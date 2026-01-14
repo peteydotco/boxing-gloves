@@ -76,7 +76,7 @@ export function Scene({ settings }: { settings: Settings }) {
         <color attach="background" args={['#ffffff']} />
 
         <Suspense fallback={null}>
-          <Physics gravity={[0, -9.81, 0]}>
+          <Physics gravity={[0, settings.gravity, 0]}>
             <HangingSpheres settings={settings} />
           </Physics>
 

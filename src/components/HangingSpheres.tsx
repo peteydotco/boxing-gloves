@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { RigidBody, BallCollider } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
@@ -17,7 +17,7 @@ function DraggableGloveWithRope({
   settings: Settings
 }) {
   const gloveRef = useRef<RapierRigidBody>(null)
-  const tubeRef = useRef<THREE.Mesh>(null)
+  const ropeGeomRef = useRef<THREE.BufferGeometry>(null)
   const { camera, gl } = useThree()
   const isDragging = useRef(false)
   const dragPlane = useRef(new THREE.Plane())
@@ -25,6 +25,11 @@ function DraggableGloveWithRope({
   const offset = useRef(new THREE.Vector3())
   const velocityHistory = useRef<THREE.Vector3[]>([])
   const lastPosition = useRef(new THREE.Vector3())
+  const ropePositions = useMemo(() => new Float32Array(5 * 3), [])
+  const ropePoints = useMemo(() => {
+    const pts = Array.from({ length: 5 }, () => new THREE.Vector3())
+    return pts as [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3]
+  }, [])
 
   // This glove's anchor point
   const anchorPos = new THREE.Vector3(
@@ -33,15 +38,15 @@ function DraggableGloveWithRope({
     ANCHOR_POSITION[2] + anchorOffset[2]
   )
 
-  // Start gloves hanging at string length below their anchor
+  // Start gloves above the anchor so they "drop in" and get caught by the rope
   const gloveStartPosition: [number, number, number] = [
     anchorPos.x,
-    anchorPos.y - settings.stringLength,
+    anchorPos.y + settings.stringLength * 0.75,
     anchorPos.z,
   ]
 
   // Soft string constraint + rope visual update
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!gloveRef.current) return
 
     const glove = gloveRef.current.translation()
@@ -49,35 +54,30 @@ function DraggableGloveWithRope({
     const toGlove = gloveCenter.clone().sub(anchorPos)
     const distance = toGlove.length()
 
-    // Apply string constraint when beyond string length
+    // Springy rope constraint when beyond string length (no teleporting)
     if (!isDragging.current && distance > settings.stringLength) {
       const direction = toGlove.clone().normalize()
+      const stretch = distance - settings.stringLength
 
-      // Hard constraint - snap back immediately to string length
-      toGlove.normalize().multiplyScalar(settings.stringLength)
-      const constrainedPos = anchorPos.clone().add(toGlove)
-      gloveRef.current.setTranslation(
-        { x: constrainedPos.x, y: constrainedPos.y, z: constrainedPos.z },
-        true
-      )
-
-      // Remove outward velocity component
       const vel = gloveRef.current.linvel()
       const radialSpeed = vel.x * direction.x + vel.y * direction.y + vel.z * direction.z
-      if (radialSpeed > 0) {
-        gloveRef.current.setLinvel(
-          {
-            x: vel.x - direction.x * radialSpeed,
-            y: vel.y - direction.y * radialSpeed,
-            z: vel.z - direction.z * radialSpeed,
-          },
-          true
-        )
-      }
+
+      // Critically-damped-ish spring along the rope axis
+      const k = settings.springStrength
+      const c = k * (1.2 * settings.ropeDamping) // simple tuned damping coefficient
+      const accel = -k * stretch - c * radialSpeed
+
+      // Convert to impulse: J = m * a * dt
+      const m = Math.max(0.0001, gloveRef.current.mass())
+      const j = accel * m * Math.min(0.033, Math.max(0.001, delta))
+      gloveRef.current.applyImpulse(
+        { x: direction.x * j, y: direction.y * j, z: direction.z * j },
+        true
+      )
     }
 
-    // Update rope visual
-    if (!tubeRef.current) return
+    // Update rope visual (cheap line with 5 control points)
+    if (!ropeGeomRef.current) return
 
     // Calculate attachment point on glove surface (top of glove where string attaches)
     const toAnchor = anchorPos.clone().sub(gloveCenter).normalize()
@@ -94,11 +94,19 @@ function DraggableGloveWithRope({
     const threeQuarter = anchorPos.clone().lerp(gloveAttach, 0.75)
     threeQuarter.y -= sag * 0.5
 
-    const points = [anchorPos, quarter, mid, threeQuarter, gloveAttach]
-    const curve = new THREE.CatmullRomCurve3(points)
-    const newGeometry = new THREE.TubeGeometry(curve, 32, settings.stringThickness, 8, false)
-    tubeRef.current.geometry.dispose()
-    tubeRef.current.geometry = newGeometry
+    ropePoints[0].copy(anchorPos)
+    ropePoints[1].copy(quarter)
+    ropePoints[2].copy(mid)
+    ropePoints[3].copy(threeQuarter)
+    ropePoints[4].copy(gloveAttach)
+
+    for (let i = 0; i < 5; i++) {
+      ropePositions[i * 3 + 0] = ropePoints[i].x
+      ropePositions[i * 3 + 1] = ropePoints[i].y
+      ropePositions[i * 3 + 2] = ropePoints[i].z
+    }
+    const attr = ropeGeomRef.current.getAttribute('position') as THREE.BufferAttribute
+    attr.needsUpdate = true
   })
 
   const handlePointerDown = useCallback((e: any) => {
@@ -168,10 +176,17 @@ function DraggableGloveWithRope({
     }
 
     gloveRef.current.setBodyType(0, true)
-    gloveRef.current.setLinvel(
-      { x: avgVelocity.x * 0.5, y: avgVelocity.y * 0.5, z: avgVelocity.z * 0.5 },
-      true
-    )
+    // Flick tuning: threshold + clamp to keep it playful and controllable
+    const flickThreshold = 0.75
+    const maxFlickSpeed = 12
+    const flickScale = 0.6
+    const speed = avgVelocity.length()
+    const v =
+      speed < flickThreshold
+        ? new THREE.Vector3(0, 0, 0)
+        : avgVelocity.clone().multiplyScalar(flickScale).clampLength(0, maxFlickSpeed)
+
+    gloveRef.current.setLinvel({ x: v.x, y: v.y, z: v.z }, true)
   }, [gl])
 
   return (
@@ -251,13 +266,17 @@ function DraggableGloveWithRope({
       </RigidBody>
 
       {/* Rope visual */}
-      <mesh ref={tubeRef}>
-        <tubeGeometry args={[new THREE.CatmullRomCurve3([
-          new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(0, -1, 0),
-        ]), 32, settings.stringThickness, 8, false]} />
-        <meshStandardMaterial color={settings.stringColor} roughness={0.95} />
-      </mesh>
+      <line>
+        <bufferGeometry ref={ropeGeomRef}>
+          <bufferAttribute
+            attach="attributes-position"
+            array={ropePositions}
+            itemSize={3}
+            count={5}
+          />
+        </bufferGeometry>
+        <lineBasicMaterial color={settings.stringColor} />
+      </line>
     </group>
   )
 }
