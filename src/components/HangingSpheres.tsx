@@ -8,15 +8,15 @@ import type { Settings } from './Scene'
 // Fixed configuration
 const ANCHOR_POSITION: [number, number, number] = [0, 2.8, 0] // Single shared origin
 
-// Draggable sphere with soft string constraint (not rigid joint)
-function DraggableSphereWithRope({
+// Draggable glove with soft string constraint
+function DraggableGloveWithRope({
   anchorOffset,
   settings,
 }: {
   anchorOffset: [number, number, number]
   settings: Settings
 }) {
-  const sphereRef = useRef<RapierRigidBody>(null)
+  const gloveRef = useRef<RapierRigidBody>(null)
   const tubeRef = useRef<THREE.Mesh>(null)
   const { camera, gl } = useThree()
   const isDragging = useRef(false)
@@ -26,15 +26,15 @@ function DraggableSphereWithRope({
   const velocityHistory = useRef<THREE.Vector3[]>([])
   const lastPosition = useRef(new THREE.Vector3())
 
-  // This sphere's anchor point
+  // This glove's anchor point
   const anchorPos = new THREE.Vector3(
     ANCHOR_POSITION[0] + anchorOffset[0],
     ANCHOR_POSITION[1] + anchorOffset[1],
     ANCHOR_POSITION[2] + anchorOffset[2]
   )
 
-  // Start spheres hanging at string length below their anchor
-  const sphereStartPosition: [number, number, number] = [
+  // Start gloves hanging at string length below their anchor
+  const gloveStartPosition: [number, number, number] = [
     anchorPos.x,
     anchorPos.y - settings.stringLength,
     anchorPos.z,
@@ -42,31 +42,30 @@ function DraggableSphereWithRope({
 
   // Soft string constraint + rope visual update
   useFrame(() => {
-    if (!sphereRef.current) return
+    if (!gloveRef.current) return
 
-    const sphere = sphereRef.current.translation()
-    const sphereCenter = new THREE.Vector3(sphere.x, sphere.y, sphere.z)
-    const toSphere = sphereCenter.clone().sub(anchorPos)
-    const distance = toSphere.length()
+    const glove = gloveRef.current.translation()
+    const gloveCenter = new THREE.Vector3(glove.x, glove.y, glove.z)
+    const toGlove = gloveCenter.clone().sub(anchorPos)
+    const distance = toGlove.length()
 
-    // Apply string constraint when beyond string length (only when not dragging)
+    // Apply string constraint when beyond string length
     if (!isDragging.current && distance > settings.stringLength) {
-      const direction = toSphere.clone().normalize()
+      const direction = toGlove.clone().normalize()
 
       // Hard constraint - snap back immediately to string length
-      // This prevents any stretching/bouncing oscillation
-      toSphere.normalize().multiplyScalar(settings.stringLength)
-      const constrainedPos = anchorPos.clone().add(toSphere)
-      sphereRef.current.setTranslation(
+      toGlove.normalize().multiplyScalar(settings.stringLength)
+      const constrainedPos = anchorPos.clone().add(toGlove)
+      gloveRef.current.setTranslation(
         { x: constrainedPos.x, y: constrainedPos.y, z: constrainedPos.z },
         true
       )
 
-      // Remove outward velocity component (keep tangent velocity for swinging)
-      const vel = sphereRef.current.linvel()
+      // Remove outward velocity component
+      const vel = gloveRef.current.linvel()
       const radialSpeed = vel.x * direction.x + vel.y * direction.y + vel.z * direction.z
       if (radialSpeed > 0) {
-        sphereRef.current.setLinvel(
+        gloveRef.current.setLinvel(
           {
             x: vel.x - direction.x * radialSpeed,
             y: vel.y - direction.y * radialSpeed,
@@ -80,22 +79,22 @@ function DraggableSphereWithRope({
     // Update rope visual
     if (!tubeRef.current) return
 
-    // Calculate attachment point on sphere surface (where line from anchor hits sphere)
-    const toAnchor = anchorPos.clone().sub(sphereCenter).normalize()
-    const sphereAttach = sphereCenter.clone().add(toAnchor.multiplyScalar(settings.radius))
+    // Calculate attachment point on glove surface (top of glove where string attaches)
+    const toAnchor = anchorPos.clone().sub(gloveCenter).normalize()
+    const gloveAttach = gloveCenter.clone().add(toAnchor.multiplyScalar(settings.radius * 1.5))
 
     // Create a slight sag in the middle for natural rope look
-    const mid = anchorPos.clone().lerp(sphereAttach, 0.5)
-    const ropeDistance = anchorPos.distanceTo(sphereAttach)
+    const mid = anchorPos.clone().lerp(gloveAttach, 0.5)
+    const ropeDistance = anchorPos.distanceTo(gloveAttach)
     const sag = Math.max(0, (settings.stringLength - ropeDistance) * 0.15)
     mid.y -= sag
 
-    const quarter = anchorPos.clone().lerp(sphereAttach, 0.25)
+    const quarter = anchorPos.clone().lerp(gloveAttach, 0.25)
     quarter.y -= sag * 0.5
-    const threeQuarter = anchorPos.clone().lerp(sphereAttach, 0.75)
+    const threeQuarter = anchorPos.clone().lerp(gloveAttach, 0.75)
     threeQuarter.y -= sag * 0.5
 
-    const points = [anchorPos, quarter, mid, threeQuarter, sphereAttach]
+    const points = [anchorPos, quarter, mid, threeQuarter, gloveAttach]
     const curve = new THREE.CatmullRomCurve3(points)
     const newGeometry = new THREE.TubeGeometry(curve, 32, settings.stringThickness, 8, false)
     tubeRef.current.geometry.dispose()
@@ -104,30 +103,30 @@ function DraggableSphereWithRope({
 
   const handlePointerDown = useCallback((e: any) => {
     e.stopPropagation()
-    if (!sphereRef.current) return
+    if (!gloveRef.current) return
 
     isDragging.current = true
     velocityHistory.current = []
 
-    const pos = sphereRef.current.translation()
-    const spherePos = new THREE.Vector3(pos.x, pos.y, pos.z)
-    lastPosition.current.copy(spherePos)
+    const pos = gloveRef.current.translation()
+    const glovePos = new THREE.Vector3(pos.x, pos.y, pos.z)
+    lastPosition.current.copy(glovePos)
 
     const cameraDir = new THREE.Vector3()
     camera.getWorldDirection(cameraDir)
-    dragPlane.current.setFromNormalAndCoplanarPoint(cameraDir.negate(), spherePos)
+    dragPlane.current.setFromNormalAndCoplanarPoint(cameraDir.negate(), glovePos)
 
     const ray = e.ray as THREE.Ray
     ray.intersectPlane(dragPlane.current, intersection.current)
-    offset.current.subVectors(spherePos, intersection.current)
+    offset.current.subVectors(glovePos, intersection.current)
 
-    sphereRef.current.setBodyType(2, true)
+    gloveRef.current.setBodyType(2, true)
     ;(gl.domElement as HTMLElement).style.cursor = 'grabbing'
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
   }, [camera, gl])
 
   const handlePointerMove = useCallback((e: any) => {
-    if (!isDragging.current || !sphereRef.current) return
+    if (!isDragging.current || !gloveRef.current) return
 
     const ray = e.ray as THREE.Ray
     if (!ray.intersectPlane(dragPlane.current, intersection.current)) return
@@ -135,12 +134,12 @@ function DraggableSphereWithRope({
     let newPos = intersection.current.clone().add(offset.current)
 
     // Constrain to string length from anchor
-    const toSphere = newPos.clone().sub(anchorPos)
-    const distance = toSphere.length()
+    const toGlove = newPos.clone().sub(anchorPos)
+    const distance = toGlove.length()
 
     if (distance > settings.stringLength) {
-      toSphere.normalize().multiplyScalar(settings.stringLength)
-      newPos = anchorPos.clone().add(toSphere)
+      toGlove.normalize().multiplyScalar(settings.stringLength)
+      newPos = anchorPos.clone().add(toGlove)
     }
 
     const velocity = newPos.clone().sub(lastPosition.current).multiplyScalar(60)
@@ -148,7 +147,7 @@ function DraggableSphereWithRope({
     if (velocityHistory.current.length > 5) velocityHistory.current.shift()
     lastPosition.current.copy(newPos)
 
-    sphereRef.current.setNextKinematicTranslation({
+    gloveRef.current.setNextKinematicTranslation({
       x: newPos.x,
       y: newPos.y,
       z: newPos.z,
@@ -156,7 +155,7 @@ function DraggableSphereWithRope({
   }, [anchorPos, settings.stringLength])
 
   const handlePointerUp = useCallback((e: any) => {
-    if (!isDragging.current || !sphereRef.current) return
+    if (!isDragging.current || !gloveRef.current) return
 
     isDragging.current = false
     ;(gl.domElement as HTMLElement).style.cursor = 'grab'
@@ -168,8 +167,8 @@ function DraggableSphereWithRope({
       avgVelocity.divideScalar(velocityHistory.current.length)
     }
 
-    sphereRef.current.setBodyType(0, true)
-    sphereRef.current.setLinvel(
+    gloveRef.current.setBodyType(0, true)
+    gloveRef.current.setLinvel(
       { x: avgVelocity.x * 0.5, y: avgVelocity.y * 0.5, z: avgVelocity.z * 0.5 },
       true
     )
@@ -177,10 +176,10 @@ function DraggableSphereWithRope({
 
   return (
     <group>
-      {/* Dynamic sphere */}
+      {/* Dynamic glove */}
       <RigidBody
-        ref={sphereRef}
-        position={sphereStartPosition}
+        ref={gloveRef}
+        position={gloveStartPosition}
         colliders={false}
         mass={settings.mass}
         restitution={settings.restitution}
@@ -188,9 +187,9 @@ function DraggableSphereWithRope({
         linearDamping={settings.linearDamping}
         angularDamping={0.3}
       >
-        <BallCollider args={[settings.radius]} />
-        <mesh
-          castShadow
+        <BallCollider args={[settings.radius * 1.2]} />
+        
+        <group
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -205,17 +204,53 @@ function DraggableSphereWithRope({
             }
           }}
         >
-          <sphereGeometry args={[settings.radius, 64, 64]} />
-          <meshStandardMaterial
-            color={settings.color}
-            metalness={settings.metalness}
-            roughness={settings.roughness}
-            envMapIntensity={settings.envMapIntensity}
-          />
-        </mesh>
+          {/* Main glove body (rectangular) */}
+          <mesh castShadow position={[0, 0, 0]}>
+            <boxGeometry args={[settings.radius * 2, settings.radius * 3, settings.radius * 2]} />
+            <meshStandardMaterial
+              color={settings.color}
+              metalness={settings.metalness}
+              roughness={settings.roughness}
+              envMapIntensity={settings.envMapIntensity}
+            />
+          </mesh>
+          
+          {/* Knuckle area (sphere on front) */}
+          <mesh castShadow position={[0, -settings.radius * 0.5, settings.radius * 0.8]}>
+            <sphereGeometry args={[settings.radius * 0.9, 32, 32]} />
+            <meshStandardMaterial
+              color={settings.color}
+              metalness={settings.metalness}
+              roughness={settings.roughness}
+              envMapIntensity={settings.envMapIntensity}
+            />
+          </mesh>
+          
+          {/* Thumb */}
+          <mesh castShadow position={[settings.radius * 1.2, -settings.radius * 0.3, settings.radius * 0.5]} rotation={[0, 0, 0.3]}>
+            <boxGeometry args={[settings.radius * 0.8, settings.radius * 1.2, settings.radius * 0.8]} />
+            <meshStandardMaterial
+              color={settings.color}
+              metalness={settings.metalness}
+              roughness={settings.roughness}
+              envMapIntensity={settings.envMapIntensity}
+            />
+          </mesh>
+          
+          {/* Cuff (white band at wrist) */}
+          <mesh castShadow position={[0, settings.radius * 1.3, 0]}>
+            <cylinderGeometry args={[settings.radius * 1.1, settings.radius * 1.2, settings.radius * 0.8, 16]} />
+            <meshStandardMaterial
+              color="#ffffff"
+              metalness={0.1}
+              roughness={0.9}
+              envMapIntensity={0.2}
+            />
+          </mesh>
+        </group>
       </RigidBody>
 
-      {/* Verlet rope visual */}
+      {/* Rope visual */}
       <mesh ref={tubeRef}>
         <tubeGeometry args={[new THREE.CatmullRomCurve3([
           new THREE.Vector3(0, 0, 0),
@@ -236,14 +271,14 @@ export function HangingSpheres({ settings }: { settings: Settings }) {
         <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
       </mesh>
 
-      {/* Left ball - offset slightly left from anchor */}
-      <DraggableSphereWithRope
+      {/* Left glove - offset slightly left from anchor */}
+      <DraggableGloveWithRope
         anchorOffset={[-0.1, 0, 0]}
         settings={settings}
       />
 
-      {/* Right ball - offset slightly right from anchor */}
-      <DraggableSphereWithRope
+      {/* Right glove - offset slightly right from anchor */}
+      <DraggableGloveWithRope
         anchorOffset={[0.1, 0, 0]}
         settings={settings}
       />
