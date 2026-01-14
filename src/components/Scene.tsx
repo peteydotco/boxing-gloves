@@ -1,59 +1,8 @@
 import { Canvas } from '@react-three/fiber'
-import { Environment, ContactShadows, Lightformer, OrbitControls } from '@react-three/drei'
+import { Environment, ContactShadows, Lightformer } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { Suspense } from 'react'
 import { HangingSpheres } from './HangingSpheres'
-
-// Rearview mirror frame - realistic rounded rectangle shape
-function MirrorFrame() {
-  return (
-    <group position={[0, 0.3, 0.3]}>
-      {/* Mirror bezel - rounded rectangle using RoundedBox-like shape */}
-      {/* Top edge */}
-      <mesh position={[0, 1.8, 0]}>
-        <boxGeometry args={[5.5, 0.15, 0.15]} />
-        <meshStandardMaterial color="#1a1a1a" metalness={0.8} roughness={0.3} />
-      </mesh>
-      {/* Bottom edge */}
-      <mesh position={[0, -1.4, 0]}>
-        <boxGeometry args={[5.5, 0.15, 0.15]} />
-        <meshStandardMaterial color="#1a1a1a" metalness={0.8} roughness={0.3} />
-      </mesh>
-      {/* Left edge */}
-      <mesh position={[-2.8, 0.2, 0]}>
-        <boxGeometry args={[0.15, 3.05, 0.15]} />
-        <meshStandardMaterial color="#1a1a1a" metalness={0.8} roughness={0.3} />
-      </mesh>
-      {/* Right edge */}
-      <mesh position={[2.8, 0.2, 0]}>
-        <boxGeometry args={[0.15, 3.05, 0.15]} />
-        <meshStandardMaterial color="#1a1a1a" metalness={0.8} roughness={0.3} />
-      </mesh>
-
-      {/* Stem connecting to car ceiling */}
-      <mesh position={[0, 2.5, -0.2]} rotation={[0.15, 0, 0]}>
-        <cylinderGeometry args={[0.08, 0.1, 1.4, 16]} />
-        <meshStandardMaterial color="#111" metalness={0.7} roughness={0.4} />
-      </mesh>
-
-      {/* Ball joint at top */}
-      <mesh position={[0, 3.2, -0.4]}>
-        <sphereGeometry args={[0.14, 16, 16]} />
-        <meshStandardMaterial color="#0a0a0a" metalness={0.9} roughness={0.2} />
-      </mesh>
-    </group>
-  )
-}
-
-// Grass ground - what you'd see in a rearview mirror
-function GrassGround() {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, -2]}>
-      <planeGeometry args={[50, 50]} />
-      <meshStandardMaterial color="#2d5a27" roughness={0.9} />
-    </mesh>
-  )
-}
 
 export interface Settings {
   // Ball
@@ -109,7 +58,7 @@ function Lighting() {
       />
 
       {/* Ambient fill */}
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={0.6} />
     </>
   )
 }
@@ -123,30 +72,15 @@ export function Scene({ settings }: { settings: Settings }) {
         dpr={[1, 2]}
         gl={{ antialias: true }}
       >
-        <color attach="background" args={['#050508']} />
+        {/* White background */}
+        <color attach="background" args={['#ffffff']} />
 
         <Suspense fallback={null}>
           <Physics gravity={[0, -9.81, 0]}>
             <HangingSpheres settings={settings} />
           </Physics>
 
-          {/* 3D camera controls - right-click/two-finger to rotate, scroll to zoom */}
-          <OrbitControls
-            enablePan={false}
-            minDistance={3}
-            maxDistance={15}
-            minPolarAngle={Math.PI / 6}
-            maxPolarAngle={Math.PI / 1.5}
-            mouseButtons={{
-              LEFT: undefined, // Left click reserved for dragging balls
-              MIDDLE: 2, // Middle = dolly/zoom
-              RIGHT: 0, // Right click = rotate
-            }}
-            touches={{
-              ONE: undefined, // Single touch reserved for dragging balls
-              TWO: 2, // Two-finger = rotate + zoom
-            }}
-          />
+          {/* Removed OrbitControls - no camera movement */}
 
           <Lighting />
 
@@ -177,12 +111,6 @@ export function Scene({ settings }: { settings: Settings }) {
               />
             </group>
           </Environment>
-
-          {/* Subtle mirror frame for context */}
-          <MirrorFrame />
-
-          {/* Grass background - like looking in a rearview mirror */}
-          <GrassGround />
 
           <ContactShadows
             position={[0, -2.5, 0]}
