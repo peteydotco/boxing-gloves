@@ -104,11 +104,11 @@ function App() {
     lightY: 2.5,
     lightZ: 10,
     shadowMapSize: 2048,
-    shadowCameraBounds: 10,
+    shadowCameraBounds: 6,
     shadowCameraFar: 30,
-    shadowRadius: 20,
-    shadowBias: -0.00005,
-    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    shadowBias: -0.0001,
+    shadowOpacity: 0.08,
   }
 
   // Boxing Gloves preset - hardcoded
@@ -137,17 +137,17 @@ function App() {
 
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden">
-      {/* Radial gradient spotlight background */}
+      {/* Background Marquee - scrolling text revealed by cursor */}
+      <BackgroundMarquee mousePosition={mousePosition} />
+
+      {/* Radial gradient spotlight overlay - covers marquee, reveals center */}
       <div
-        className="absolute inset-0 z-0 pointer-events-none"
+        className="absolute inset-0 z-[5] pointer-events-none"
         style={{
-          background: `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 30%, rgba(255,255,255,0.5) 55%, #FFFFFF 80%)`,
+          background: `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, rgba(255,255,255,0.65) 50%)`,
           transition: 'background 0.1s ease-out',
         }}
       />
-
-      {/* Background Marquee - scrolling text revealed by cursor */}
-      <BackgroundMarquee mousePosition={mousePosition} />
 
       {/* Cards - single container */}
       <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto' }}>

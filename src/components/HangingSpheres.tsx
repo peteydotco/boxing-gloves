@@ -2,6 +2,7 @@ import { useRef, useCallback } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
+import { ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Settings } from './Scene'
 
@@ -357,10 +358,10 @@ function DraggableGloveWithRope({
 export function HangingSpheres({ settings, shadowOpacity = 0.08 }: { settings: Settings; shadowOpacity?: number }) {
   return (
     <group>
-      {/* Shadow plane behind gloves - expanded to capture string shadows */}
+      {/* Shadow plane behind gloves */}
       <mesh position={[0, 0, -2]} receiveShadow>
         <planeGeometry args={[40, 40]} />
-        <shadowMaterial opacity={shadowOpacity} />
+        <shadowMaterial opacity={shadowOpacity} transparent />
       </mesh>
 
       {/* Anchor point visual */}

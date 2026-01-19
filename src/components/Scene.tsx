@@ -239,7 +239,7 @@ export function Scene({ settings, shadowSettings, mousePosition }: { settings: S
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         onCreated={({ gl }) => {
-          gl.shadowMap.type = THREE.VSMShadowMap
+          gl.shadowMap.type = THREE.PCFSoftShadowMap
           gl.shadowMap.autoUpdate = true
           gl.shadowMap.needsUpdate = true
         }}
