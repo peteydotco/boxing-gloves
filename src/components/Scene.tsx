@@ -3,7 +3,7 @@ import { Environment, Lightformer } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { Suspense, useEffect } from 'react'
 import { HangingSpheres } from './HangingSpheres'
-import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 

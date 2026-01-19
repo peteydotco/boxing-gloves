@@ -38,21 +38,12 @@ const variantStyles = {
   },
 }
 
-// CTA-like default style (transparent bg, gray text)
-const defaultStyle = {
-  bg: 'rgba(255,255,255,0)',
-  textColor: 'rgba(17,24,39,1)', // gray-900
-  border: 'border-gray-300',
-}
-
 const shortcutBadgeStyles = {
   blue: 'rgba(0,0,0,0.2)',
   white: 'rgba(0,0,0,0.2)',
   red: 'rgba(0,0,0,0.2)',
   cta: 'rgba(243,244,246,1)', // gray-100
 }
-
-const defaultBadgeStyle = 'rgba(243,244,246,1)' // gray-100
 
 // Tilt angles for each card variant
 const tiltAngles = {
@@ -62,7 +53,7 @@ const tiltAngles = {
   cta: 0,
 }
 
-export function Card({ id, label, title, shortcut, variant, onClick, isBottomFixed = false, isFlexible = false, layoutId }: CardProps) {
+export function Card({ id, label, title, shortcut, variant, onClick, isBottomFixed: _isBottomFixed = false, isFlexible: _isFlexible = false, layoutId }: CardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [hasInitialized, setHasInitialized] = useState(false)
   const cardRef = useRef<HTMLButtonElement>(null)
