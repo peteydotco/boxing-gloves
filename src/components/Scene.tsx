@@ -1,7 +1,7 @@
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { HangingSpheres } from './HangingSpheres'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
@@ -41,15 +41,21 @@ function ShadowMapUpdater() {
   return null
 }
 
-function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias }: {
+function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias, mousePosition }: {
   lightPos: [number, number, number]
   shadowMapSize: [number, number]
   cameraBounds: number
   cameraFar: number
   shadowRadius: number
   shadowBias: number
+  mousePosition: { x: number; y: number }
 }) {
   const { gl } = useThree()
+  const mainLightRef = useRef<THREE.DirectionalLight>(null)
+  const fillLightRef = useRef<THREE.DirectionalLight>(null)
+
+  // Current light position with smooth interpolation
+  const currentLightPos = useRef({ x: lightPos[0], y: lightPos[1], z: lightPos[2] })
 
   // Force shadow map update when parameters change
   useEffect(() => {
@@ -58,10 +64,48 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
     }
   }, [lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias, gl])
 
+  // Smoothly interpolate light position based on mouse
+  useFrame(() => {
+    if (!mainLightRef.current) return
+
+    // Calculate target light position based on mouse
+    // Mouse x: 0-1 maps to light x offset (subtle, ±2 units)
+    // Mouse y: 0-1 maps to light y offset (subtle, ±1 unit)
+    const lightOffsetX = (mousePosition.x - 0.5) * 4 // ±2 units
+    const lightOffsetY = (mousePosition.y - 0.5) * -2 // ±1 unit (inverted)
+
+    const targetX = lightPos[0] + lightOffsetX
+    const targetY = lightPos[1] + lightOffsetY
+    const targetZ = lightPos[2]
+
+    // Smooth interpolation (lerp factor ~0.05 for gentle movement)
+    const lerp = 0.05
+    currentLightPos.current.x += (targetX - currentLightPos.current.x) * lerp
+    currentLightPos.current.y += (targetY - currentLightPos.current.y) * lerp
+    currentLightPos.current.z += (targetZ - currentLightPos.current.z) * lerp
+
+    // Update main light position
+    mainLightRef.current.position.set(
+      currentLightPos.current.x,
+      currentLightPos.current.y,
+      currentLightPos.current.z
+    )
+
+    // Update fill light to complement (opposite side, subtle)
+    if (fillLightRef.current) {
+      fillLightRef.current.position.set(
+        -4 - lightOffsetX * 0.3,
+        3 - lightOffsetY * 0.3,
+        2
+      )
+    }
+  })
+
   return (
     <>
       {/* Main light from front - creates shadow behind gloves */}
       <directionalLight
+        ref={mainLightRef}
         position={lightPos}
         intensity={3}
         castShadow
@@ -78,6 +122,7 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
 
       {/* Fill light - from left */}
       <directionalLight
+        ref={fillLightRef}
         position={[-4, 3, 2]}
         intensity={1.5}
         color="#a0c4ff"
@@ -115,7 +160,64 @@ interface ShadowSettings {
   shadowOpacity: number
 }
 
-export function Scene({ settings, shadowSettings }: { settings: Settings; shadowSettings?: ShadowSettings }) {
+// Mouse follow rotation wrapper for the gloves
+function MouseFollowGroup({ children, mousePosition }: { children: React.ReactNode; mousePosition: { x: number; y: number } }) {
+  const groupRef = useRef<THREE.Group>(null)
+
+  // Target rotation based on mouse position
+  const targetRotation = useRef({ x: 0, y: 0 })
+  // Current rotation with spring physics
+  const currentRotation = useRef({ x: 0, y: 0 })
+  // Velocity for spring physics
+  const velocity = useRef({ x: 0, y: 0 })
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return
+
+    // Calculate target rotation from mouse position
+    // Mouse x: 0-1 maps to rotation around Y axis (left/right)
+    // Mouse y: 0-1 maps to rotation around X axis (up/down)
+    // Very subtle: max ±3 degrees (0.052 radians)
+    const maxRotation = 0.052 // ~3 degrees
+    targetRotation.current.y = (mousePosition.x - 0.5) * 2 * maxRotation
+    targetRotation.current.x = (mousePosition.y - 0.5) * -2 * maxRotation * 0.5 // Less vertical movement
+
+    // Spring physics constants
+    const springStrength = 3 // How quickly it moves toward target
+    const damping = 0.85 // How quickly it settles (lower = more bouncy)
+
+    // Calculate spring force
+    const forceX = (targetRotation.current.x - currentRotation.current.x) * springStrength
+    const forceY = (targetRotation.current.y - currentRotation.current.y) * springStrength
+
+    // Apply force to velocity
+    velocity.current.x += forceX * delta
+    velocity.current.y += forceY * delta
+
+    // Apply damping
+    velocity.current.x *= damping
+    velocity.current.y *= damping
+
+    // Update current rotation
+    currentRotation.current.x += velocity.current.x
+    currentRotation.current.y += velocity.current.y
+
+    // Apply rotation to group
+    groupRef.current.rotation.x = currentRotation.current.x
+    groupRef.current.rotation.y = currentRotation.current.y
+  })
+
+  return (
+    <group ref={groupRef}>
+      {children}
+    </group>
+  )
+}
+
+export function Scene({ settings, shadowSettings, mousePosition }: { settings: Settings; shadowSettings?: ShadowSettings; mousePosition?: { x: number; y: number } }) {
+  // Default mouse position to center if not provided
+  const mouse = mousePosition || { x: 0.5, y: 0.5 }
+
   // Use shadow settings if provided, otherwise use defaults
   const lightPos: [number, number, number] = shadowSettings
     ? [shadowSettings.lightX, shadowSettings.lightY, shadowSettings.lightZ]
@@ -146,9 +248,11 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
         <Suspense fallback={null}>
           <ShadowMapUpdater />
 
-          <Physics gravity={[0, -9.81, 0]}>
-            <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} />
-          </Physics>
+          <MouseFollowGroup mousePosition={mouse}>
+            <Physics gravity={[0, -9.81, 0]}>
+              <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} />
+            </Physics>
+          </MouseFollowGroup>
 
           <Lighting
             lightPos={lightPos}
@@ -157,6 +261,7 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
             cameraFar={cameraFar}
             shadowRadius={shadowRadius}
             shadowBias={shadowBias}
+            mousePosition={mouse}
           />
 
           {/* Environment with custom lightformers for better reflections */}

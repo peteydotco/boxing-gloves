@@ -12,6 +12,8 @@ interface CardProps {
   isBottomFixed?: boolean
   isFlexible?: boolean
   layoutId?: string
+  hideShortcut?: boolean
+  compactCta?: boolean // Mobile-only: narrow CTA card with stacked label + icon, no title
 }
 
 // Original colored styles (shown on hover for first 3 cards)
@@ -53,9 +55,10 @@ const tiltAngles = {
   cta: 0,
 }
 
-export function Card({ id, label, title, shortcut, variant, onClick, isBottomFixed: _isBottomFixed = false, isFlexible: _isFlexible = false, layoutId }: CardProps) {
+export function Card({ id, label, title, shortcut, variant, onClick, isBottomFixed: _isBottomFixed = false, isFlexible: _isFlexible = false, layoutId, hideShortcut = false, compactCta = false }: CardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [hasInitialized, setHasInitialized] = useState(false)
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 }) // Percentage position for gradient
   const cardRef = useRef<HTMLButtonElement>(null)
 
   // Delay the tilt animation until gloves have dropped (~600ms after page load)
@@ -83,6 +86,10 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
       x: e.clientX - centerX,
       y: e.clientY - centerY
     }
+    // Track mouse position as percentage for spotlight gradient
+    const xPercent = ((e.clientX - rect.left) / rect.width) * 100
+    const yPercent = ((e.clientY - rect.top) / rect.height) * 100
+    setMousePos({ x: xPercent, y: yPercent })
   }
 
   const handleMouseLeave = () => {
@@ -113,28 +120,35 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
   const textColor = styles.textColor
   const badgeStyle = shortcutBadgeStyles[variant]
 
+  // Border colors that sample from each card's bg with opacity
+  const borderColors = {
+    blue: 'rgba(22, 115, 255, 0.6)',      // Blue card border
+    white: 'rgba(26, 26, 46, 0.6)',       // Dark card border
+    red: 'rgba(239, 68, 68, 0.6)',        // Red card border
+    cta: 'rgba(120, 120, 130, 0.5)',      // CTA neutral border
+  }
+
+  const defaultBorderColor = borderColors[variant]
+
+  // Spotlight border gradient - light near cursor, dark far from cursor
+  // Incorporates card bg color for color-matched effect
+  const spotlightGradient = isHovered
+    ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(200, 210, 230, 0.7) 20%, ${defaultBorderColor} 50%, rgba(40, 45, 55, 0.7) 100%)`
+    : 'none'
+
+  // Border width for the inner stroke effect
+  const borderWidth = 1
+
   return (
-    <motion.button
-      ref={cardRef}
+    <motion.div
       layoutId={layoutId || `card-${id}`}
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      className="flex items-start overflow-clip p-0 m-0 rounded-[8px] relative cursor-pointer"
+      className="relative rounded-[12px]"
       style={{
-        padding: '12px 16px 20px 20px',
-        backgroundColor: bgColor,
-        color: textColor,
-        border: '1px solid rgba(209, 213, 219, 1)',
-        pointerEvents: 'auto',
         width: '100%',
         maxWidth: '100%',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
         rotateX: springRotateX,
         rotateY: springRotateY,
-        transition: 'background-color 0.3s ease, color 0.3s ease',
+        isolation: 'isolate', // Create stacking context for blend modes
       }}
       initial={{ rotate: 0, scale: 1 }}
       animate={{
@@ -147,43 +161,117 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
         damping: 15,
       }}
     >
+      <button
+        ref={cardRef}
+        onClick={onClick}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        className="flex items-start w-full rounded-[12px] relative cursor-pointer"
+        style={{
+          padding: '12px 16px 20px 20px',
+          backgroundColor: bgColor,
+          color: textColor,
+          pointerEvents: 'auto',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          transition: 'background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease',
+          boxShadow: `inset 0 0 0 ${borderWidth}px ${defaultBorderColor}`,
+        }}
+      >
+        {/* Spotlight gradient inner stroke - only on hover */}
+        {isHovered && (
+          <>
+            {/* Main spotlight layer */}
+            <div
+              className="absolute inset-0 rounded-[12px] pointer-events-none"
+              style={{
+                background: spotlightGradient,
+                mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+                maskComposite: 'exclude',
+                WebkitMaskComposite: 'xor',
+                padding: `${borderWidth}px`,
+              }}
+            />
+            {/* Darken layer for depth */}
+            <div
+              className="absolute inset-0 rounded-[12px] pointer-events-none"
+              style={{
+                background: spotlightGradient,
+                mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+                maskComposite: 'exclude',
+                WebkitMaskComposite: 'xor',
+                padding: `${borderWidth}px`,
+                mixBlendMode: 'darken',
+                opacity: 0.48,
+              }}
+            />
+            {/* Multiply layer for depth */}
+            <div
+              className="absolute inset-0 rounded-[12px] pointer-events-none"
+              style={{
+                background: spotlightGradient,
+                mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+                maskComposite: 'exclude',
+                WebkitMaskComposite: 'xor',
+                padding: `${borderWidth}px`,
+                mixBlendMode: 'multiply',
+                opacity: 0.48,
+              }}
+            />
+          </>
+        )}
 
       {/* Content wrapper - vertical stack */}
-      <div className="flex flex-col gap-[0px] relative w-full">
-        {/* First row: Label and Shortcut badge */}
-        <div className="flex items-start justify-between relative w-full">
-          {/* Label */}
-          <div className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-left uppercase">
+      {compactCta ? (
+        /* Compact CTA layout for mobile: stacked label + icon, centered */
+        <div className="flex flex-col items-center justify-center gap-1 w-full relative z-10">
+          <div className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-center uppercase">
             {label}
           </div>
-
-          {/* Shortcut badge */}
-          <div
-            className="flex items-center justify-center rounded-[4px] shrink-0"
-            style={{
-              padding: '4px 8px',
-              backgroundColor: badgeStyle,
-              transition: 'background-color 0.3s ease',
-            }}
-          >
-            <div className="text-[12px] uppercase font-pressura-mono leading-[100%]">
-              {shortcut}
+          <FaCirclePlus className="w-6 h-6 text-gray-500" />
+        </div>
+      ) : (
+        /* Standard layout */
+        <div className="flex flex-col gap-[0px] relative z-10 w-full">
+          {/* First row: Label and Shortcut badge */}
+          <div className="flex items-start justify-between relative w-full">
+            {/* Label */}
+            <div className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-left uppercase">
+              {label}
             </div>
+
+            {/* Shortcut badge - hidden on mobile */}
+            {!hideShortcut && (
+              <div
+                className="flex items-center justify-center rounded-[4px] shrink-0"
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: badgeStyle,
+                  transition: 'background-color 0.3s ease',
+                }}
+              >
+                <div className="text-[12px] uppercase font-pressura-mono leading-[100%]">
+                  {shortcut}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Second row: Title - full width */}
+          <div className="text-[18px] tracking-[-0.02em] font-pressura font-medium leading-normal text-left w-full uppercase">
+            {variant === 'cta' ? (
+              <span className="flex items-center gap-3">
+                <FaCirclePlus className="w-6 h-6 text-gray-500" />
+                {title}
+              </span>
+            ) : (
+              title
+            )}
           </div>
         </div>
-
-        {/* Second row: Title - full width */}
-        <div className="text-[18px] tracking-[-0.02em] font-pressura font-medium leading-normal text-left w-full uppercase">
-          {variant === 'cta' ? (
-            <span className="flex items-center gap-3">
-              <FaCirclePlus className="w-6 h-6 text-gray-500" />
-              {title}
-            </span>
-          ) : (
-            title
-          )}
-        </div>
-      </div>
-    </motion.button>
+      )}
+      </button>
+    </motion.div>
   )
 }

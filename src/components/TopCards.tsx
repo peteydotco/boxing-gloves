@@ -214,11 +214,11 @@ function ExpandedCard({ card, onClose }: { card: CardData; onClose: () => void }
   )
 }
 
-function CollapsedCard({ card, onClick, isBottomFixed, isFlexible, layoutId }: { card: CardData; onClick: () => void; isBottomFixed?: boolean; isFlexible?: boolean; layoutId?: string }) {
+function CollapsedCard({ card, onClick, isBottomFixed, isFlexible, layoutId, hideShortcut, compactCta, mobileLabel }: { card: CardData; onClick: () => void; isBottomFixed?: boolean; isFlexible?: boolean; layoutId?: string; hideShortcut?: boolean; compactCta?: boolean; mobileLabel?: string }) {
   return (
     <Card
       id={card.id}
-      label={card.label}
+      label={mobileLabel || card.label}
       title={card.title}
       shortcut={card.shortcut}
       variant={card.variant}
@@ -226,12 +226,37 @@ function CollapsedCard({ card, onClick, isBottomFixed, isFlexible, layoutId }: {
       isBottomFixed={isBottomFixed}
       isFlexible={isFlexible}
       layoutId={layoutId}
+      hideShortcut={hideShortcut}
+      compactCta={compactCta}
     />
   )
 }
 
 export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
+
+  const [isDesktop, setIsDesktop] = React.useState<boolean>(() => {
+    // Initialize with actual window size on mount
+    return typeof window !== 'undefined' ? window.innerWidth > 1080 : true
+  })
+
+  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
+    // Initialize with actual window size on mount
+    return typeof window !== 'undefined' ? window.innerWidth <= 768 : false
+  })
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth > 1080)
+      setIsMobile(window.innerWidth <= 768)
+    }
+
+    // Set correct value immediately on mount
+    handleResize()
+
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const toggleCard = (cardId: string) => {
     setExpandedCards(prev => {
@@ -253,9 +278,12 @@ export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
     })
   }
 
-  // Handle keyboard shortcuts
+  // Handle keyboard shortcuts (disabled on mobile)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip keyboard shortcuts on mobile
+      if (isMobile) return
+
       // ESC to close all expanded cards
       if (e.key === 'Escape' && expandedCards.size > 0) {
         setExpandedCards(new Set())
@@ -282,35 +310,15 @@ export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [expandedCards])
+  }, [expandedCards, isMobile])
 
   // Filter cards based on cardIndices prop, or show all if not specified
   const cardsToShow = cardIndices ? cardIndices.map(i => cards[i]).filter(Boolean) : cards
   const topThreeCards = cardsToShow.slice(0, 3)
   const ctaCard = cardsToShow.length > 3 ? cardsToShow[3] : undefined
 
-  const [isDesktop, setIsDesktop] = React.useState<boolean>(() => {
-    // Initialize with actual window size on mount
-    return typeof window !== 'undefined' ? window.innerWidth > 1080 : true
-  })
-
-  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
-    // Initialize with actual window size on mount
-    return typeof window !== 'undefined' ? window.innerWidth <= 768 : false
-  })
-
-  React.useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth > 1080)
-      setIsMobile(window.innerWidth <= 768)
-    }
-
-    // Set correct value immediately on mount
-    handleResize()
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  // On mobile, put CTA card first in the row; on desktop/tablet, keep original order
+  const mobileCards = ctaCard ? [ctaCard, ...topThreeCards] : topThreeCards
 
   // Check if we're showing a subset (split mode)
   const isSplitMode = cardIndices && cardIndices.length < cards.length
@@ -337,8 +345,10 @@ export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
           }}
         >
           <AnimatePresence mode="popLayout">
-            {topThreeCards.map((card) => (
-              expandedCards.has(card.id) ? (
+            {(isMobile ? mobileCards : topThreeCards).map((card) => {
+              const isCtaCard = card.variant === 'cta'
+              const isMobileCtaCard = isMobile && isCtaCard
+              return expandedCards.has(card.id) ? (
                 <ExpandedCard
                   key={card.id}
                   card={card}
@@ -351,9 +361,9 @@ export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
                     isMobile
                       ? {
                           flex: '0 0 auto',
-                          minWidth: '243px',
-                          maxWidth: '243px',
-                          width: '243px',
+                          minWidth: isMobileCtaCard ? '115px' : '243px',
+                          maxWidth: isMobileCtaCard ? '115px' : '243px',
+                          width: isMobileCtaCard ? '115px' : '243px',
                         }
                       : {
                           flex: '1 1 0%',
@@ -365,10 +375,13 @@ export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
                     card={card}
                     onClick={() => toggleCard(card.id)}
                     isFlexible={true}
+                    hideShortcut={isMobile}
+                    compactCta={isMobileCtaCard}
+                    mobileLabel={isMobileCtaCard ? 'ADD A TITLE' : undefined}
                   />
                 </div>
               )
-            ))}
+            })}
           </AnimatePresence>
 
           {/* CTA card - Desktop only: inline in same row - OUTSIDE AnimatePresence */}
@@ -400,9 +413,9 @@ export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
           )}
         </div>
 
-        {/* CTA card - Tablet/Mobile only: fixed bottom full width */}
+        {/* CTA card - Tablet only: fixed bottom full width (mobile has CTA in top row) */}
         <AnimatePresence>
-          {!isDesktop && ctaCard && (
+          {!isDesktop && !isMobile && ctaCard && (
             <motion.div
               key="bottom-cta"
               initial={{ y: 100, opacity: 0 }}

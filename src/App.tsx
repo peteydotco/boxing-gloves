@@ -10,6 +10,9 @@ function App() {
   const [isDesktop, setIsDesktop] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth > 1080 : true
   })
+  const [isMobile, setIsMobile] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  })
   const [nycTime, setNycTime] = useState(() => {
     const now = new Date()
     return new Intl.DateTimeFormat('en-US', {
@@ -19,6 +22,7 @@ function App() {
       hour12: true,
     }).format(now)
   })
+  const [colonVisible, setColonVisible] = useState(true)
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -30,6 +34,7 @@ function App() {
 
     const handleResize = () => {
       setIsDesktop(window.innerWidth > 1080)
+      setIsMobile(window.innerWidth < 768)
     }
 
     window.addEventListener('mousemove', handleMouseMove)
@@ -56,8 +61,31 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
+  // Blink colon every second to simulate seconds counting
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setColonVisible(prev => !prev)
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
   // Get AM/PM status for NYC time
   const isAM = nycTime.includes('AM')
+
+  // Format time with blinking colon
+  const formatTimeWithBlinkingColon = (time: string) => {
+    const colonIndex = time.indexOf(':')
+    if (colonIndex === -1) return time
+    const before = time.slice(0, colonIndex)
+    const after = time.slice(colonIndex + 1)
+    return (
+      <>
+        {before}
+        <span style={{ opacity: colonVisible ? 1 : 0 }}>:</span>
+        {after}
+      </>
+    )
+  }
 
   // Calculate distance from center (0 at center, 1 at corners)
   const distanceFromCenter = Math.sqrt(
@@ -130,7 +158,7 @@ function App() {
           pointerEvents: 'auto',
         }}
       >
-        <Scene settings={settings} shadowSettings={shadowSettings} />
+        <Scene settings={settings} shadowSettings={shadowSettings} mousePosition={mousePosition} />
       </div>
 
       {/* Left biographical text - show on tablet and desktop (md+) */}
@@ -186,14 +214,14 @@ function App() {
             textTransform: 'uppercase',
             marginTop: '4px'
           }}>
-            {nycTime} {isAM ? '☀︎' : '⏾'} BROOKLYN, NY
+            {formatTimeWithBlinkingColon(nycTime)} {isAM ? '☀︎' : '⏾'} BROOKLYN, NY
           </p>
         </div>
       )}
 
-      {/* Mobile/Tablet: Logo above CTA card */}
+      {/* Mobile/Tablet: Logo and text - mobile: lower position (where bottom CTA used to be), tablet: above CTA card */}
       {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '124px' }}>
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: isMobile ? '40px' : '124px' }}>
           <PeteLogo />
           <p style={{
             color: 'rgba(0, 0, 0, 0.6)',
@@ -221,7 +249,7 @@ function App() {
             textTransform: 'uppercase',
             marginTop: '4px'
           }}>
-            {nycTime} {isAM ? '☀︎' : '⏾'} BROOKLYN, NY
+            {formatTimeWithBlinkingColon(nycTime)} {isAM ? '☀︎' : '⏾'} BROOKLYN, NY
           </p>
         </div>
       )}
