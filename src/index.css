@@ -39,7 +39,7 @@ body,
 }
 
 body {
-  background: #fafaf8;
+  background: #E0E0E0;
 }
 
 canvas {
@@ -91,4 +91,39 @@ canvas {
     padding-left: 1.5rem; /* Desktop: 24px */
     padding-right: 1.5rem;
   }
+}
+
+/* Background Marquee Animations */
+@keyframes marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-marquee-left {
+  animation: marquee-left 480s linear infinite;
+}
+
+.animate-marquee-right {
+  animation: marquee-right 480s linear infinite;
+}
+
+.animate-marquee-left-slow {
+  animation: marquee-left 800s linear infinite;
+}
+
+.animate-marquee-right-slow {
+  animation: marquee-right 800s linear infinite;
 }

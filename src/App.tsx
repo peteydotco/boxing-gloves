@@ -3,6 +3,7 @@ import { TopCards } from './components/TopCards'
 import { PeteLogo } from './components/PeteLogo'
 import { LeftBioSvg } from './components/LeftBioSvg'
 import { RightBioSvg } from './components/RightBioSvg'
+import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { useState, useEffect } from 'react'
 
 function App() {
@@ -140,10 +141,13 @@ function App() {
       <div
         className="absolute inset-0 z-0 pointer-events-none"
         style={{
-          background: `radial-gradient(${radiusPercent}% ${radiusPercent}% at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, #FFF 0%, #E9E9E9 100%)`,
+          background: `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 30%, rgba(255,255,255,0.5) 55%, #FFFFFF 80%)`,
           transition: 'background 0.1s ease-out',
         }}
       />
+
+      {/* Background Marquee - scrolling text revealed by cursor */}
+      <BackgroundMarquee mousePosition={mousePosition} />
 
       {/* Cards - single container */}
       <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto' }}>
