@@ -115,7 +115,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
   // CTA card: transparent bg by default, white bg on hover
   const isCta = variant === 'cta'
   const bgColor = isCta
-    ? (isHovered ? 'rgba(255,255,255,1)' : styles.bg)
+    ? (isHovered ? 'rgba(255,255,255,0.24)' : styles.bg)
     : styles.bg
   const textColor = styles.textColor
   const badgeStyle = shortcutBadgeStyles[variant]
