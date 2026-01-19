@@ -90,14 +90,6 @@ function App() {
     )
   }
 
-  // Calculate distance from center (0 at center, 1 at corners)
-  const distanceFromCenter = Math.sqrt(
-    Math.pow(mousePosition.x - 0.5, 2) + Math.pow(mousePosition.y - 0.5, 2)
-  ) * Math.sqrt(2) // Normalize to 0-1 range
-
-  // Radius grows as cursor approaches center (inverted distance)
-  const radiusPercent = 30 + (1 - distanceFromCenter) * 40 // 30% to 70% radius
-
   // Hardcoded shadow settings
   const shadowSettings = {
     lightX: 0,

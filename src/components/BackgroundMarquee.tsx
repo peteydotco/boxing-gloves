@@ -2,9 +2,6 @@ interface BackgroundMarqueeProps {
   mousePosition: { x: number; y: number }
 }
 
-// Top line: Names (with bullet separators for visual spacing)
-const topLineContent = 'PETER RODRIGUEZ   ·   PETER COLÓN   ·   PETEY PETE   ·   '
-
 // Bottom line: Locations
 const bottomLineContent = 'OAKLAND  DA BRONX  SAN JUAN  SILICON VALLEY  NEW YORK  '
 
@@ -242,14 +239,9 @@ function MarqueeRow({
   )
 }
 
-export function BackgroundMarquee({ mousePosition }: BackgroundMarqueeProps) {
-  // Convert normalized mouse position to percentage
-  const spotlightX = mousePosition.x * 100
-  const spotlightY = mousePosition.y * 100
-
-  // Spotlight mask - inverted: hides text near cursor, reveals text away from cursor
-  // Core area near cursor is hidden, fades to visible at edges
-  const spotlightMask = `radial-gradient(circle 600px at ${spotlightX}% ${spotlightY}%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.15) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.6) 100%)`
+export function BackgroundMarquee({ mousePosition: _mousePosition }: BackgroundMarqueeProps) {
+  // mousePosition available for future spotlight effects
+  void _mousePosition
 
   return (
     <div

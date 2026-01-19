@@ -2,7 +2,6 @@ import { useRef, useCallback } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
-import { ContactShadows } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Settings } from './Scene'
 
