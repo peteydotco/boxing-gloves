@@ -1,0 +1,158 @@
+import { Scene } from './components/Scene'
+import { TopCards } from './components/TopCards'
+import { useState, useEffect } from 'react'
+
+function App() {
+  // Breakpoint detection for split layout
+  const [isDesktop, setIsDesktop] = useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth > 1080 : true
+  })
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth > 1080)
+    }
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Boxing Gloves preset - hardcoded (removed Leva controls)
+  const settings = {
+    // Ball/Glove appearance
+    color: '#8b0000',
+    metalness: 0.1,
+    roughness: 0.6,
+    envMapIntensity: 0.4,
+    radius: 0.525, // Increased from 0.42 to 0.525 (1.25x larger)
+
+    // Physics
+    mass: 3,
+    restitution: 0.1,
+    friction: 0.3,
+    linearDamping: 1.0,
+    gravity: -60,
+    springStrength: 800,
+
+    // String
+    stringLength: 2.5,
+    stringThickness: 0.018,
+    stringColor: '#d4a574',
+    ropeDamping: 0.92,
+  }
+
+  return (
+    <div className="relative w-full h-full flex flex-col overflow-hidden">
+      {/* Grid/dot background pattern */}
+      <div
+        className="absolute inset-0 pointer-events-none select-none z-0"
+        style={{
+          backgroundImage: `radial-gradient(circle, rgba(0, 0, 0, 0.06) 1px, transparent 1px)`,
+          backgroundSize: '24px 24px',
+        }}
+      />
+
+      {/* PETE watermark background */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
+        <span
+          className="font-black tracking-tighter text-gray-200/40"
+          style={{ fontSize: '25vw', letterSpacing: '-0.05em' }}
+        >
+          PETE
+        </span>
+      </div>
+
+      {/* Cards container - split on desktop, single group on mobile/tablet */}
+      {isDesktop ? (
+        // Desktop: Split layout with z-index layering
+        <div className="absolute top-0 left-0 right-0 horizontal-padding-responsive" style={{ pointerEvents: 'none' }}>
+          <div className="mx-auto flex gap-4 justify-center relative" style={{ pointerEvents: 'none' }}>
+            {/* First two cards - ABOVE 3D scene */}
+            <div className="absolute left-0 top-0 flex-1" style={{ pointerEvents: 'auto', width: 'calc(50% - 0.5rem)', zIndex: 20 }}>
+              <TopCards cardIndices={[0, 1]} />
+            </div>
+
+            {/* Last two cards - BELOW 3D scene */}
+            <div className="absolute right-0 top-0 flex-1" style={{ pointerEvents: 'auto', width: 'calc(50% - 0.5rem)', zIndex: 5 }}>
+              <TopCards cardIndices={[2, 3]} />
+            </div>
+          </div>
+        </div>
+      ) : (
+        // Mobile/Tablet: Original single group layout
+        <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'none' }}>
+          <TopCards />
+        </div>
+      )}
+
+      {/* 3D Scene - positioned in middle layer */}
+      <div
+        className="absolute inset-0"
+        style={{
+          transform: 'translateY(-50px)',
+          transformOrigin: 'top center',
+          zIndex: 10,
+          pointerEvents: 'none',
+        }}
+      >
+        <Scene settings={settings} />
+      </div>
+
+      {/* Pointer event enabler for 3D scene */}
+      <div
+        className="absolute inset-0"
+        style={{
+          zIndex: 15,
+          pointerEvents: 'none',
+        }}
+      >
+        {isDesktop ? (
+          // Desktop: Enable pointer events on left 50% for glove interaction
+          <div
+            className="absolute top-0 left-0 bottom-0"
+            style={{
+              width: '50%',
+              pointerEvents: 'auto',
+              transform: 'translateY(-50px)',
+            }}
+          />
+        ) : (
+          // Mobile/Tablet: Enable pointer events everywhere for glove interaction
+          <div
+            className="absolute inset-0"
+            style={{
+              pointerEvents: 'auto',
+              transform: 'translateY(-50px)',
+            }}
+          />
+        )}
+      </div>
+
+      {/* Middle section with side text */}
+      <div className="flex-1 relative flex" style={{ pointerEvents: 'none' }}>
+        {/* Left side text */}
+        <div className="absolute left-8 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+          <p className="font-mono text-[11px] text-gray-500 leading-relaxed tracking-wide text-left whitespace-pre-line">
+            {`PETER RODRIGUEZ.
+3RD-GEN NUYORICAN DESIGNER.
+PROUDLY BRONX-BRED.
+NOW PLAYING IN BROOKLYN.`}
+          </p>
+        </div>
+
+        {/* Right side text */}
+        <div className="absolute right-8 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+          <p className="font-mono text-[11px] text-gray-500 leading-relaxed tracking-wide text-right whitespace-pre-line">
+            {`CRAFTING WORLD-CLASS
+SITES & APPS.
+FROM MY SCREEN TO YOURS.
+WITH HEART, SINCE 1989.`}
+          </p>
+        </div>
+      </div>
+
+    </div>
+  )
+}
+
+export default App

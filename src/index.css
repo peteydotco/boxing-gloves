@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@theme {
+  --font-pressura: 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
+  --font-pressura-mono: 'GT Pressura Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace;
+
+  --breakpoint-tablet: 810px;
+}
+
+/* GT Pressura Fonts */
+@font-face {
+  font-family: 'GT Pressura Mono';
+  src: url('/fonts/GT-Pressura-Mono-Text.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Pressura';
+  src: url('/fonts/GT-Pressura-Standard-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #fafaf8;
+}
+
+canvas {
+  touch-action: none;
+}
+
+/* Hide scrollbar for horizontal scroll on mobile */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Responsive padding classes */
+/* Mobile/Tablet (≤1080px): 12px padding on all sides */
+/* Desktop (>1080px): 24px padding on all sides */
+
+.padding-responsive {
+  padding: 0.75rem; /* Mobile/Tablet default: 12px all sides */
+}
+
+@media (min-width: 1081px) {
+  .padding-responsive {
+    padding: 1.5rem; /* Desktop: 24px all sides */
+  }
+}
+
+/* Legacy classes for backward compatibility */
+.top-padding-responsive {
+  padding-top: 0.75rem; /* Mobile/Tablet default: 12px */
+}
+
+@media (min-width: 1081px) {
+  .top-padding-responsive {
+    padding-top: 1.5rem; /* Desktop: 24px */
+  }
+}
+
+.horizontal-padding-responsive {
+  padding-left: 0.75rem; /* Mobile/Tablet default: 12px */
+  padding-right: 0.75rem;
+}
+
+@media (min-width: 1081px) {
+  .horizontal-padding-responsive {
+    padding-left: 1.5rem; /* Desktop: 24px */
+    padding-right: 1.5rem;
+  }
+}
