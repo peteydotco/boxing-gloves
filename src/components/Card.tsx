@@ -1,6 +1,6 @@
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
-import { FaCirclePlus } from 'react-icons/fa6'
+import { SlPlus } from 'react-icons/sl'
 
 interface CardProps {
   id: string
@@ -153,6 +153,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
         rotate: isHovered ? 0 : (hasInitialized ? tiltAngle : 0),
         scale: isHovered ? 1.02 : 1,
       }}
+      whileTap={{ scale: 0.97 }}
       transition={{
         type: 'spring',
         stiffness: 200,
@@ -232,7 +233,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
           <div className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-center uppercase">
             {label}
           </div>
-          <FaCirclePlus className="w-6 h-6 text-gray-500" />
+          <SlPlus className="w-6 h-6" style={{ color: textColor }} />
         </div>
       ) : (
         /* Standard layout */
@@ -265,7 +266,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
           <div className="text-[18px] tracking-[-0.015em] font-pressura font-medium leading-normal text-left w-full uppercase">
             {variant === 'cta' ? (
               <span className="flex items-center gap-3">
-                <FaCirclePlus className="w-6 h-6 text-gray-500" />
+                <SlPlus className="w-6 h-6" style={{ color: textColor }} />
                 {title}
               </span>
             ) : (

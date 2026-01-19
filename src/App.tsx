@@ -69,8 +69,10 @@ function App() {
     return () => clearInterval(interval)
   }, [])
 
-  // Get AM/PM status for NYC time
-  const isAM = nycTime.includes('AM')
+  // Get hour for NYC time to determine sun/moon (5AM-5:59PM = sun, 6PM-4:59AM = moon)
+  const nycHour = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false })
+  const hourNum = parseInt(nycHour, 10)
+  const isDaylight = hourNum >= 5 && hourNum <= 17 // 5:00 AM to 5:59 PM
 
   // Format time with blinking colon
   const formatTimeWithBlinkingColon = (time: string) => {
@@ -214,7 +216,7 @@ function App() {
             textTransform: 'uppercase',
             marginTop: '4px'
           }}>
-            {formatTimeWithBlinkingColon(nycTime)} {isAM ? '☀︎' : '⏾'} BROOKLYN, NY
+            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
           </p>
         </div>
       )}
@@ -249,7 +251,7 @@ function App() {
             textTransform: 'uppercase',
             marginTop: '4px'
           }}>
-            {formatTimeWithBlinkingColon(nycTime)} {isAM ? '☀︎' : '⏾'} BROOKLYN, NY
+            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
           </p>
         </div>
       )}
