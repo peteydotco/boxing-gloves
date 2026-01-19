@@ -130,10 +130,9 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
 
   const defaultBorderColor = borderColors[variant]
 
-  // Spotlight border gradient - light near cursor, dark far from cursor
-  // Incorporates card bg color for color-matched effect
+  // Spotlight border gradient - light near cursor, subtle dark far from cursor
   const spotlightGradient = isHovered
-    ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(200, 210, 230, 0.7) 20%, ${defaultBorderColor} 50%, rgba(40, 45, 55, 0.7) 100%)`
+    ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(200, 210, 230, 0.8) 15%, ${defaultBorderColor} 35%, rgba(140, 140, 150, 0.3) 55%, rgba(120, 120, 130, 0.35) 100%)`
     : 'none'
 
   // Border width for the inner stroke effect
@@ -148,7 +147,6 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
         maxWidth: '100%',
         rotateX: springRotateX,
         rotateY: springRotateY,
-        isolation: 'isolate', // Create stacking context for blend modes
       }}
       initial={{ rotate: 0, scale: 1 }}
       animate={{
@@ -169,20 +167,25 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
         onMouseLeave={handleMouseLeave}
         className="flex items-start w-full rounded-[12px] relative cursor-pointer"
         style={{
-          padding: '12px 16px 20px 20px',
+          padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px',
           backgroundColor: bgColor,
           color: textColor,
           pointerEvents: 'auto',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
           transition: 'background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease',
           boxShadow: `inset 0 0 0 ${borderWidth}px ${defaultBorderColor}`,
         }}
       >
-        {/* Spotlight gradient inner stroke - only on hover */}
+        {/* Spotlight effects on hover */}
         {isHovered && (
           <>
-            {/* Main spotlight layer */}
+            {/* Fill spotlight - subtle light following cursor */}
+            <div
+              className="absolute inset-0 rounded-[12px] pointer-events-none"
+              style={{
+                background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%)`,
+              }}
+            />
+            {/* Border spotlight layer */}
             <div
               className="absolute inset-0 rounded-[12px] pointer-events-none"
               style={{
@@ -251,7 +254,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
                   transition: 'background-color 0.3s ease',
                 }}
               >
-                <div className="text-[12px] uppercase font-pressura-mono leading-[100%]">
+                <div className="text-[12px] uppercase font-pressura-mono leading-[100%]" style={{ position: 'relative', top: '-1px' }}>
                   {shortcut}
                 </div>
               </div>
@@ -259,7 +262,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
           </div>
 
           {/* Second row: Title - full width */}
-          <div className="text-[18px] tracking-[-0.02em] font-pressura font-medium leading-normal text-left w-full uppercase">
+          <div className="text-[18px] tracking-[-0.015em] font-pressura font-medium leading-normal text-left w-full uppercase">
             {variant === 'cta' ? (
               <span className="flex items-center gap-3">
                 <FaCirclePlus className="w-6 h-6 text-gray-500" />
