@@ -2,8 +2,8 @@ interface BackgroundMarqueeProps {
   mousePosition: { x: number; y: number }
 }
 
-// Bottom line: Locations
-const bottomLineContent = 'OAKLAND  DA BRONX  SAN JUAN  SILICON VALLEY  NEW YORK  '
+// Locations content
+const locationsContent = 'OAKLAND  DA BRONX  SAN JUAN  SILICON VALLEY  NEW YORK  '
 
 // Icon components for the middle marquee row
 const RoyalCaribbeanIcon = () => (
@@ -104,6 +104,7 @@ const AgencyIcons = [
 ]
 
 // Single marquee row component for reuse
+// Heights use vh units so the 4 rows always total 200vh (50vh overflow top & bottom when centered)
 function MarqueeRow({
   content,
   direction,
@@ -119,17 +120,22 @@ function MarqueeRow({
   fontType?: 'dotmatrix' | 'mono' | 'gothic'
   startOffset?: number // Percentage offset for animation start position (0-50)
 }) {
+  // Row heights in vh - tuned for consistent spacing and ~50% clipping top/bottom
+  // Row 1 (Clients): 50vh icons, positioned so ~50% clips at top
+  // Row 2 (Locations): 38vh text - slightly larger than before
+  // Row 3 (Agencies): 32vh icons - slightly smaller than before
+  // Row 4 (Locations): 38vh text, positioned so ~50% clips at bottom
+
   if (isIcons || isAgencies) {
     const icons = isAgencies ? AgencyIcons : MarqueeIcons
     const repetitions = 6
 
-    // Agency icons are larger
-    // Mobile/Tablet (≤1080px): 40% larger base, Desktop: normal
-    // Agencies: 245px (175*1.4) min -> 480px max
-    // Clients: 175px (125*1.4) min -> 350px max
-    const iconHeight = isAgencies
-      ? 'clamp(245px, 38vw, 480px)'
-      : 'clamp(175px, 27.5vw, 350px)'
+    // Clients row larger, agencies row smaller
+    const rowHeight = isAgencies ? '32vh' : '50vh'
+    const iconHeight = isAgencies ? '28vh' : '40vh'
+    // Agencies: slight adjustment - a bit more space above, bit less below
+    const rowMarginTop = isAgencies ? '-2vh' : '-8vh'
+    const rowMarginBottom = isAgencies ? '-6vh' : '-8vh'
 
     // Generate icons
     const renderIconSet = (keyPrefix: string) => (
@@ -142,7 +148,7 @@ function MarqueeRow({
               display: 'inline-flex',
               alignItems: 'center',
               flexShrink: 0,
-              paddingRight: 'clamp(28px, 4vw, 50px)', // 40% larger min padding
+              paddingRight: '3vh',
             }}
           >
             <Icon />
@@ -151,34 +157,26 @@ function MarqueeRow({
       )
     )
 
-    // Custom margins for each row type - proportionally looser on mobile/tablet
-    // Agencies (McCann, Publicis, etc): tighter spacing
-    // Clients (Apple, Squarespace, etc): standard spacing
-    // Mobile/Tablet margins are ~30% looser (less negative) to account for larger elements
-    const rowMarginTop = isAgencies
-      ? 'clamp(-50px, -14vw, -175px)'  // Looser on mobile: -50px vs -70px
-      : 'clamp(-7px, -2vw, -25px)'     // Looser on mobile: -7px vs -10px
-    const rowMarginBottom = isAgencies
-      ? 'clamp(-50px, -14vw, -175px)'  // Looser on mobile
-      : 'clamp(-7px, -2vw, -25px)'     // Looser on mobile
-
     return (
-      <div className="relative w-full overflow-hidden" style={{ height: iconHeight, marginTop: rowMarginTop, marginBottom: rowMarginBottom }}>
+      <div
+        className="relative w-full overflow-hidden flex items-center"
+        style={{ height: rowHeight, marginTop: rowMarginTop, marginBottom: rowMarginBottom }}
+      >
         <div
           className={`inline-flex whitespace-nowrap items-center ${direction === 'left' ? 'animate-marquee-left' : 'animate-marquee-right'}`}
           style={{
             color: '#FFFFFF',
             opacity: 0.35,
             lineHeight: 1,
-            height: '100%',
+            height: iconHeight,
           }}
         >
           {/* First half */}
-          <span className="inline-flex items-center">
+          <span className="inline-flex items-center" style={{ height: '100%' }}>
             {renderIconSet('a')}
           </span>
           {/* Second half - identical for seamless loop */}
-          <span className="inline-flex items-center">
+          <span className="inline-flex items-center" style={{ height: '100%' }}>
             {renderIconSet('b')}
           </span>
         </div>
@@ -186,25 +184,27 @@ function MarqueeRow({
     )
   }
 
-  // Mobile/Tablet (≤1080px): 40% larger base sizes
-  // 125px * 1.4 = 175px, 140px * 1.4 = 196px, 150px * 1.4 = 210px
+  // Text rows - 38vh height (slightly larger than before)
+  const rowHeight = '38vh'
+  const rowMargin = '-6vh'
+
   const fontStyles = fontType === 'dotmatrix'
     ? {
         fontFamily: '"DotGothic16", monospace',
-        fontSize: 'clamp(175px, 27.5vw, 350px)',  // 40% larger min
+        fontSize: '34vh',
         fontWeight: 400,
         letterSpacing: '-0.02em',
       }
     : fontType === 'gothic'
     ? {
         fontFamily: 'GT Pressura, sans-serif',
-        fontSize: 'clamp(196px, 30vw, 380px)',    // 40% larger min
+        fontSize: '36vh',
         fontWeight: 500,
         letterSpacing: '-0.09em',
       }
     : {
         fontFamily: 'GT Pressura Mono, monospace',
-        fontSize: 'clamp(175px, 27.5vw, 350px)',  // 40% larger min
+        fontSize: '34vh',
         fontWeight: 350,
         letterSpacing: '-0.06em',
       }
@@ -212,14 +212,14 @@ function MarqueeRow({
   // Create the repeated content string
   const repeatedContent = content.repeat(8)
 
-  // Row height and margins - 40% larger on mobile/tablet, proportionally looser spacing
-  // 150px * 1.4 = 210px, margins ~30% looser
   // Apply startOffset as animation-delay (in seconds) to desync animations
-  // Animation is 800s, so offset of 200 = 200s delay = 25% through the animation
   const animationDelay = startOffset > 0 ? `-${startOffset}s` : '0s'
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: 'clamp(210px, 31.25vw, 375px)', marginTop: 'clamp(-7px, -2vw, -25px)', marginBottom: 'clamp(-7px, -2vw, -25px)' }}>
+    <div
+      className="relative w-full overflow-hidden flex items-center"
+      style={{ height: rowHeight, marginTop: rowMargin, marginBottom: rowMargin }}
+    >
       <div
         className={`inline-flex whitespace-nowrap ${direction === 'left' ? 'animate-marquee-left-slow' : 'animate-marquee-right-slow'}`}
         style={{
@@ -243,61 +243,49 @@ export function BackgroundMarquee({ mousePosition: _mousePosition }: BackgroundM
   // mousePosition available for future spotlight effects
   void _mousePosition
 
+  // 4 rows using vh units, centered vertically
+  // When centered, first row is ~50% clipped at top, last row ~50% clipped at bottom
+  // This maintains consistent proportions at any viewport height
+
   return (
     <div
       className="absolute inset-0 overflow-hidden pointer-events-none select-none"
       style={{ zIndex: 1 }}
     >
-      {/* Container for repeating marquee pattern - fills entire viewport */}
+      {/* Container for 4-row marquee pattern - centered vertically */}
       <div
-        className="absolute inset-0 flex flex-col justify-start items-center"
+        className="absolute left-0 right-0 flex flex-col justify-center"
         style={{
-          marginTop: '-150px',
+          top: '50%',
+          transform: 'translateY(-50%)',
         }}
       >
-        {/* Repeat the 4-line pattern multiple times to fill vertical space */}
-        {/* With even number of rows, we flip direction each group for proper alternation */}
-        {[...Array(5)].map((_, groupIndex) => {
-          // Flip the starting direction for odd groups
-          const flip = groupIndex % 2 === 1
-          const dir = (rowOffset: number) => {
-            const isEvenRow = rowOffset % 2 === 0
-            return (isEvenRow !== flip) ? 'right' : 'left'
-          }
-          return (
-            // Group margin: proportionally looser on mobile/tablet (~30% less negative)
-            <div key={`group-${groupIndex}`} className="flex flex-col w-full shrink-0" style={{ marginTop: groupIndex > 0 ? 'clamp(-35px, -10vw, -125px)' : 0 }}>
-              {/* Icons line */}
-              <MarqueeRow
-                content=""
-                direction={dir(0)}
-                isIcons
-              />
-              {/* Locations line - offset to desync from other locations rows */}
-              {/* 400s delay on 800s animation = starts 50% through */}
-              <MarqueeRow
-                content={bottomLineContent}
-                direction={dir(1)}
-                fontType="dotmatrix"
-                startOffset={400}
-              />
-              {/* Agencies line */}
-              <MarqueeRow
-                content=""
-                direction={dir(2)}
-                isAgencies
-              />
-              {/* Locations line (repeat) - offset to desync from first locations row */}
-              {/* 200s delay on 800s animation = starts 25% through */}
-              <MarqueeRow
-                content={bottomLineContent}
-                direction={dir(3)}
-                fontType="dotmatrix"
-                startOffset={200}
-              />
-            </div>
-          )
-        })}
+        {/* Row 1: Client icons */}
+        <MarqueeRow
+          content=""
+          direction="right"
+          isIcons
+        />
+        {/* Row 2: Locations */}
+        <MarqueeRow
+          content={locationsContent}
+          direction="left"
+          fontType="dotmatrix"
+          startOffset={400}
+        />
+        {/* Row 3: Agency icons */}
+        <MarqueeRow
+          content=""
+          direction="right"
+          isAgencies
+        />
+        {/* Row 4: Locations */}
+        <MarqueeRow
+          content={locationsContent}
+          direction="left"
+          fontType="dotmatrix"
+          startOffset={200}
+        />
       </div>
     </div>
   )
