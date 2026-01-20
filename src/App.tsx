@@ -6,6 +6,20 @@ import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { useState, useEffect, useRef } from 'react'
 
+// Theme presets for quick toggling
+const themes = {
+  light: {
+    bgColor: '#FFFFFF',
+    spotlightOuter: 'rgba(224,224,224,0.65)',
+    marqueeColor: '#E0E0E0',
+  },
+  dark: {
+    bgColor: '#E0E0E0',
+    spotlightOuter: 'rgba(255,255,255,0.65)',
+    marqueeColor: '#FFFFFF',
+  },
+}
+
 function App() {
   // Ref for the main container - used as event source for Canvas
   // This allows mouse events to be captured even when over TopCards
@@ -14,8 +28,11 @@ function App() {
   // mousePosition state is only for 2D UI elements (spotlight, marquee)
   // Scene reads from mousePositionRef directly to avoid re-renders
   const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 })
+  const [isXLDesktop, setIsXLDesktop] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth > 1280 : true
+  })
   const [isDesktop, setIsDesktop] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth > 1080 : true
+    return typeof window !== 'undefined' ? window.innerWidth >= 1024 && window.innerWidth <= 1280 : false
   })
   const [isMobile, setIsMobile] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 768 : false
@@ -30,6 +47,8 @@ function App() {
     }).format(now)
   })
   const [colonVisible, setColonVisible] = useState(true)
+  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light')
+  const theme = themes[themeMode]
 
   useEffect(() => {
     // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
@@ -54,7 +73,8 @@ function App() {
     }
 
     const handleResize = () => {
-      setIsDesktop(window.innerWidth > 1080)
+      setIsXLDesktop(window.innerWidth > 1280)
+      setIsDesktop(window.innerWidth >= 1024 && window.innerWidth <= 1280)
       setIsMobile(window.innerWidth < 768)
     }
 
@@ -116,7 +136,7 @@ function App() {
     lightX: 0,
     lightY: 2.5,
     lightZ: 10,
-    shadowMapSize: 2048,
+    shadowMapSize: 1024,
     shadowCameraBounds: 6,
     shadowCameraFar: 30,
     shadowRadius: 4,
@@ -149,18 +169,24 @@ function App() {
   }
 
   return (
-    <div ref={containerRef} className="relative w-full h-full flex flex-col overflow-hidden">
+    <div
+      ref={containerRef}
+      className="relative w-full h-full flex flex-col overflow-hidden"
+      style={{ backgroundColor: theme.bgColor }}
+    >
       {/* Background Marquee - scrolling text revealed by cursor */}
-      <BackgroundMarquee mousePosition={mousePosition} />
+      <BackgroundMarquee mousePosition={mousePosition} marqueeFill={theme.marqueeColor} />
 
-      {/* Radial gradient spotlight overlay - covers marquee, reveals center */}
-      <div
-        className="absolute inset-0 z-[5] pointer-events-none"
-        style={{
-          background: `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, rgba(255,255,255,0.65) 50%)`,
-          transition: 'background 0.1s ease-out',
-        }}
-      />
+      {/* Radial gradient spotlight overlay - covers marquee, reveals center (desktop only) */}
+      {!isMobile && (
+        <div
+          className="absolute inset-0 z-[5] pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
+            transition: 'background 0.1s ease-out',
+          }}
+        />
+      )}
 
       {/* Cards - single container */}
       <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto' }}>
@@ -179,32 +205,48 @@ function App() {
       </div>
 
       {/* Left biographical text - show on tablet and desktop (md+) */}
+      {/* XL Desktop (>1280px): flanks gloves at vertical center */}
+      {/* Desktop (1024-1280px): flanks Pete logo at bottom of viewport */}
+      {/* Tablet (<1024px): positioned at bottom */}
       <div
         className="absolute z-20 pointer-events-none select-none hidden md:block"
         style={{
           left: '5%',
-          bottom: isDesktop ? 'calc(8vh - 41px)' : '140px',
+          ...(isXLDesktop
+            ? { top: '50%', transform: 'translateY(-50%)' }
+            : isDesktop
+              ? { bottom: 'calc(8vh - 41px)' }
+              : { bottom: '146px' }
+          ),
         }}
       >
         <LeftBioSvg />
       </div>
 
       {/* Right biographical text - show on tablet and desktop (md+) */}
+      {/* XL Desktop (>1280px): flanks gloves at vertical center */}
+      {/* Desktop (1024-1280px): flanks Pete logo at bottom of viewport */}
+      {/* Tablet (<1024px): positioned at bottom */}
       <div
         className="absolute z-20 pointer-events-none select-none hidden md:block"
         style={{
           right: '5%',
-          bottom: isDesktop ? 'calc(8vh - 41px)' : '140px',
           maxWidth: '200px',
+          ...(isXLDesktop
+            ? { top: '50%', transform: 'translateY(-50%)' }
+            : isDesktop
+              ? { bottom: 'calc(8vh - 41px)' }
+              : { bottom: '146px' }
+          ),
         }}
       >
         <RightBioSvg />
       </div>
 
-      {/* Pete.co Logo - Desktop only (1080px+): positioned at bottom */}
+      {/* Pete.co Logo - Desktop only (1024-1280px): positioned at bottom of viewport, bottom-aligned with Bio SVGs */}
       {isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: 'calc(8vh - 65px)' }}>
-          <PeteLogo />
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: 'calc(8vh - 59px)' }}>
+          <PeteLogo onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')} />
           <p style={{
             color: 'rgba(0, 0, 0, 0.6)',
             textAlign: 'center',
@@ -236,10 +278,13 @@ function App() {
         </div>
       )}
 
-      {/* Mobile/Tablet: Logo and text - mobile: lower position (where bottom CTA used to be), tablet: above CTA card */}
+      {/* Mobile/Tablet/XL Desktop: Logo and text */}
+      {/* XL Desktop (>1280px): bottom of viewport like Desktop */}
+      {/* Tablet (768-1024px): above CTA card */}
+      {/* Mobile (<768px): lower position */}
       {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: isMobile ? '40px' : '124px' }}>
-          <PeteLogo />
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: isMobile ? '40px' : isXLDesktop ? 'calc(8vh - 59px)' : '130px' }}>
+          <PeteLogo onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')} />
           <p style={{
             color: 'rgba(0, 0, 0, 0.6)',
             textAlign: 'center',

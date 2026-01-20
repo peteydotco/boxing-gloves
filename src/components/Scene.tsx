@@ -283,7 +283,7 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
     : [0, 2.5, 10]
   const shadowMapSize: [number, number] = shadowSettings
     ? [shadowSettings.shadowMapSize, shadowSettings.shadowMapSize]
-    : [2048, 2048]
+    : [1024, 1024]
   const cameraBounds = shadowSettings?.shadowCameraBounds ?? 10
   const cameraFar = shadowSettings?.shadowCameraFar ?? 30
   const shadowRadius = shadowSettings?.shadowRadius ?? 20

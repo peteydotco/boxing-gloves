@@ -12,14 +12,14 @@ interface CardData {
 const cards: CardData[] = [
   {
     id: 'sva',
-    label: 'IXD PROFESSOR AT',
+    label: 'ADJUNCT PROFESSOR FOR',
     title: 'SCHOOL OF VISUAL ARTS',
     shortcut: '1',
     variant: 'blue',
   },
   {
     id: 'squarespace',
-    label: 'PRODUCT DESIGNER AT',
+    label: 'STAFF DESIGNER WITH',
     title: 'SQUARESPACE',
     shortcut: '2',
     variant: 'white',
@@ -33,8 +33,8 @@ const cards: CardData[] = [
   },
   {
     id: 'cta',
-    label: 'ADD NEW TITLE',
-    title: 'REQUEST A CHAT',
+    label: '< EMPTY >',
+    title: 'ADD NEW TITLE',
     shortcut: '⌘ K',
     variant: 'cta',
   },
@@ -58,18 +58,21 @@ function CollapsedCard({ card, onClick, isBottomFixed, isFlexible, hideShortcut,
 }
 
 export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
+  // Desktop (>=1024px): all 4 cards in top row
+  // Tablet (768-1024px): 3 cards top, CTA fixed bottom
+  // Mobile (<768px): CTA in top row with 3 cards
   const [isDesktop, setIsDesktop] = React.useState<boolean>(() => {
-    return typeof window !== 'undefined' ? window.innerWidth > 1080 : true
+    return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
   })
 
   const [isMobile, setIsMobile] = React.useState<boolean>(() => {
-    return typeof window !== 'undefined' ? window.innerWidth <= 768 : false
+    return typeof window !== 'undefined' ? window.innerWidth < 768 : false
   })
 
   React.useEffect(() => {
     const handleResize = () => {
-      setIsDesktop(window.innerWidth > 1080)
-      setIsMobile(window.innerWidth <= 768)
+      setIsDesktop(window.innerWidth >= 1024)
+      setIsMobile(window.innerWidth < 768)
     }
 
     handleResize()
@@ -141,7 +144,7 @@ export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
             )
           })}
 
-          {/* CTA card - Desktop only: inline in same row */}
+          {/* CTA card - XL Desktop only: inline in same row */}
           {isDesktop && ctaCard && (
             <div
               style={{
@@ -157,7 +160,7 @@ export function TopCards({ cardIndices }: { cardIndices?: number[] } = {}) {
           )}
         </div>
 
-        {/* CTA card - Tablet only: fixed bottom full width (mobile has CTA in top row) */}
+        {/* CTA card - Desktop/Tablet only: fixed bottom full width (mobile has CTA in top row) */}
         {!isDesktop && !isMobile && ctaCard && (
           <div
             className="fixed bottom-0 left-0 right-0 padding-responsive z-20"

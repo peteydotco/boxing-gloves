@@ -1,9 +1,78 @@
-import { useRef, useCallback, useMemo } from 'react'
+import { useRef, useCallback, useMemo, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
 import type { Settings } from './Scene'
+
+// Rope segments for smooth curve
+const ROPE_SEGMENTS = 32
+const ROPE_RADIAL_SEGMENTS = 8
+
+// Helper to create a reusable tube geometry that can be updated in place
+// Takes initial anchor and glove positions to create geometry at the right location from the start
+function createRopeGeometry(
+  thickness: number,
+  anchorPos?: THREE.Vector3,
+  glovePos?: THREE.Vector3
+): THREE.TubeGeometry {
+  // If positions provided, create geometry at correct initial location
+  // Otherwise create a minimal geometry that will be updated on first frame
+  const start = anchorPos || new THREE.Vector3(0, 3.2, 0)
+  const end = glovePos || new THREE.Vector3(0, 0.7, 0)
+  const mid = new THREE.Vector3().lerpVectors(start, end, 0.5)
+
+  const curve = new THREE.CatmullRomCurve3([start, mid, end])
+  return new THREE.TubeGeometry(curve, ROPE_SEGMENTS, thickness, ROPE_RADIAL_SEGMENTS, false)
+}
+
+// Update tube geometry vertices in place without creating new geometry
+function updateRopeGeometry(
+  geometry: THREE.TubeGeometry,
+  points: THREE.Vector3[],
+  thickness: number
+): void {
+  const curve = new THREE.CatmullRomCurve3(points)
+  const tubularSegments = ROPE_SEGMENTS
+  const radialSegments = ROPE_RADIAL_SEGMENTS
+
+  const frames = curve.computeFrenetFrames(tubularSegments, false)
+  const position = geometry.attributes.position
+
+  const vertex = new THREE.Vector3()
+  const normal = new THREE.Vector3()
+  const P = new THREE.Vector3()
+
+  // Generate vertices
+  for (let i = 0; i <= tubularSegments; i++) {
+    const u = i / tubularSegments
+    curve.getPointAt(u, P)
+
+    const N = frames.normals[i]
+    const B = frames.binormals[i]
+
+    for (let j = 0; j <= radialSegments; j++) {
+      const v = (j / radialSegments) * Math.PI * 2
+      const sin = Math.sin(v)
+      const cos = -Math.cos(v)
+
+      normal.x = cos * N.x + sin * B.x
+      normal.y = cos * N.y + sin * B.y
+      normal.z = cos * N.z + sin * B.z
+      normal.normalize()
+
+      vertex.x = P.x + thickness * normal.x
+      vertex.y = P.y + thickness * normal.y
+      vertex.z = P.z + thickness * normal.z
+
+      const index = i * (radialSegments + 1) + j
+      position.setXYZ(index, vertex.x, vertex.y, vertex.z)
+    }
+  }
+
+  position.needsUpdate = true
+  geometry.computeVertexNormals()
+}
 
 // Fixed configuration
 const ANCHOR_POSITION: [number, number, number] = [0, 3.2, 0] // Single shared origin - raised to extend ropes off viewport
@@ -57,6 +126,35 @@ function DraggableGloveWithRope({
 
   // Determine if this is the left glove (for rope attachment) - computed once
   const isLeftGlove = useMemo(() => anchorOffset[0] < 0, [anchorOffset])
+
+  // Create rope geometry once and reuse it
+  // Pass initial positions so the rope is visible immediately (not at origin)
+  const initialGlovePos = useMemo(() => new THREE.Vector3(
+    anchorPos.x,
+    anchorPos.y - settings.stringLength,
+    anchorPos.z
+  ), [anchorPos, settings.stringLength])
+
+  const ropeGeometry = useMemo(
+    () => createRopeGeometry(settings.stringThickness, anchorPos, initialGlovePos),
+    [settings.stringThickness, anchorPos, initialGlovePos]
+  )
+
+  // Reusable array for rope curve points (avoid allocation in useFrame)
+  const ropePoints = useRef<THREE.Vector3[]>([
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+  ])
+
+  // Cleanup geometry on unmount
+  useEffect(() => {
+    return () => {
+      ropeGeometry.dispose()
+    }
+  }, [ropeGeometry])
 
   // Start gloves above the anchor point for drop-in animation
   const gloveStartPosition = useMemo((): [number, number, number] => [
@@ -219,12 +317,16 @@ function DraggableGloveWithRope({
     t.threeQuarter.copy(anchorPos).lerp(t.gloveAttach, 0.75)
     t.threeQuarter.y -= sag * 0.5
 
-    // Note: CatmullRomCurve3 and TubeGeometry still allocate, but this is unavoidable
-    // without a custom rope implementation. The vector reuse above handles the bulk of allocations.
-    const curve = new THREE.CatmullRomCurve3([anchorPos, t.quarter, t.mid, t.threeQuarter, t.gloveAttach])
-    const newGeometry = new THREE.TubeGeometry(curve, 32, settings.stringThickness, 8, false)
-    tubeRef.current.geometry.dispose()
-    tubeRef.current.geometry = newGeometry
+    // Update rope points in place (no allocation)
+    const pts = ropePoints.current
+    pts[0].copy(anchorPos)
+    pts[1].copy(t.quarter)
+    pts[2].copy(t.mid)
+    pts[3].copy(t.threeQuarter)
+    pts[4].copy(t.gloveAttach)
+
+    // Update geometry vertices in place (no new geometry allocation)
+    updateRopeGeometry(ropeGeometry, pts, settings.stringThickness)
   })
 
   const handlePointerDown = useCallback((e: any) => {
@@ -419,12 +521,8 @@ function DraggableGloveWithRope({
         </mesh>
       </group>
 
-      {/* Rope visual */}
-      <mesh ref={tubeRef}>
-        <tubeGeometry args={[new THREE.CatmullRomCurve3([
-          new THREE.Vector3(0, 0, 0),
-          new THREE.Vector3(0, -1, 0),
-        ]), 32, settings.stringThickness, 8, false]} />
+      {/* Rope visual - uses memoized geometry that's updated in place */}
+      <mesh ref={tubeRef} geometry={ropeGeometry}>
         <meshStandardMaterial color="#000000" roughness={0.4} metalness={0.1} />
       </mesh>
     </group>

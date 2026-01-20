@@ -1,5 +1,6 @@
 interface BackgroundMarqueeProps {
   mousePosition: { x: number; y: number }
+  marqueeFill?: string
 }
 
 // Locations content
@@ -111,12 +112,14 @@ function MarqueeRow({
   isIcons = false,
   isAgencies = false,
   fontType = 'mono',
-  startOffset = 0
+  startOffset = 0,
+  fillColor = '#E0E0E0',
 }: {
   content: string
   direction: 'left' | 'right'
   isIcons?: boolean
   isAgencies?: boolean
+  fillColor?: string
   fontType?: 'dotmatrix' | 'mono' | 'gothic'
   startOffset?: number // Percentage offset for animation start position (0-50)
 }) {
@@ -165,7 +168,7 @@ function MarqueeRow({
         <div
           className={`inline-flex whitespace-nowrap items-center ${direction === 'left' ? 'animate-marquee-left' : 'animate-marquee-right'}`}
           style={{
-            color: '#FFFFFF',
+            color: fillColor,
             opacity: 0.35,
             lineHeight: 1,
             height: iconHeight,
@@ -226,7 +229,7 @@ function MarqueeRow({
           ...fontStyles,
           animationDelay,
           textTransform: 'uppercase',
-          color: '#FFFFFF',
+          color: fillColor,
           opacity: 0.35,
           lineHeight: 1,
         }}
@@ -239,7 +242,7 @@ function MarqueeRow({
   )
 }
 
-export function BackgroundMarquee({ mousePosition: _mousePosition }: BackgroundMarqueeProps) {
+export function BackgroundMarquee({ mousePosition: _mousePosition, marqueeFill = '#E0E0E0' }: BackgroundMarqueeProps) {
   // mousePosition available for future spotlight effects
   void _mousePosition
 
@@ -265,6 +268,7 @@ export function BackgroundMarquee({ mousePosition: _mousePosition }: BackgroundM
           content=""
           direction="right"
           isIcons
+          fillColor={marqueeFill}
         />
         {/* Row 2: Locations */}
         <MarqueeRow
@@ -272,12 +276,14 @@ export function BackgroundMarquee({ mousePosition: _mousePosition }: BackgroundM
           direction="left"
           fontType="dotmatrix"
           startOffset={400}
+          fillColor={marqueeFill}
         />
         {/* Row 3: Agency icons */}
         <MarqueeRow
           content=""
           direction="right"
           isAgencies
+          fillColor={marqueeFill}
         />
         {/* Row 4: Locations */}
         <MarqueeRow
@@ -285,6 +291,7 @@ export function BackgroundMarquee({ mousePosition: _mousePosition }: BackgroundM
           direction="left"
           fontType="dotmatrix"
           startOffset={200}
+          fillColor={marqueeFill}
         />
       </div>
     </div>

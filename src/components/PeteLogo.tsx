@@ -1,7 +1,11 @@
 import { useState, useRef } from 'react'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 
-export function PeteLogo() {
+interface PeteLogoProps {
+  onClick?: () => void
+}
+
+export function PeteLogo({ onClick }: PeteLogoProps) {
   const [isHovered, setIsHovered] = useState(false)
   const logoRef = useRef<HTMLDivElement>(null)
 
@@ -43,6 +47,7 @@ export function PeteLogo() {
   return (
     <motion.div
       ref={logoRef}
+      onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
@@ -54,10 +59,12 @@ export function PeteLogo() {
       animate={{
         scale: isHovered ? 1.03 : 1,
       }}
+      whileTap={{ scale: 0.98 }}
       transition={{
         type: 'spring',
         stiffness: 200,
-        damping: 15,
+        damping: 20,
+        mass: 0.8,
       }}
     >
       <svg width="124" height="42" viewBox="0 0 124 42" fill="none" xmlns="http://www.w3.org/2000/svg">
