@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
@@ -6,7 +6,8 @@ import * as THREE from 'three'
 import type { Settings } from './Scene'
 
 // Fixed configuration
-const ANCHOR_POSITION: [number, number, number] = [0, 2.8, 0] // Single shared origin
+const ANCHOR_POSITION: [number, number, number] = [0, 3.2, 0] // Single shared origin - raised to extend ropes off viewport
+
 
 // Draggable glove with soft string constraint
 function DraggableGloveWithRope({
@@ -27,56 +28,118 @@ function DraggableGloveWithRope({
   const lastPosition = useRef(new THREE.Vector3())
   const hasDropped = useRef(false)
 
-  // This glove's anchor point
-  const anchorPos = new THREE.Vector3(
+  // Reusable Vector3 objects to avoid garbage collection in useFrame
+  const tempVec = useRef({
+    gloveCenter: new THREE.Vector3(),
+    toGlove: new THREE.Vector3(),
+    direction: new THREE.Vector3(),
+    constrainedPos: new THREE.Vector3(),
+    naturalPos: new THREE.Vector3(),
+    toNatural: new THREE.Vector3(),
+    restoreForce: new THREE.Vector3(),
+    worldDown: new THREE.Vector3(0, -1, 0),
+    gloveDown: new THREE.Vector3(),
+    torqueAxis: new THREE.Vector3(),
+    gloveAttach: new THREE.Vector3(),
+    attachOffset: new THREE.Vector3(), // Local offset for rope attachment point
+    mid: new THREE.Vector3(),
+    quarter: new THREE.Vector3(),
+    threeQuarter: new THREE.Vector3(),
+  })
+  const tempQuat = useRef(new THREE.Quaternion())
+
+  // This glove's anchor point - memoized to prevent recreation
+  const anchorPos = useMemo(() => new THREE.Vector3(
     ANCHOR_POSITION[0] + anchorOffset[0],
     ANCHOR_POSITION[1] + anchorOffset[1],
     ANCHOR_POSITION[2] + anchorOffset[2]
-  )
+  ), [anchorOffset])
+
+  // Determine if this is the left glove (for rope attachment) - computed once
+  const isLeftGlove = useMemo(() => anchorOffset[0] < 0, [anchorOffset])
 
   // Start gloves above the anchor point for drop-in animation
-  const gloveStartPosition: [number, number, number] = [
+  const gloveStartPosition = useMemo((): [number, number, number] => [
     anchorPos.x,
     anchorPos.y + 3, // Start 3 units above anchor point
     anchorPos.z,
-  ]
+  ], [anchorPos])
+
+  // Smooth visual position - interpolates towards physics position
+  const visualPosition = useRef(new THREE.Vector3())
+  const visualRotation = useRef(new THREE.Quaternion())
+  const visualGroupRef = useRef<THREE.Group>(null)
+  const frameCount = useRef(0)
+  const isInitialized = useRef(false)
+  const settledTime = useRef(0) // Track time since drop completed
 
   // Soft string constraint + rope visual update
   useFrame(() => {
-    if (!gloveRef.current) return
+    if (!gloveRef.current || !visualGroupRef.current) return
 
+    const t = tempVec.current
     const glove = gloveRef.current.translation()
-    const gloveCenter = new THREE.Vector3(glove.x, glove.y, glove.z)
-    const toGlove = gloveCenter.clone().sub(anchorPos)
-    const distance = toGlove.length()
+    const gloveRot = gloveRef.current.rotation()
+
+    t.gloveCenter.set(glove.x, glove.y, glove.z)
+    tempQuat.current.set(gloveRot.x, gloveRot.y, gloveRot.z, gloveRot.w)
+
+    frameCount.current++
+
+    // Initialize visual position on first frame
+    if (!isInitialized.current) {
+      visualPosition.current.copy(t.gloveCenter)
+      visualRotation.current.copy(tempQuat.current)
+      isInitialized.current = true
+    }
+
+    // Smoothly interpolate visual position towards physics position
+    // This prevents sudden jumps from being visible
+    // Lower values = smoother but more lag, higher = more responsive but shows jumps
+    // Note: This only affects visuals, not the underlying physics simulation
+    // Use responsive lerp during initial drop + settling, then switch to smoother
+    if (hasDropped.current) {
+      settledTime.current += 1/60 // Approximate frame time
+    }
+    // Stay responsive for 2 seconds after drop, then transition to smooth
+    const isSettled = settledTime.current > 2.0
+    const lerpFactor = isSettled ? 0.08 : 0.5
+    visualPosition.current.lerp(t.gloveCenter, lerpFactor)
+    visualRotation.current.slerp(tempQuat.current, lerpFactor)
+
+    // Update the visual group position and rotation
+    visualGroupRef.current.position.copy(visualPosition.current)
+    visualGroupRef.current.quaternion.copy(visualRotation.current)
+
+    t.toGlove.copy(t.gloveCenter).sub(anchorPos)
+    const distance = t.toGlove.length()
 
     // Initial drop-in animation: apply initial velocity of -4 units/second
-    if (!hasDropped.current && gloveCenter.y < anchorPos.y + 2.5) {
+    if (!hasDropped.current && t.gloveCenter.y < anchorPos.y + 2.5) {
       hasDropped.current = true
       gloveRef.current.setLinvel({ x: 0, y: -4, z: 0 }, true)
     }
 
     // Apply string constraint when beyond string length
     if (!isDragging.current && distance > settings.stringLength) {
-      const direction = toGlove.clone().normalize()
+      t.direction.copy(t.toGlove).normalize()
 
       // Hard constraint - snap back immediately to string length
-      toGlove.normalize().multiplyScalar(settings.stringLength)
-      const constrainedPos = anchorPos.clone().add(toGlove)
+      t.constrainedPos.copy(t.direction).multiplyScalar(settings.stringLength).add(anchorPos)
       gloveRef.current.setTranslation(
-        { x: constrainedPos.x, y: constrainedPos.y, z: constrainedPos.z },
+        { x: t.constrainedPos.x, y: t.constrainedPos.y, z: t.constrainedPos.z },
         true
       )
 
       // Remove outward velocity component
       const vel = gloveRef.current.linvel()
-      const radialSpeed = vel.x * direction.x + vel.y * direction.y + vel.z * direction.z
+      const radialSpeed = vel.x * t.direction.x + vel.y * t.direction.y + vel.z * t.direction.z
       if (radialSpeed > 0) {
         gloveRef.current.setLinvel(
           {
-            x: vel.x - direction.x * radialSpeed,
-            y: vel.y - direction.y * radialSpeed,
-            z: vel.z - direction.z * radialSpeed,
+            x: vel.x - t.direction.x * radialSpeed,
+            y: vel.y - t.direction.y * radialSpeed,
+            z: vel.z - t.direction.z * radialSpeed,
           },
           true
         )
@@ -87,50 +150,45 @@ function DraggableGloveWithRope({
     // This prevents gloves from unnaturally resting on top of each other
     if (!isDragging.current) {
       // Natural hanging position is directly below anchor at string length
-      const naturalPos = new THREE.Vector3(anchorPos.x, anchorPos.y - settings.stringLength, anchorPos.z)
-      const toNatural = naturalPos.clone().sub(gloveCenter)
-      const distanceFromNatural = toNatural.length()
+      t.naturalPos.set(anchorPos.x, anchorPos.y - settings.stringLength, anchorPos.z)
+      t.toNatural.copy(t.naturalPos).sub(t.gloveCenter)
+      const distanceFromNatural = t.toNatural.length()
 
       // Apply a gentle restoring force when not at natural position
       if (distanceFromNatural > 0.01) {
         const restoreStrength = 5.0 // Gentle force to restore natural position
-        const restoreForce = toNatural.normalize().multiplyScalar(restoreStrength * distanceFromNatural)
+        t.restoreForce.copy(t.toNatural).normalize().multiplyScalar(restoreStrength * distanceFromNatural)
 
         const vel = gloveRef.current.linvel()
         gloveRef.current.setLinvel(
           {
-            x: vel.x + restoreForce.x * 0.016, // Apply force scaled by frame time (~16ms)
-            y: vel.y + restoreForce.y * 0.016,
-            z: vel.z + restoreForce.z * 0.016,
+            x: vel.x + t.restoreForce.x * 0.016, // Apply force scaled by frame time (~16ms)
+            y: vel.y + t.restoreForce.y * 0.016,
+            z: vel.z + t.restoreForce.z * 0.016,
           },
           true
         )
       }
 
       // Apply torque to make bottom (knuckle) hang lowest (heaviest part)
-      // Get current rotation and apply corrective torque to keep knuckles pointing down
       const currentRotation = gloveRef.current.rotation()
-      const quat = new THREE.Quaternion(currentRotation.x, currentRotation.y, currentRotation.z, currentRotation.w)
-
-      // Calculate the "down" direction in world space
-      const worldDown = new THREE.Vector3(0, -1, 0)
+      tempQuat.current.set(currentRotation.x, currentRotation.y, currentRotation.z, currentRotation.w)
 
       // Calculate the glove's local "down" direction (where knuckles should point)
-      // The knuckle is at negative Y in local space (at -radius * 0.5)
-      const gloveDown = new THREE.Vector3(0, -1, 0).applyQuaternion(quat)
+      t.gloveDown.set(0, -1, 0).applyQuaternion(tempQuat.current)
 
       // Calculate torque needed to align glove's bottom with world down
-      const torqueAxis = new THREE.Vector3().crossVectors(gloveDown, worldDown)
-      const torqueMagnitude = Math.asin(Math.min(1, torqueAxis.length())) * 3.0 // Strength factor
+      t.torqueAxis.crossVectors(t.gloveDown, t.worldDown)
+      const torqueMagnitude = Math.asin(Math.min(1, t.torqueAxis.length())) * 3.0
 
-      if (torqueAxis.length() > 0.01) {
-        torqueAxis.normalize().multiplyScalar(torqueMagnitude)
+      if (t.torqueAxis.length() > 0.01) {
+        t.torqueAxis.normalize().multiplyScalar(torqueMagnitude)
         const angVel = gloveRef.current.angvel()
         gloveRef.current.setAngvel(
           {
-            x: angVel.x + torqueAxis.x * 0.1,
-            y: angVel.y + torqueAxis.y * 0.1,
-            z: angVel.z + torqueAxis.z * 0.1,
+            x: angVel.x + t.torqueAxis.x * 0.1,
+            y: angVel.y + t.torqueAxis.y * 0.1,
+            z: angVel.z + t.torqueAxis.z * 0.1,
           },
           true
         )
@@ -141,30 +199,29 @@ function DraggableGloveWithRope({
     if (!tubeRef.current) return
 
     // Calculate attachment point at top-inner corner of white cuff
-    // White cuff is positioned at gloveCenter.y + radius * 1.3
-    // Cuff height is radius * 0.8, so top of cuff is at: (radius * 1.3) + (radius * 0.4)
-    // For inner corner: left glove uses +x (right edge), right glove uses -x (left edge)
-    // This creates the "inner" corner effect where cords angle toward each other
-    const isLeftGlove = anchorOffset[0] < 0
-    const gloveAttach = new THREE.Vector3(
-      gloveCenter.x + (isLeftGlove ? settings.radius * 0.7 : -settings.radius * 0.7), // Inner corner at edge of cuff
-      gloveCenter.y + settings.radius * 1.3 + settings.radius * 0.4, // Top of the white cuff
-      gloveCenter.z
-    )
+    // Use visualPosition and visualRotation (smoothed) to match the visual glove
+    // The offset is in local space and needs to be rotated by the glove's orientation
+    const ropeXOffset = isLeftGlove ? settings.radius * 0.7 : -settings.radius * 0.7
+    t.attachOffset.set(ropeXOffset, settings.radius * 1.7, 0) // Local offset
+    t.attachOffset.applyQuaternion(visualRotation.current) // Rotate by glove orientation
+    t.gloveAttach.copy(visualPosition.current).add(t.attachOffset) // Add to position
 
     // Create a slight sag in the middle for natural rope look
-    const mid = anchorPos.clone().lerp(gloveAttach, 0.5)
-    const ropeDistance = anchorPos.distanceTo(gloveAttach)
+    const ropeDistance = anchorPos.distanceTo(t.gloveAttach)
     const sag = Math.max(0, (settings.stringLength - ropeDistance) * 0.15)
-    mid.y -= sag
 
-    const quarter = anchorPos.clone().lerp(gloveAttach, 0.25)
-    quarter.y -= sag * 0.5
-    const threeQuarter = anchorPos.clone().lerp(gloveAttach, 0.75)
-    threeQuarter.y -= sag * 0.5
+    t.mid.copy(anchorPos).lerp(t.gloveAttach, 0.5)
+    t.mid.y -= sag
 
-    const points = [anchorPos, quarter, mid, threeQuarter, gloveAttach]
-    const curve = new THREE.CatmullRomCurve3(points)
+    t.quarter.copy(anchorPos).lerp(t.gloveAttach, 0.25)
+    t.quarter.y -= sag * 0.5
+
+    t.threeQuarter.copy(anchorPos).lerp(t.gloveAttach, 0.75)
+    t.threeQuarter.y -= sag * 0.5
+
+    // Note: CatmullRomCurve3 and TubeGeometry still allocate, but this is unavoidable
+    // without a custom rope implementation. The vector reuse above handles the bulk of allocations.
+    const curve = new THREE.CatmullRomCurve3([anchorPos, t.quarter, t.mid, t.threeQuarter, t.gloveAttach])
     const newGeometry = new THREE.TubeGeometry(curve, 32, settings.stringThickness, 8, false)
     tubeRef.current.geometry.dispose()
     tubeRef.current.geometry = newGeometry
@@ -245,7 +302,7 @@ function DraggableGloveWithRope({
 
   return (
     <group>
-      {/* Dynamic glove */}
+      {/* Physics body - invisible, only colliders */}
       <RigidBody
         ref={gloveRef}
         position={gloveStartPosition}
@@ -268,11 +325,15 @@ function DraggableGloveWithRope({
           position={[0, -settings.radius * 0.5, settings.radius * 0.8]}
         />
 
-        {/* Collider for thumb */}
+        {/* Collider for thumb - mirrored for left glove */}
         <CuboidCollider
           args={[settings.radius * 0.4, settings.radius * 0.6, settings.radius * 0.4]}
-          position={[settings.radius * 1.2, -settings.radius * 0.3, settings.radius * 0.5]}
-          rotation={[0, 0, 0.3]}
+          position={[
+            isLeftGlove ? -settings.radius * 1.2 : settings.radius * 1.2,
+            -settings.radius * 0.3,
+            settings.radius * 0.5
+          ]}
+          rotation={[0, 0, isLeftGlove ? -0.3 : 0.3]}
         />
 
         {/* Collider for cuff (white band at wrist) */}
@@ -281,7 +342,9 @@ function DraggableGloveWithRope({
           position={[0, settings.radius * 1.3, 0]}
         />
 
-        <group
+        {/* Invisible interaction mesh for pointer events */}
+        <mesh
+          visible={false}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
@@ -296,51 +359,65 @@ function DraggableGloveWithRope({
             }
           }}
         >
-          {/* Main glove body (rectangular) */}
-          <mesh castShadow position={[0, 0, 0]}>
-            <boxGeometry args={[settings.radius * 2, settings.radius * 3, settings.radius * 2]} />
-            <meshStandardMaterial
-              color={settings.color}
-              metalness={settings.metalness}
-              roughness={settings.roughness}
-              envMapIntensity={settings.envMapIntensity}
-            />
-          </mesh>
-
-          {/* Knuckle area (sphere on front) */}
-          <mesh castShadow position={[0, -settings.radius * 0.5, settings.radius * 0.8]}>
-            <sphereGeometry args={[settings.radius * 0.9, 32, 32]} />
-            <meshStandardMaterial
-              color={settings.color}
-              metalness={settings.metalness}
-              roughness={settings.roughness}
-              envMapIntensity={settings.envMapIntensity}
-            />
-          </mesh>
-
-          {/* Thumb */}
-          <mesh castShadow position={[settings.radius * 1.2, -settings.radius * 0.3, settings.radius * 0.5]} rotation={[0, 0, 0.3]}>
-            <boxGeometry args={[settings.radius * 0.8, settings.radius * 1.2, settings.radius * 0.8]} />
-            <meshStandardMaterial
-              color={settings.color}
-              metalness={settings.metalness}
-              roughness={settings.roughness}
-              envMapIntensity={settings.envMapIntensity}
-            />
-          </mesh>
-
-          {/* Cuff (white band at wrist) */}
-          <mesh castShadow position={[0, settings.radius * 1.3, 0]}>
-            <cylinderGeometry args={[settings.radius * 1.1, settings.radius * 1.2, settings.radius * 0.8, 16]} />
-            <meshStandardMaterial
-              color="#ffffff"
-              metalness={0.1}
-              roughness={0.9}
-              envMapIntensity={0.2}
-            />
-          </mesh>
-        </group>
+          <boxGeometry args={[settings.radius * 3, settings.radius * 4, settings.radius * 3]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
       </RigidBody>
+
+      {/* Visual glove - smoothly interpolated, separate from physics */}
+      <group ref={visualGroupRef}>
+        {/* Main glove body (rectangular) */}
+        <mesh castShadow position={[0, 0, 0]}>
+          <boxGeometry args={[settings.radius * 2, settings.radius * 3, settings.radius * 2]} />
+          <meshStandardMaterial
+            color={settings.color}
+            metalness={settings.metalness}
+            roughness={settings.roughness}
+            envMapIntensity={settings.envMapIntensity}
+          />
+        </mesh>
+
+        {/* Knuckle area (sphere on front) */}
+        <mesh castShadow position={[0, -settings.radius * 0.5, settings.radius * 0.8]}>
+          <sphereGeometry args={[settings.radius * 0.9, 32, 32]} />
+          <meshStandardMaterial
+            color={settings.color}
+            metalness={settings.metalness}
+            roughness={settings.roughness}
+            envMapIntensity={settings.envMapIntensity}
+          />
+        </mesh>
+
+        {/* Thumb - mirrored for left glove */}
+        <mesh
+          castShadow
+          position={[
+            isLeftGlove ? -settings.radius * 1.2 : settings.radius * 1.2,
+            -settings.radius * 0.3,
+            settings.radius * 0.5
+          ]}
+          rotation={[0, 0, isLeftGlove ? -0.3 : 0.3]}
+        >
+          <boxGeometry args={[settings.radius * 0.8, settings.radius * 1.2, settings.radius * 0.8]} />
+          <meshStandardMaterial
+            color={settings.color}
+            metalness={settings.metalness}
+            roughness={settings.roughness}
+            envMapIntensity={settings.envMapIntensity}
+          />
+        </mesh>
+
+        {/* Cuff (white band at wrist) */}
+        <mesh castShadow position={[0, settings.radius * 1.3, 0]}>
+          <cylinderGeometry args={[settings.radius * 1.1, settings.radius * 1.2, settings.radius * 0.8, 16]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            metalness={0.1}
+            roughness={0.9}
+            envMapIntensity={0.2}
+          />
+        </mesh>
+      </group>
 
       {/* Rope visual */}
       <mesh ref={tubeRef}>
@@ -363,8 +440,8 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08 }: { settings: S
         <shadowMaterial opacity={shadowOpacity} transparent />
       </mesh>
 
-      {/* Anchor point visual */}
-      <mesh position={ANCHOR_POSITION}>
+      {/* Anchor point visual - hidden since it should be off-screen */}
+      <mesh position={ANCHOR_POSITION} visible={false}>
         <sphereGeometry args={[0.04, 16, 16]} />
         <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
       </mesh>

@@ -1,11 +1,15 @@
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
-import { Suspense, useEffect, useRef } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { HangingSpheres } from './HangingSpheres'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
+
+// Global ref for mouse position - updated by App.tsx, read by Scene internals
+// This avoids React re-renders when mouse moves
+export const mousePositionRef = { current: { x: 0.5, y: 0.5 } }
 
 export interface Settings {
   // Ball
@@ -41,14 +45,88 @@ function ShadowMapUpdater() {
   return null
 }
 
-function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias, mousePosition }: {
+// Hook to detect pause events and control physics
+function usePhysicsPauseDetection() {
+  const [isPaused, setIsPaused] = useState(false)
+  const lastTime = useRef(performance.now())
+  const pauseTimeoutRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const checkForPause = () => {
+      const now = performance.now()
+      const elapsed = now - lastTime.current
+      lastTime.current = now
+
+      // If more than 100ms elapsed, pause physics briefly
+      if (elapsed > 100) {
+        setIsPaused(true)
+        // Resume after a short delay to let things stabilize
+        if (pauseTimeoutRef.current) {
+          clearTimeout(pauseTimeoutRef.current)
+        }
+        pauseTimeoutRef.current = window.setTimeout(() => {
+          setIsPaused(false)
+        }, 50)
+      }
+
+      requestAnimationFrame(checkForPause)
+    }
+
+    const rafId = requestAnimationFrame(checkForPause)
+
+    // Also pause on visibility change
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setIsPaused(true)
+      } else {
+        // Resume after a delay when becoming visible
+        if (pauseTimeoutRef.current) {
+          clearTimeout(pauseTimeoutRef.current)
+        }
+        pauseTimeoutRef.current = window.setTimeout(() => {
+          setIsPaused(false)
+        }, 100)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  return isPaused
+}
+
+// Wrapper component that handles physics with pause detection
+function PhysicsWithPauseDetection({ children }: { children: React.ReactNode }) {
+  const isPaused = usePhysicsPauseDetection()
+
+  return (
+    <Physics
+      gravity={[0, -9.81, 0]}
+      timeStep={1/60}
+      updatePriority={-50}
+      paused={isPaused}
+      interpolate={true}
+    >
+      {children}
+    </Physics>
+  )
+}
+
+function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias }: {
   lightPos: [number, number, number]
   shadowMapSize: [number, number]
   cameraBounds: number
   cameraFar: number
   shadowRadius: number
   shadowBias: number
-  mousePosition: { x: number; y: number }
 }) {
   const { gl } = useThree()
   const mainLightRef = useRef<THREE.DirectionalLight>(null)
@@ -68,11 +146,14 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
   useFrame(() => {
     if (!mainLightRef.current) return
 
+    // Read mouse position from ref (no React re-renders)
+    const mouse = mousePositionRef.current
+
     // Calculate target light position based on mouse
     // Mouse x: 0-1 maps to light x offset (subtle, ±2 units)
     // Mouse y: 0-1 maps to light y offset (subtle, ±1 unit)
-    const lightOffsetX = (mousePosition.x - 0.5) * 4 // ±2 units
-    const lightOffsetY = (mousePosition.y - 0.5) * -2 // ±1 unit (inverted)
+    const lightOffsetX = (mouse.x - 0.5) * 4 // ±2 units
+    const lightOffsetY = (mouse.y - 0.5) * -2 // ±1 unit (inverted)
 
     const targetX = lightPos[0] + lightOffsetX
     const targetY = lightPos[1] + lightOffsetY
@@ -161,48 +242,29 @@ interface ShadowSettings {
 }
 
 // Mouse follow rotation wrapper for the gloves
-function MouseFollowGroup({ children, mousePosition }: { children: React.ReactNode; mousePosition: { x: number; y: number } }) {
+function MouseFollowGroup({ children }: { children: React.ReactNode }) {
   const groupRef = useRef<THREE.Group>(null)
-
-  // Target rotation based on mouse position
   const targetRotation = useRef({ x: 0, y: 0 })
-  // Current rotation with spring physics
   const currentRotation = useRef({ x: 0, y: 0 })
-  // Velocity for spring physics
   const velocity = useRef({ x: 0, y: 0 })
 
-  useFrame((_, delta) => {
+  useFrame((_, rawDelta) => {
     if (!groupRef.current) return
-
-    // Calculate target rotation from mouse position
-    // Mouse x: 0-1 maps to rotation around Y axis (left/right)
-    // Mouse y: 0-1 maps to rotation around X axis (up/down)
-    // Very subtle: max ±3 degrees (0.052 radians)
-    const maxRotation = 0.052 // ~3 degrees
-    targetRotation.current.y = (mousePosition.x - 0.5) * 2 * maxRotation
-    targetRotation.current.x = (mousePosition.y - 0.5) * -2 * maxRotation * 0.5 // Less vertical movement
-
-    // Spring physics constants
-    const springStrength = 3 // How quickly it moves toward target
-    const damping = 0.85 // How quickly it settles (lower = more bouncy)
-
-    // Calculate spring force
+    const delta = Math.min(rawDelta, 0.05)
+    const mouse = mousePositionRef.current
+    const maxRotation = 0.052
+    targetRotation.current.y = (mouse.x - 0.5) * 2 * maxRotation
+    targetRotation.current.x = (mouse.y - 0.5) * -2 * maxRotation * 0.5
+    const springStrength = 3
+    const damping = 0.85
     const forceX = (targetRotation.current.x - currentRotation.current.x) * springStrength
     const forceY = (targetRotation.current.y - currentRotation.current.y) * springStrength
-
-    // Apply force to velocity
     velocity.current.x += forceX * delta
     velocity.current.y += forceY * delta
-
-    // Apply damping
     velocity.current.x *= damping
     velocity.current.y *= damping
-
-    // Update current rotation
     currentRotation.current.x += velocity.current.x
     currentRotation.current.y += velocity.current.y
-
-    // Apply rotation to group
     groupRef.current.rotation.x = currentRotation.current.x
     groupRef.current.rotation.y = currentRotation.current.y
   })
@@ -214,10 +276,7 @@ function MouseFollowGroup({ children, mousePosition }: { children: React.ReactNo
   )
 }
 
-export function Scene({ settings, shadowSettings, mousePosition }: { settings: Settings; shadowSettings?: ShadowSettings; mousePosition?: { x: number; y: number } }) {
-  // Default mouse position to center if not provided
-  const mouse = mousePosition || { x: 0.5, y: 0.5 }
-
+export function Scene({ settings, shadowSettings }: { settings: Settings; shadowSettings?: ShadowSettings }) {
   // Use shadow settings if provided, otherwise use defaults
   const lightPos: [number, number, number] = shadowSettings
     ? [shadowSettings.lightX, shadowSettings.lightY, shadowSettings.lightZ]
@@ -237,6 +296,7 @@ export function Scene({ settings, shadowSettings, mousePosition }: { settings: S
         camera={{ position: [0, 0, 7], fov: 45 }}
         shadows
         dpr={[1, 2]}
+        frameloop="always"
         gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
         onCreated={({ gl }) => {
           gl.shadowMap.type = THREE.PCFSoftShadowMap
@@ -248,10 +308,10 @@ export function Scene({ settings, shadowSettings, mousePosition }: { settings: S
         <Suspense fallback={null}>
           <ShadowMapUpdater />
 
-          <MouseFollowGroup mousePosition={mouse}>
-            <Physics gravity={[0, -9.81, 0]}>
+          <MouseFollowGroup>
+            <PhysicsWithPauseDetection>
               <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} />
-            </Physics>
+            </PhysicsWithPauseDetection>
           </MouseFollowGroup>
 
           <Lighting
@@ -261,7 +321,6 @@ export function Scene({ settings, shadowSettings, mousePosition }: { settings: S
             cameraFar={cameraFar}
             shadowRadius={shadowRadius}
             shadowBias={shadowBias}
-            mousePosition={mouse}
           />
 
           {/* Environment with custom lightformers for better reflections */}

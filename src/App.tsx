@@ -1,12 +1,18 @@
-import { Scene } from './components/Scene'
+import { Scene, mousePositionRef } from './components/Scene'
 import { TopCards } from './components/TopCards'
 import { PeteLogo } from './components/PeteLogo'
 import { LeftBioSvg } from './components/LeftBioSvg'
 import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 function App() {
+  // Ref for the main container - used as event source for Canvas
+  // This allows mouse events to be captured even when over TopCards
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // mousePosition state is only for 2D UI elements (spotlight, marquee)
+  // Scene reads from mousePositionRef directly to avoid re-renders
   const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 })
   const [isDesktop, setIsDesktop] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth > 1080 : true
@@ -26,11 +32,25 @@ function App() {
   const [colonVisible, setColonVisible] = useState(true)
 
   useEffect(() => {
+    // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
+    let rafId: number | null = null
+    let pendingX = 0.5
+    let pendingY = 0.5
+
     const handleMouseMove = (e: MouseEvent) => {
       // Normalize mouse position to 0-1 range
-      const x = e.clientX / window.innerWidth
-      const y = e.clientY / window.innerHeight
-      setMousePosition({ x, y })
+      pendingX = e.clientX / window.innerWidth
+      pendingY = e.clientY / window.innerHeight
+      // Update ref for Scene immediately (no re-render)
+      mousePositionRef.current = { x: pendingX, y: pendingY }
+
+      // Batch state updates with RAF to prevent excessive re-renders
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          setMousePosition({ x: pendingX, y: pendingY })
+          rafId = null
+        })
+      }
     }
 
     const handleResize = () => {
@@ -43,6 +63,7 @@ function App() {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('resize', handleResize)
+      if (rafId !== null) cancelAnimationFrame(rafId)
     }
   }, [])
 
@@ -128,7 +149,7 @@ function App() {
   }
 
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden">
+    <div ref={containerRef} className="relative w-full h-full flex flex-col overflow-hidden">
       {/* Background Marquee - scrolling text revealed by cursor */}
       <BackgroundMarquee mousePosition={mousePosition} />
 
@@ -150,13 +171,11 @@ function App() {
       <div
         className="absolute inset-0"
         style={{
-          transform: 'translateY(-50px)',
-          transformOrigin: 'top center',
           zIndex: 10,
           pointerEvents: 'auto',
         }}
       >
-        <Scene settings={settings} shadowSettings={shadowSettings} mousePosition={mousePosition} />
+        <Scene settings={settings} shadowSettings={shadowSettings} />
       </div>
 
       {/* Left biographical text - show on tablet and desktop (md+) */}
