@@ -62,7 +62,7 @@ const cards: CardData[] = [
       roleLabel: 'IXD PROFESSOR AT',
       dateRange: '2020 → Present',
       description: [
-        <>I teach an accelerated interaction design course, where students create portfolio-ready soft products for the web, native apps, and beyond. Curriculum covers design systems, motion principles, and hands-on builds. <a href="https://sva.edu/academics/undergraduate/bfa-design" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>Register</a></>,
+        <>I teach an accelerated interaction design course, where students create portfolio-ready soft products for the web, native apps, and beyond. Curriculum covers design systems, motion principles, and hands-on builds. <a href="https://sva.edu/academics/undergraduate/bfa-design" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>Sign up.</a></>,
       ],
       highlights: [
         { label: "SVA'26", href: 'https://www.instagram.com/stories/highlights/18062055449168032/', image: '/images/highlights/sva-26.png' },
@@ -89,17 +89,19 @@ const cards: CardData[] = [
       dateRange: '2019 → Present',
       description: [
         'Leading design for pro-tier creative tools, helping professionals build and scale their online presence.',
-        'Focus on design systems, component architecture, and bridging the gap between design and engineering.',
       ],
       highlights: [
-        { label: 'SQSP IV' },
-        { label: 'SQSP III' },
-        { label: 'SQSP II' },
-        { label: 'SQSP I' },
+        { label: 'SQSP IV', href: 'https://www.instagram.com/stories/highlights/18306770473162196/', image: '/images/highlights/sqsp-iv.png' },
+        { label: 'SQSP III', href: 'https://www.instagram.com/stories/highlights/17986731617286794/', image: '/images/highlights/sqsp-iii.png' },
+        { label: 'SQSP II', href: 'https://www.instagram.com/stories/highlights/17926855298693100/', image: '/images/highlights/sqsp-ii.png' },
+        { label: 'SQSP I', href: 'https://www.instagram.com/stories/highlights/17907270110479298/', image: '/images/highlights/sqsp-i.png' },
       ],
-      actions: [
-        { label: 'NEW PRO TOOLS REVEAL', icon: 'play', primary: true },
-      ],
+      reflectionsCard: {
+        title: 'SQSP for Pros: Product Reveal & Demo',
+        image: '/images/sqsp-video-preview.jpg',
+        href: 'https://youtu.be/rJKduGHwvHk?si=mcBfPuZCJBRC10b6',
+      },
+      actions: [],
     },
   },
   {
@@ -116,19 +118,18 @@ const cards: CardData[] = [
         'Currently leveling up in LEGO engineering, bedtime story voice acting, and playground diplomacy.',
       ],
       highlights: [
-        { label: 'Year 4' },
-        { label: 'Year 3' },
-        { label: 'Year 2' },
-        { label: 'Year 1' },
+        { label: 'Rio 5', href: 'https://www.instagram.com/stories/highlights/17999753420661811/' },
+        { label: 'Rio 4', href: 'https://www.instagram.com/stories/highlights/18028911476420720/' },
+        { label: 'Rio 3', href: 'https://www.instagram.com/stories/highlights/18034957247227258/' },
+        { label: 'Rio 2', href: 'https://www.instagram.com/stories/highlights/17948423936818673/' },
+        { label: 'Rio 1', href: 'https://www.instagram.com/stories/highlights/18273965395161132/' },
       ],
-      actions: [
-        { label: 'VIEW GALLERY', icon: 'external', primary: true },
-      ],
+      actions: [],
     },
   },
   {
     id: 'cta',
-    label: '《 EMPTY SLOT 》',
+    label: 'EMPTY SLOT',
     title: 'ADD NEW ROLE',
     shortcut: '⌘ C',
     variant: 'cta',
@@ -226,17 +227,134 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       if (e.key === 'Escape') {
         handleCloseExpanded()
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        const atEnd = expandedIndex === cardsToShow.length - 1
+        // Apply tug effect - much stronger at boundary for dramatic rubber band
+        const tugStrength = atEnd ? 70 : 25
+        velocityState.current.rawVelocity += tugStrength
+
+        if (!atEnd) {
+          setExpandedIndex((prev) =>
+            prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0
+          )
+        }
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        const atStart = expandedIndex === 0
+        // Apply tug effect - much stronger at boundary for dramatic rubber band
+        const tugStrength = atStart ? -70 : -25
+        velocityState.current.rawVelocity += tugStrength
+
+        if (!atStart) {
+          setExpandedIndex((prev) =>
+            prev !== null ? Math.max(prev - 1, 0) : 0
+          )
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [expandedIndex, cardsToShow.length])
+
+  // Parallax velocity state - smoothed scroll velocity for parallax effect
+  const [parallaxOffset, setParallaxOffset] = React.useState(0)
+  const velocityState = React.useRef({
+    rawVelocity: 0,
+    smoothVelocity: 0,
+    lastTime: performance.now(),
+  })
+
+  // Animation frame for smooth velocity decay
+  React.useEffect(() => {
+    if (expandedIndex === null) {
+      setParallaxOffset(0)
+      return
+    }
+
+    let animationId: number
+    const animate = () => {
+      const now = performance.now()
+      const state = velocityState.current
+      const deltaTime = (now - state.lastTime) / 1000 // Convert to seconds
+      state.lastTime = now
+
+      // Damp the smooth velocity towards raw velocity, then decay raw
+      // Using exponential decay for frame-rate independent smoothing
+      const dampFactor = 1 - Math.exp(-25 * deltaTime) // ~25 = instant response for sharp tug
+      state.smoothVelocity += (state.rawVelocity - state.smoothVelocity) * dampFactor
+
+      // Decay raw velocity - very fast decay for quick snap back
+      state.rawVelocity *= Math.pow(0.65, deltaTime * 60) // Aggressive decay for tug-and-release feel
+
+      // Apply parallax offset based on smoothed velocity
+      // Multiplier controls effect strength (negative = cards push in scroll direction)
+      const parallaxMultiplier = 0.18 // Noticeable tug
+      setParallaxOffset(state.smoothVelocity * parallaxMultiplier)
+
+      animationId = requestAnimationFrame(animate)
+    }
+
+    animationId = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(animationId)
+  }, [expandedIndex])
+
+  // Wheel navigation when expanded - one card per scroll gesture
+  const wheelState = React.useRef({ lastDelta: 0, lastTime: 0, locked: false })
+  React.useEffect(() => {
+    if (expandedIndex === null) return
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault()
+
+      const atStart = expandedIndex === 0
+      const atEnd = expandedIndex === cardsToShow.length - 1
+      const scrollingLeft = e.deltaY < 0
+      const scrollingRight = e.deltaY > 0
+
+      // Rubber band at boundaries - apply tug but don't navigate
+      const hitBoundary = (atStart && scrollingLeft) || (atEnd && scrollingRight)
+
+      // Feed velocity into parallax system (much stronger at boundaries for dramatic rubber band)
+      const velocityScale = hitBoundary ? 1.2 : 0.5
+      velocityState.current.rawVelocity += e.deltaY * velocityScale
+
+      // If at boundary, just apply the tug effect without navigation
+      if (hitBoundary) return
+
+      const now = Date.now()
+      const state = wheelState.current
+      const timeSinceLast = now - state.lastTime
+      const direction = Math.sign(e.deltaY)
+      const lastDirection = Math.sign(state.lastDelta)
+
+      // Detect new gesture: direction change, or gap in events (>50ms = new flick)
+      const isNewGesture = direction !== lastDirection || timeSinceLast > 50
+
+      if (isNewGesture) {
+        // New gesture - unlock and navigate
+        state.locked = false
+      }
+
+      state.lastDelta = e.deltaY
+      state.lastTime = now
+
+      // If locked from current gesture's momentum, ignore
+      if (state.locked) return
+
+      // Lock and navigate once per gesture
+      state.locked = true
+
+      if (e.deltaY > 0) {
         setExpandedIndex((prev) =>
           prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0
         )
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      } else if (e.deltaY < 0) {
         setExpandedIndex((prev) =>
           prev !== null ? Math.max(prev - 1, 0) : 0
         )
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+
+    window.addEventListener('wheel', handleWheel, { passive: false })
+    return () => window.removeEventListener('wheel', handleWheel)
   }, [expandedIndex, cardsToShow.length])
 
   // Lock body scroll when expanded
@@ -431,6 +549,13 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                 const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
                 const collapsedPos = getCollapsedPosition(card.id)
                 const expandedPos = getExpandedPosition(cardIndex)
+                const isFocused = cardIndex === expandedIndex
+
+                // Cascading parallax: cards further from focus move more
+                const distanceFromFocus = cardIndex - (expandedIndex ?? 0)
+                // Multiplier increases with distance, creating staggered/cascading effect
+                const cascadeMultiplier = 1 + Math.abs(distanceFromFocus) * 0.7
+                const cardParallaxOffset = parallaxOffset * cascadeMultiplier
 
                 return (
                   <MorphingCard
@@ -442,12 +567,13 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     onClick={() => {}}
                     onClose={handleCloseExpanded}
                     onHighlightClick={(label) => console.log('Highlight clicked:', label)}
-                    hideShortcut={isMobile}
+                    hideShortcut={isMobile || !isFocused}
                     compactCta={isMobileCtaCard}
                     mobileLabel={isMobileCtaCard ? 'ADD ROLE' : undefined}
                     emailCopied={emailCopied}
                     setEmailCopied={setEmailCopied}
                     themeMode={themeMode}
+                    parallaxOffset={cardParallaxOffset}
                   />
                 )
               })}

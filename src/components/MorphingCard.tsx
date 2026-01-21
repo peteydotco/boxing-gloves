@@ -49,6 +49,7 @@ interface MorphingCardProps {
   emailCopied?: boolean
   setEmailCopied?: (copied: boolean) => void
   themeMode?: 'light' | 'inverted' | 'dark'
+  parallaxOffset?: number
 }
 
 // Variant styles shared between collapsed and expanded states
@@ -256,9 +257,10 @@ function HighlightButton({ highlight, styles, onHighlightClick }: HighlightButto
         }
         onHighlightClick?.(highlight.label)
       }}
-      className="flex flex-col items-center gap-2"
+      className="flex flex-col items-center gap-2 cursor-pointer"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      initial={false}
       animate={{
         scale: isHovered ? 1.08 : 1,
       }}
@@ -271,6 +273,7 @@ function HighlightButton({ highlight, styles, onHighlightClick }: HighlightButto
           boxShadow: `0 0 0 4px ${styles.highlightShadow}`,
           backgroundColor: highlight.image ? 'transparent' : 'rgba(255,255,255,0.1)',
         }}
+        initial={false}
         animate={{
           boxShadow: isHovered
             ? `0 0 0 4px ${styles.highlightShadow}, 0 8px 24px rgba(0,0,0,0.25)`
@@ -305,10 +308,21 @@ interface ReflectionsCardProps {
   }
   styles: typeof variantStylesLight.blue
   themeMode?: 'light' | 'inverted' | 'dark'
+  variant?: 'blue' | 'white' | 'red' | 'cta'
 }
 
-function ReflectionsCard({ card, themeMode = 'light' }: ReflectionsCardProps) {
+function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+
+  // Determine background color based on variant and theme
+  const getBackgroundColor = () => {
+    if (variant === 'white') {
+      // Squarespace card: swap the bg colors between themes
+      return themeMode === 'dark' ? 'rgba(26,26,46,1)' : 'rgba(22,22,39,1)'
+    }
+    // SVA and other cards: use original blue colors
+    return themeMode === 'dark' ? 'rgba(22,115,255,1)' : '#125CCC'
+  }
 
   return (
     <motion.button
@@ -316,30 +330,36 @@ function ReflectionsCard({ card, themeMode = 'light' }: ReflectionsCardProps) {
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
       }}
-      className="w-full rounded-[8px] overflow-hidden relative"
+      className="w-full rounded-[8px] overflow-hidden relative cursor-pointer"
       style={{
-        backgroundColor: themeMode === 'dark' ? 'rgba(22,115,255,1)' : '#125CCC',
-        borderBottom: '2px solid rgba(0,0,0,0.2)',
+        backgroundColor: getBackgroundColor(),
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      initial={false}
       animate={{
         scale: isHovered ? 1.02 : 1,
         boxShadow: isHovered
-          ? '0 12px 32px rgba(0,0,0,0.25)'
-          : '0 4px 10px rgba(0,0,0,0)',
+          ? '0 2px 0 0 rgba(0,0,0,0.2), 0 12px 32px rgba(0,0,0,0.25)'
+          : '0 2px 0 0 rgba(0,0,0,0.2)',
       }}
       transition={hoverTransition}
     >
+      {/* Inner stroke overlay on video container */}
+      <div
+        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+        style={{
+          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
+        }}
+      />
       {/* Preview image container */}
       <div
-        className="overflow-hidden"
+        className="overflow-hidden relative"
         style={{
           margin: '10px',
           marginBottom: '10px',
           width: 'calc(100% - 20px)',
           height: '234px',
-          border: '1px solid rgba(255,255,255,0.24)',
           borderRadius: '4px',
         }}
       >
@@ -348,10 +368,18 @@ function ReflectionsCard({ card, themeMode = 'light' }: ReflectionsCardProps) {
           alt={card.title}
           className="w-full h-full object-cover"
           style={{ borderRadius: '4px' }}
+          initial={false}
           animate={{
             scale: isHovered ? 1.05 : 1,
           }}
           transition={hoverTransition}
+        />
+        {/* Inner stroke overlay on thumbnail */}
+        <div
+          className="absolute inset-0 rounded-[4px] pointer-events-none"
+          style={{
+            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+          }}
         />
       </div>
 
@@ -372,6 +400,7 @@ function ReflectionsCard({ card, themeMode = 'light' }: ReflectionsCardProps) {
             width: '30px',
             height: '30px',
           }}
+          initial={false}
           animate={{
             scale: isHovered ? 1.05 : 1,
           }}
@@ -380,12 +409,13 @@ function ReflectionsCard({ card, themeMode = 'light' }: ReflectionsCardProps) {
           <SlControlPlay className="w-5 h-5" style={{ color: 'white' }} />
         </motion.div>
 
-        {/* Title - centered within the container */}
+        {/* Title - matches Highlights on IG Stories text style */}
         <span
-          className="font-pressura leading-normal uppercase flex-1 text-center"
+          className="font-pressura-ext flex-1 text-center"
           style={{
-            fontSize: '18px',
-            letterSpacing: '-0.015em',
+            fontWeight: 350,
+            fontSize: '19px',
+            lineHeight: '25px',
             color: '#FFFFFF',
           }}
         >
@@ -413,6 +443,7 @@ export function MorphingCard({
   emailCopied: emailCopiedProp,
   setEmailCopied: setEmailCopiedProp,
   themeMode = 'light',
+  parallaxOffset = 0,
 }: MorphingCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
@@ -455,30 +486,35 @@ export function MorphingCard({
     return (
       <motion.div
         ref={cardRef}
-        className="fixed rounded-[16px] overflow-hidden"
+        className="fixed overflow-hidden"
         style={{
           backgroundColor: styles.bg,
           color: styles.textColor,
           zIndex: 9999,
           pointerEvents: 'auto',
+          // Parallax offset applied as transform for real-time velocity response
+          transform: `translateX(${parallaxOffset}px)`,
         }}
         initial={{
           top: collapsedPosition.top,
           left: collapsedPosition.left,
           width: collapsedPosition.width,
           height: collapsedPosition.height,
+          borderRadius: 14,
         }}
         animate={{
           top: expandedPosition.y,
           left: expandedPosition.x,
           width: expandedPosition.width,
           height: expandedPosition.height,
+          borderRadius: 16,
         }}
         exit={{
           top: collapsedPosition.top,
           left: collapsedPosition.left,
           width: collapsedPosition.width,
           height: collapsedPosition.height,
+          borderRadius: 14,
         }}
         transition={{
           // Position gets spring bounce
@@ -487,6 +523,7 @@ export function MorphingCard({
           // Size is critically damped - no bounce
           width: contentSpring,
           height: contentSpring,
+          borderRadius: contentSpring,
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseMove={handleMouseMove}
@@ -494,10 +531,14 @@ export function MorphingCard({
       >
         {/* Border - same subtle stroke as collapsed state */}
         <motion.div
-          className="absolute inset-0 rounded-[16px] pointer-events-none"
+          className="absolute inset-0 pointer-events-none"
           style={{
             border: `1px solid ${styles.border}`,
           }}
+          initial={{ borderRadius: 14 }}
+          animate={{ borderRadius: 16 }}
+          exit={{ borderRadius: 14 }}
+          transition={contentSpring}
         />
 
         {/* Spotlight hover effects - reduced opacity for expanded cards */}
@@ -547,59 +588,53 @@ export function MorphingCard({
             </motion.div>
 
             {/* Shortcut badge - morphs between ESC (expanded) and shortcut key (collapsed) */}
-            {!hideShortcut && (
-              <motion.div
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onClose()
-                }}
-                className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer"
-                style={{ backgroundColor: styles.badgeBg }}
-                initial={{ padding: '4px 12px' }}
-                animate={{ padding: '6px 12px' }}
-                exit={{ padding: '4px 12px' }}
-                transition={contentSpring}
+            {/* Always render during exit animation to prevent blinking */}
+            <motion.div
+              onClick={(e) => {
+                e.stopPropagation()
+                onClose()
+              }}
+              className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer"
+              style={{ backgroundColor: styles.badgeBg }}
+              initial={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
+              animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: card.variant === 'cta' ? '8px' : '16px', paddingRight: card.variant === 'cta' ? '8px' : '16px', opacity: hideShortcut ? 0 : 1 }}
+              exit={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: 1 }}
+              transition={contentSpring}
+            >
+              {/* Badge text - same size as collapsed card */}
+              <div
+                className="uppercase font-pressura-mono leading-[100%] relative text-[12px]"
+                style={{ top: '-1px' }}
               >
-                {/* Badge text - crossfades between shortcut and ESC */}
-                {/* Use same structure as collapsed card for pixel-perfect exit */}
-                <motion.div
-                  className="uppercase font-pressura-mono leading-[100%] relative"
-                  style={{ top: '-1px' }}
-                  initial={{ fontSize: '12px' }}
-                  animate={{ fontSize: '13px' }}
-                  exit={{ fontSize: '12px' }}
-                  transition={contentSpring}
+                {/* ESC text - absolutely positioned, fades in when expanded */}
+                <motion.span
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ color: styles.textColor }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: hideShortcut ? 0 : 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.12, ease: 'easeOut' }}
                 >
-                  {/* ESC text - absolutely positioned, fades in when expanded */}
-                  <motion.span
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{ color: styles.textColor }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.12, ease: 'easeOut' }}
-                  >
-                    ESC
-                  </motion.span>
-                  {/* Shortcut text - provides layout, fades out when expanded */}
-                  <motion.span
-                    style={{ color: styles.textColor }}
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: 0 }}
-                    exit={{ opacity: 1 }}
-                    transition={{ duration: 0.12, ease: 'easeOut' }}
-                  >
-                    {card.shortcut}
-                  </motion.span>
-                </motion.div>
-              </motion.div>
-            )}
+                  ESC
+                </motion.span>
+                {/* Shortcut text - provides layout, fades out when expanded */}
+                <motion.span
+                  style={{ color: styles.textColor }}
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: hideShortcut ? 1 : 0 }}
+                  exit={{ opacity: 1 }}
+                  transition={{ duration: 0.12, ease: 'easeOut' }}
+                >
+                  {card.shortcut}
+                </motion.span>
+              </div>
+            </motion.div>
           </div>
 
           {/* Morphing title - scales proportionally from collapsed to expanded */}
           <motion.h2
             className={`leading-normal text-left w-full uppercase ${card.variant === 'cta' ? 'font-pressura-light' : 'font-pressura'}`}
-            style={{ color: card.variant === 'cta' ? 'rgba(0,0,0,0.6)' : styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px' }}
+            style={{ color: card.variant === 'cta' ? (styles as typeof variantStylesLight.cta).ctaTitleColor : styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px' }}
             initial={{ fontSize: '18px', marginTop: '0px' }}
             animate={{ fontSize: '32px', marginTop: '4px' }}
             exit={{ fontSize: '18px', marginTop: '0px' }}
@@ -673,16 +708,32 @@ export function MorphingCard({
             ))}
           </motion.div>
 
-          {/* Spacer to push expanded content to bottom */}
-          <div className="flex-1" />
+        </motion.div>
 
-          {/* Expanded-only content - fades in, hugs bottom */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ opacity: { duration: 0.15, ease: 'easeOut' } }}
-          >
+        {/* Expanded-only content - absolutely positioned at bottom, animates with card height */}
+        <motion.div
+          className="absolute"
+          style={{
+            left: '24px',
+            right: '24px',
+          }}
+          initial={{
+            bottom: 26 - (expandedPosition.height - collapsedPosition.height),
+            opacity: 0,
+          }}
+          animate={{
+            bottom: 26,
+            opacity: 1,
+          }}
+          exit={{
+            bottom: 26 - (expandedPosition.height - collapsedPosition.height),
+            opacity: 0,
+          }}
+          transition={{
+            bottom: contentSpring,
+            opacity: { duration: 0.15, ease: 'easeOut' },
+          }}
+        >
             {/* Highlights Section */}
             {expandedContent.highlights && expandedContent.highlights.length > 0 && (
               <div
@@ -722,6 +773,7 @@ export function MorphingCard({
                 card={expandedContent.reflectionsCard}
                 styles={styles}
                 themeMode={themeMode}
+                variant={card.variant}
               />
             )}
 
@@ -753,7 +805,6 @@ export function MorphingCard({
               })}
             </div>
           </motion.div>
-        </motion.div>
       </motion.div>
     )
   }
