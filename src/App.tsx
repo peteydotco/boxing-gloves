@@ -212,7 +212,7 @@ function App() {
 
       {/* Cards - single container */}
       <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
-        <TopCards />
+        <TopCards themeMode={themeMode} />
       </div>
 
       {/* 3D Scene - positioned below cards */}

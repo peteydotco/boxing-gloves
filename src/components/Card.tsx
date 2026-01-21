@@ -14,10 +14,11 @@ interface CardProps {
   layoutId?: string
   hideShortcut?: boolean
   compactCta?: boolean // Mobile-only: narrow CTA card with stacked label + icon, no title
+  themeMode?: 'light' | 'inverted' | 'dark'
 }
 
-// Original colored styles (shown on hover for first 3 cards)
-const variantStyles = {
+// Light/inverted theme styles
+const variantStylesLight = {
   blue: {
     bg: 'rgba(22,115,255,1)',
     textColor: 'rgba(255,255,255,1)', // white
@@ -40,15 +41,55 @@ const variantStyles = {
   },
 }
 
-const shortcutBadgeStyles = {
+// Dark theme styles - moderately darker backgrounds (split difference)
+const variantStylesDark = {
+  blue: {
+    bg: 'rgba(17,92,207,1)',
+    textColor: 'rgba(255,255,255,1)',
+    border: 'border-[rgba(255,255,255,0.12)]',
+  },
+  white: {
+    bg: 'rgba(22,22,39,1)',
+    textColor: 'rgba(255,255,255,1)',
+    border: 'border-[rgba(255,255,255,0.12)]',
+  },
+  red: {
+    bg: 'rgba(200,56,56,1)',
+    textColor: 'rgba(255,255,255,1)',
+    border: 'border-[rgba(255,255,255,0.12)]',
+  },
+  cta: {
+    bg: 'rgba(32,32,32,1)',
+    textColor: 'rgba(255,255,255,0.3)',
+    border: 'border-[rgba(255,255,255,0.1)]',
+  },
+}
+
+// Helper to get styles based on theme
+const getVariantStyles = (themeMode: 'light' | 'inverted' | 'dark') => {
+  return themeMode === 'dark' ? variantStylesDark : variantStylesLight
+}
+
+const shortcutBadgeStylesLight = {
   blue: 'rgba(0,0,0,0.2)',
   white: 'rgba(0,0,0,0.2)',
   red: 'rgba(0,0,0,0.2)',
   cta: 'rgba(0,0,0,0.1)',
 }
 
+const shortcutBadgeStylesDark = {
+  blue: 'rgba(0,0,0,0.3)',
+  white: 'rgba(0,0,0,0.3)',
+  red: 'rgba(0,0,0,0.3)',
+  cta: 'rgba(255,255,255,0.1)',
+}
 
-export function Card({ id, label, title, shortcut, variant, onClick, isBottomFixed: _isBottomFixed = false, isFlexible: _isFlexible = false, layoutId, hideShortcut = false, compactCta = false }: CardProps) {
+const getShortcutBadgeStyles = (themeMode: 'light' | 'inverted' | 'dark') => {
+  return themeMode === 'dark' ? shortcutBadgeStylesDark : shortcutBadgeStylesLight
+}
+
+
+export function Card({ id, label, title, shortcut, variant, onClick, isBottomFixed: _isBottomFixed = false, isFlexible: _isFlexible = false, layoutId, hideShortcut = false, compactCta = false, themeMode = 'light' }: CardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 }) // Percentage position for gradient
   const cardRef = useRef<HTMLButtonElement>(null)
@@ -66,12 +107,12 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
     setIsHovered(false)
   }
 
-  const styles = variantStyles[variant]
+  const styles = getVariantStyles(themeMode)[variant]
 
   // All cards: always show full color
   const bgColor = styles.bg
   const textColor = styles.textColor
-  const badgeStyle = shortcutBadgeStyles[variant]
+  const badgeStyle = getShortcutBadgeStyles(themeMode)[variant]
 
   // Border colors - white at 12% for colored cards, black at 8% for CTA
   const borderColors = {
@@ -104,8 +145,9 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
 
   return (
     <motion.div
+      layout
       layoutId={layoutId || `card-${id}`}
-      className="relative rounded-[12px]"
+      className="relative rounded-[14px]"
       style={{
         width: '100%',
         maxWidth: '100%',
@@ -117,7 +159,14 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
         scale: isHovered ? 1.015 : 1,
       }}
       whileTap={{ scale: 0.98 }}
-      transition={springTransition}
+      transition={{
+        layout: {
+          type: 'spring',
+          stiffness: 300,
+          damping: 30,
+        },
+        ...springTransition,
+      }}
     >
       <button
         ref={cardRef}
@@ -125,7 +174,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
         onMouseEnter={() => setIsHovered(true)}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        className="flex items-start w-full rounded-[12px] relative cursor-pointer"
+        className="flex items-start w-full rounded-[14px] relative cursor-pointer"
         style={{
           padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px',
           backgroundColor: bgColor,
@@ -140,14 +189,14 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
           <>
             {/* Fill spotlight - subtle light following cursor */}
             <div
-              className="absolute inset-0 rounded-[12px] pointer-events-none"
+              className="absolute inset-0 rounded-[14px] pointer-events-none"
               style={{
                 background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%)`,
               }}
             />
             {/* Border spotlight layer */}
             <div
-              className="absolute inset-0 rounded-[12px] pointer-events-none"
+              className="absolute inset-0 rounded-[14px] pointer-events-none"
               style={{
                 background: spotlightGradient,
                 mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
@@ -158,7 +207,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
             />
             {/* Darken layer for depth */}
             <div
-              className="absolute inset-0 rounded-[12px] pointer-events-none"
+              className="absolute inset-0 rounded-[14px] pointer-events-none"
               style={{
                 background: spotlightGradient,
                 mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
@@ -171,7 +220,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
             />
             {/* Multiply layer for depth */}
             <div
-              className="absolute inset-0 rounded-[12px] pointer-events-none"
+              className="absolute inset-0 rounded-[14px] pointer-events-none"
               style={{
                 background: spotlightGradient,
                 mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
@@ -209,7 +258,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
               <div
                 className="flex items-center justify-center rounded-[4px] shrink-0"
                 style={{
-                  padding: '4px 8px',
+                  padding: '4px 12px',
                   backgroundColor: badgeStyle,
                   transition: 'background-color 0.3s ease',
                 }}

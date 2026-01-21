@@ -2,6 +2,8 @@
 
 @theme {
   --font-pressura: 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
+  --font-pressura-light: 'GT Pressura Light', 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
+  --font-pressura-ext: 'GT Pressura Ext', 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
   --font-pressura-mono: 'GT Pressura Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace;
 
   --breakpoint-tablet: 810px;
@@ -20,6 +22,38 @@
   font-family: 'GT Pressura';
   src: url('/fonts/GT-Pressura-Standard-Regular.woff2') format('woff2');
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Pressura Light';
+  src: url('/fonts/GT-Pressura-Standard-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Pressura Ext';
+  src: url('/fonts/GT-Pressura-Extended-Text.woff2') format('woff2');
+  font-weight: 350;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Pressura Ext';
+  src: url('/fonts/GT-Pressura-Extended-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'GT Pressura';
+  src: url('/fonts/GT-Pressura-Standard-Medium.woff2') format('woff2');
+  font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
@@ -57,14 +91,14 @@ canvas {
 }
 
 /* Responsive padding classes */
-/* Mobile/Tablet (≤1080px): 12px padding on all sides */
-/* Desktop (>1080px): 24px padding on all sides */
+/* Mobile/Tablet (<1024px): 12px padding on all sides */
+/* Desktop (≥1024px): 24px padding on all sides */
 
 .padding-responsive {
   padding: 0.75rem; /* Mobile/Tablet default: 12px all sides */
 }
 
-@media (min-width: 1081px) {
+@media (min-width: 1024px) {
   .padding-responsive {
     padding: 1.5rem; /* Desktop: 24px all sides */
   }
@@ -75,7 +109,7 @@ canvas {
   padding-top: 0.75rem; /* Mobile/Tablet default: 12px */
 }
 
-@media (min-width: 1081px) {
+@media (min-width: 1024px) {
   .top-padding-responsive {
     padding-top: 1.5rem; /* Desktop: 24px */
   }
@@ -86,7 +120,7 @@ canvas {
   padding-right: 0.75rem;
 }
 
-@media (min-width: 1081px) {
+@media (min-width: 1024px) {
   .horizontal-padding-responsive {
     padding-left: 1.5rem; /* Desktop: 24px */
     padding-right: 1.5rem;

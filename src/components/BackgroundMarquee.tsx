@@ -169,7 +169,7 @@ function MarqueeRow({
           className={`inline-flex whitespace-nowrap items-center ${direction === 'left' ? 'animate-marquee-left' : 'animate-marquee-right'}`}
           style={{
             color: fillColor,
-            opacity: 0.35,
+            opacity: 0.44,
             lineHeight: 1,
             height: iconHeight,
           }}
@@ -230,7 +230,7 @@ function MarqueeRow({
           animationDelay,
           textTransform: 'uppercase',
           color: fillColor,
-          opacity: 0.35,
+          opacity: 0.44,
           lineHeight: 1,
         }}
       >
