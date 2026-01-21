@@ -128,8 +128,8 @@ const cards: CardData[] = [
   },
   {
     id: 'cta',
-    label: 'ADD NEW ROLE',
-    title: '《 EMPTY SLOT 》',
+    label: '《 EMPTY SLOT 》',
+    title: 'ADD NEW ROLE',
     shortcut: '⌘ C',
     variant: 'cta',
     expandedContent: {
