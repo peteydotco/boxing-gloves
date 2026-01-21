@@ -252,7 +252,7 @@ function MouseFollowGroup({ children }: { children: React.ReactNode }) {
     if (!groupRef.current) return
     const delta = Math.min(rawDelta, 0.05)
     const mouse = mousePositionRef.current
-    const maxRotation = 0.052
+    const maxRotation = 0.12 // Increased for more noticeable cursor follow
     targetRotation.current.y = (mouse.x - 0.5) * 2 * maxRotation
     targetRotation.current.x = (mouse.y - 0.5) * -2 * maxRotation * 0.5
     const springStrength = 3
@@ -286,7 +286,7 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
     : [1024, 1024]
   const cameraBounds = shadowSettings?.shadowCameraBounds ?? 10
   const cameraFar = shadowSettings?.shadowCameraFar ?? 30
-  const shadowRadius = shadowSettings?.shadowRadius ?? 20
+  const shadowRadius = shadowSettings?.shadowRadius ?? 40 // Increased for more diffuse shadow
   const shadowBias = shadowSettings?.shadowBias ?? -0.00005
   const shadowOpacity = shadowSettings?.shadowOpacity ?? 0.12
 

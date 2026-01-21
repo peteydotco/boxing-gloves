@@ -56,7 +56,7 @@ interface MorphingCardProps {
 // Light/inverted theme styles
 const variantStylesLight = {
   blue: {
-    bg: 'rgba(22,115,255,1)',
+    bg: 'rgba(0,100,255,1)',
     textColor: '#FFFFFF',
     secondaryText: 'rgba(255,255,255,0.85)',
     border: 'rgba(255,255,255,0.12)',
@@ -90,7 +90,7 @@ const variantStylesLight = {
     dividerColor: 'rgba(255,255,255,0.3)',
   },
   red: {
-    bg: 'rgba(239,68,68,1)',
+    bg: 'rgba(235,45,55,1)',
     textColor: '#FFFFFF',
     secondaryText: 'rgba(255,255,255,0.85)',
     border: 'rgba(255,255,255,0.12)',
@@ -129,7 +129,7 @@ const variantStylesLight = {
 // Dark theme styles - moderately darker backgrounds (split difference)
 const variantStylesDark = {
   blue: {
-    bg: 'rgba(17,92,207,1)',
+    bg: 'rgba(0,80,210,1)',
     textColor: '#FFFFFF',
     secondaryText: 'rgba(255,255,255,0.85)',
     border: 'rgba(255,255,255,0.12)',
@@ -138,7 +138,7 @@ const variantStylesDark = {
     primaryButtonBg: '#FFFFFF',
     primaryButtonText: '#000000',
     primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: '#1050B5',
+    secondaryButtonBg: '#0050B5',
     secondaryButtonText: '#FFFFFF',
     secondaryButtonBorder: 'rgba(0,0,0,0.2)',
     highlightBorder: '#FFFFFF',
@@ -163,7 +163,7 @@ const variantStylesDark = {
     dividerColor: 'rgba(255,255,255,0.3)',
   },
   red: {
-    bg: 'rgba(200,56,56,1)',
+    bg: 'rgba(195,35,45,1)',
     textColor: '#FFFFFF',
     secondaryText: 'rgba(255,255,255,0.85)',
     border: 'rgba(255,255,255,0.12)',
@@ -942,7 +942,7 @@ export function MorphingCard({
             >
               {card.variant === 'cta' ? (
                 <span className="flex items-center gap-3">
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence mode="wait" initial={false}>
                     <motion.span
                       key={emailCopied ? 'check' : 'plus'}
                       initial={{ opacity: 0, scale: 0.8 }}
@@ -958,7 +958,7 @@ export function MorphingCard({
                       )}
                     </motion.span>
                   </AnimatePresence>
-                  <AnimatePresence mode="wait">
+                  <AnimatePresence mode="wait" initial={false}>
                     <motion.span
                       key={emailCopied ? 'copied' : 'title'}
                       initial={{ opacity: 0 }}

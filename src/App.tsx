@@ -175,17 +175,17 @@ function App() {
     envMapIntensity: 0.4,
     radius: 0.525, // Increased from 0.42 to 0.525 (1.25x larger)
 
-    // Physics
-    mass: 3,
-    restitution: 0.1,
-    friction: 0.3,
-    linearDamping: 1.0,
-    gravity: -60,
-    springStrength: 800,
+    // Physics - light to drag, bouncy plop when released, dangly, soft collisions
+    mass: 1.2,
+    restitution: 0.02,
+    friction: 0.8,
+    linearDamping: 1.0, // Reduced from 1.5 for more bounce oscillation
+    gravity: -200,
+    springStrength: 350,
 
     // String
     stringLength: 2.5,
-    stringThickness: 0.018,
+    stringThickness: 0.028,
     stringColor: '#d4a574',
     ropeDamping: 0.92,
   }

@@ -7,15 +7,15 @@ import { createPortal } from 'react-dom'
 // Light/inverted themes use brighter versions, dark theme uses darker shades
 const backdropColors = {
   light: {
-    blue: 'rgba(22,115,255,0.6)',
+    blue: 'rgba(0,100,255,0.6)',
     white: 'rgba(26,26,46,0.6)',
-    red: 'rgba(239,68,68,0.6)',
+    red: 'rgba(235,45,55,0.6)',
     cta: 'rgba(0,0,0,0.6)',
   },
   dark: {
-    blue: 'rgba(15,85,185,0.7)',
+    blue: 'rgba(0,75,200,0.7)',
     white: 'rgba(19,19,35,0.7)',
-    red: 'rgba(180,50,50,0.7)',
+    red: 'rgba(185,35,45,0.7)',
     cta: 'rgba(35,35,35,0.75)',
   },
 }
@@ -263,6 +263,16 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     lastTime: performance.now(),
   })
 
+  // Drag state for pointer-based navigation
+  const dragState = React.useRef({
+    isDragging: false,
+    startX: 0,
+    lastX: 0,
+    lastTime: 0,
+    dragVelocity: 0,
+    totalDragDistance: 0,
+  })
+
   // Animation frame for smooth velocity decay
   React.useEffect(() => {
     if (expandedIndex === null) {
@@ -314,7 +324,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       const hitBoundary = (atStart && scrollingLeft) || (atEnd && scrollingRight)
 
       // Feed velocity into parallax system (much stronger at boundaries for dramatic rubber band)
-      const velocityScale = hitBoundary ? 1.2 : 0.5
+      // At boundaries: spring OPPOSITE to scroll direction (like tugging against an anchor)
+      // First card scrolling left -> springs right (anchor on left)
+      // Last card scrolling right -> springs left (anchor on right)
+      const velocityScale = hitBoundary ? -1.2 : 0.5
       velocityState.current.rawVelocity += e.deltaY * velocityScale
 
       // If at boundary, just apply the tug effect without navigation
@@ -356,6 +369,86 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
     window.addEventListener('wheel', handleWheel, { passive: false })
     return () => window.removeEventListener('wheel', handleWheel)
+  }, [expandedIndex, cardsToShow.length])
+
+  // Drag navigation handlers for expanded cards
+  const DRAG_THRESHOLD = 100 // pixels to trigger navigation
+
+  const handlePointerDown = React.useCallback((e: React.PointerEvent) => {
+    if (expandedIndex === null) return
+
+    const state = dragState.current
+    state.isDragging = true
+    state.startX = e.clientX
+    state.lastX = e.clientX
+    state.lastTime = performance.now()
+    state.dragVelocity = 0
+    state.totalDragDistance = 0
+
+    // Capture pointer for reliable tracking outside element
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }, [expandedIndex])
+
+  const handlePointerMove = React.useCallback((e: React.PointerEvent) => {
+    const state = dragState.current
+    if (!state.isDragging || expandedIndex === null) return
+
+    const now = performance.now()
+    const deltaX = e.clientX - state.lastX
+    const deltaTime = now - state.lastTime
+
+    // Track instantaneous velocity for momentum on release
+    if (deltaTime > 0) {
+      state.dragVelocity = deltaX / deltaTime * 16 // Normalize to ~60fps
+    }
+
+    state.totalDragDistance += deltaX
+    state.lastX = e.clientX
+    state.lastTime = now
+
+    // Check boundaries for spring effect
+    const atStart = expandedIndex === 0
+    const atEnd = expandedIndex === cardsToShow.length - 1
+    const draggingLeft = deltaX < 0
+    const draggingRight = deltaX > 0
+
+    // At boundaries dragging "outward" (first card right, last card left), spring in drag direction
+    const draggingOutward = (atStart && draggingRight) || (atEnd && draggingLeft)
+
+    if (draggingOutward) {
+      // Spring in the drag direction (positive deltaX = card moves right)
+      velocityState.current.rawVelocity += deltaX * 0.6
+    } else {
+      // Normal navigation: negative so dragging right moves cards left
+      velocityState.current.rawVelocity += -deltaX * 1.5
+    }
+  }, [expandedIndex, cardsToShow.length])
+
+  const handlePointerUp = React.useCallback((e: React.PointerEvent) => {
+    const state = dragState.current
+    if (!state.isDragging || expandedIndex === null) {
+      state.isDragging = false
+      return
+    }
+
+    state.isDragging = false
+    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+
+    const totalDrag = state.totalDragDistance
+
+    // Apply momentum from drag velocity
+    velocityState.current.rawVelocity += -state.dragVelocity * 8
+
+    // Navigate one card at a time if drag exceeded threshold
+    if (Math.abs(totalDrag) >= DRAG_THRESHOLD) {
+      if (totalDrag > 0) {
+        // Dragged right -> go to previous card
+        setExpandedIndex((prev) => prev !== null ? Math.max(prev - 1, 0) : 0)
+      } else {
+        // Dragged left -> go to next card
+        setExpandedIndex((prev) => prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0)
+      }
+    }
   }, [expandedIndex, cardsToShow.length])
 
   // Lock body scroll when expanded
@@ -531,7 +624,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               <motion.div
                 className="fixed inset-0 backdrop-blur-md"
                 style={{ zIndex: 9998 }}
-                onClick={handleCloseExpanded}
                 initial={{ opacity: 0, backgroundColor: backdropColors[themeMode === 'dark' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'] }}
                 animate={{
                   opacity: 1,
@@ -544,40 +636,55 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                 }}
               />
 
-              {/* Expanded cards */}
-              {visibleCards.map((card) => {
-                const isMobileCtaCard = isMobile && card.variant === 'cta'
-                const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
-                const collapsedPos = getCollapsedPosition(card.id)
-                const expandedPos = getExpandedPosition(cardIndex)
-                const isFocused = cardIndex === expandedIndex
+              {/* Expanded cards - wrapped in drag container */}
+              <div
+                className="fixed inset-0 cursor-grab active:cursor-grabbing"
+                style={{ zIndex: 9999, touchAction: 'none' }}
+                onClick={() => {
+                  // Only close if it wasn't a drag (minimal movement)
+                  if (Math.abs(dragState.current.totalDragDistance) < 10) {
+                    handleCloseExpanded()
+                  }
+                }}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+              >
+                {visibleCards.map((card) => {
+                  const isMobileCtaCard = isMobile && card.variant === 'cta'
+                  const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
+                  const collapsedPos = getCollapsedPosition(card.id)
+                  const expandedPos = getExpandedPosition(cardIndex)
+                  const isFocused = cardIndex === expandedIndex
 
-                // Cascading parallax: cards further from focus move more
-                const distanceFromFocus = cardIndex - (expandedIndex ?? 0)
-                // Multiplier increases with distance, creating staggered/cascading effect
-                const cascadeMultiplier = 1 + Math.abs(distanceFromFocus) * 0.7
-                const cardParallaxOffset = parallaxOffset * cascadeMultiplier
+                  // Cascading parallax: cards further from focus move more
+                  const distanceFromFocus = cardIndex - (expandedIndex ?? 0)
+                  // Multiplier increases with distance, creating staggered/cascading effect
+                  const cascadeMultiplier = 1 + Math.abs(distanceFromFocus) * 0.7
+                  const cardParallaxOffset = parallaxOffset * cascadeMultiplier
 
-                return (
-                  <MorphingCard
-                    key={`expanded-${card.id}`}
-                    card={card}
-                    isExpanded={true}
-                    collapsedPosition={collapsedPos}
-                    expandedPosition={expandedPos}
-                    onClick={() => {}}
-                    onClose={handleCloseExpanded}
-                    onHighlightClick={(label) => console.log('Highlight clicked:', label)}
-                    hideShortcut={isMobile || !isFocused}
-                    compactCta={isMobileCtaCard}
-                    mobileLabel={isMobileCtaCard ? 'ADD ROLE' : undefined}
-                    emailCopied={emailCopied}
-                    setEmailCopied={setEmailCopied}
-                    themeMode={themeMode}
-                    parallaxOffset={cardParallaxOffset}
-                  />
-                )
-              })}
+                  return (
+                    <MorphingCard
+                      key={`expanded-${card.id}`}
+                      card={card}
+                      isExpanded={true}
+                      collapsedPosition={collapsedPos}
+                      expandedPosition={expandedPos}
+                      onClick={() => {}}
+                      onClose={handleCloseExpanded}
+                      onHighlightClick={(label) => console.log('Highlight clicked:', label)}
+                      hideShortcut={isMobile || !isFocused}
+                      compactCta={isMobileCtaCard}
+                      mobileLabel={isMobileCtaCard ? 'ADD ROLE' : undefined}
+                      emailCopied={emailCopied}
+                      setEmailCopied={setEmailCopied}
+                      themeMode={themeMode}
+                      parallaxOffset={cardParallaxOffset}
+                    />
+                  )
+                })}
+              </div>
             </>
           )}
         </AnimatePresence>,
