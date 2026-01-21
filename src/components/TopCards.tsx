@@ -60,7 +60,7 @@ const cards: CardData[] = [
     variant: 'blue',
     expandedContent: {
       roleLabel: 'IXD PROFESSOR AT',
-      dateRange: '2020 → Present',
+      dateRange: '2021 → Present',
       description: [
         <>I teach an accelerated interaction design course, where students create portfolio-ready soft products for the web, native apps, and beyond. Curriculum covers design systems, motion principles, and hands-on builds. <a href="https://sva.edu/academics/undergraduate/bfa-design" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>Sign up.</a></>,
       ],
@@ -88,7 +88,7 @@ const cards: CardData[] = [
       roleLabel: 'PRODUCT DESIGNER AT',
       dateRange: '2019 → Present',
       description: [
-        'Leading design for pro-tier creative tools, helping professionals build and scale their online presence.',
+        <>Leading design for pro-tier website tools, helping professionals build and scale their online presence. See our <a href="https://www.squarespace.com/refresh" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>FW2025 release</a>.</>,
       ],
       highlights: [
         { label: 'SQSP IV', href: 'https://www.instagram.com/stories/highlights/18306770473162196/', image: '/images/highlights/sqsp-iv.png' },
@@ -97,7 +97,7 @@ const cards: CardData[] = [
         { label: 'SQSP I', href: 'https://www.instagram.com/stories/highlights/17907270110479298/', image: '/images/highlights/sqsp-i.png' },
       ],
       reflectionsCard: {
-        title: 'SQSP for Pros: Product Reveal & Demo',
+        title: 'Pro Product Reveal + Demo',
         image: '/images/sqsp-video-preview.jpg',
         href: 'https://youtu.be/rJKduGHwvHk?si=mcBfPuZCJBRC10b6',
       },
@@ -115,6 +115,7 @@ const cards: CardData[] = [
       dateRange: '2023 → Present',
       description: [
         'Full-time dad duties: snacks, adventures, and answering "why?" approximately 400 times per day.',
+        '\u00A0',
         'Currently leveling up in LEGO engineering, bedtime story voice acting, and playground diplomacy.',
       ],
       highlights: [
