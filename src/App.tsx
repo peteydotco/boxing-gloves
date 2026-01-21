@@ -6,17 +6,34 @@ import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { useState, useEffect, useRef } from 'react'
 
-// Theme presets for quick toggling
+// Theme presets for quick toggling (cycles: light → inverted → dark)
 const themes = {
   light: {
     bgColor: '#FFFFFF',
     spotlightOuter: 'rgba(224,224,224,0.65)',
     marqueeColor: '#E0E0E0',
+    textColor: 'rgba(0, 0, 0, 0.44)',
+    logoFill: '#1A1A2E',
+    bioFill: '#000000',
+    bioOpacity: 0.44,
   },
-  dark: {
+  inverted: {
     bgColor: '#E0E0E0',
     spotlightOuter: 'rgba(255,255,255,0.65)',
     marqueeColor: '#FFFFFF',
+    textColor: 'rgba(0, 0, 0, 0.5)',
+    logoFill: '#1A1A2E',
+    bioFill: '#000000',
+    bioOpacity: 0.5,
+  },
+  dark: {
+    bgColor: '#121212',
+    spotlightOuter: 'rgba(40,40,40,0.75)',
+    marqueeColor: 'rgba(255,255,255,0.08)',
+    textColor: 'rgba(255, 255, 255, 0.6)',
+    logoFill: '#FFFFFF',
+    bioFill: '#FFFFFF',
+    bioOpacity: 0.6,
   },
 }
 
@@ -28,11 +45,8 @@ function App() {
   // mousePosition state is only for 2D UI elements (spotlight, marquee)
   // Scene reads from mousePositionRef directly to avoid re-renders
   const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 })
-  const [isXLDesktop, setIsXLDesktop] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth > 1280 : true
-  })
   const [isDesktop, setIsDesktop] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= 1024 && window.innerWidth <= 1280 : false
+    return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
   })
   const [isMobile, setIsMobile] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 768 : false
@@ -47,8 +61,17 @@ function App() {
     }).format(now)
   })
   const [colonVisible, setColonVisible] = useState(true)
-  const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light')
+  const [themeMode, setThemeMode] = useState<'light' | 'inverted' | 'dark'>('light')
   const theme = themes[themeMode]
+
+  // Cycle through themes: light → inverted → dark → light
+  const cycleTheme = () => {
+    setThemeMode(current => {
+      if (current === 'light') return 'inverted'
+      if (current === 'inverted') return 'dark'
+      return 'light'
+    })
+  }
 
   useEffect(() => {
     // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
@@ -73,8 +96,7 @@ function App() {
     }
 
     const handleResize = () => {
-      setIsXLDesktop(window.innerWidth > 1280)
-      setIsDesktop(window.innerWidth >= 1024 && window.innerWidth <= 1280)
+      setIsDesktop(window.innerWidth >= 1024)
       setIsMobile(window.innerWidth < 768)
     }
 
@@ -189,7 +211,7 @@ function App() {
       )}
 
       {/* Cards - single container */}
-      <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto' }}>
+      <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
         <TopCards />
       </div>
 
@@ -205,50 +227,43 @@ function App() {
       </div>
 
       {/* Left biographical text - show on tablet and desktop (md+) */}
-      {/* XL Desktop (>1280px): flanks gloves at vertical center */}
-      {/* Desktop (1024-1280px): flanks Pete logo at bottom of viewport */}
-      {/* Tablet (<1024px): positioned at bottom */}
+      {/* Desktop (>=1024px): flanks gloves at vertical center */}
+      {/* Tablet (<1024px): positioned at bottom, offset +3px to center-align with taller Right Bio */}
       <div
         className="absolute z-20 pointer-events-none select-none hidden md:block"
         style={{
           left: '5%',
-          ...(isXLDesktop
+          ...(isDesktop
             ? { top: '50%', transform: 'translateY(-50%)' }
-            : isDesktop
-              ? { bottom: 'calc(8vh - 41px)' }
-              : { bottom: '146px' }
+            : { bottom: '214px' }
           ),
         }}
       >
-        <LeftBioSvg />
+        <LeftBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
       </div>
 
       {/* Right biographical text - show on tablet and desktop (md+) */}
-      {/* XL Desktop (>1280px): flanks gloves at vertical center */}
-      {/* Desktop (1024-1280px): flanks Pete logo at bottom of viewport */}
-      {/* Tablet (<1024px): positioned at bottom */}
+      {/* Desktop (>=1024px): flanks gloves at vertical center */}
+      {/* Tablet (<1024px): positioned at bottom, center-aligned with left bio */}
       <div
         className="absolute z-20 pointer-events-none select-none hidden md:block"
         style={{
           right: '5%',
           maxWidth: '200px',
-          ...(isXLDesktop
+          ...(isDesktop
             ? { top: '50%', transform: 'translateY(-50%)' }
-            : isDesktop
-              ? { bottom: 'calc(8vh - 41px)' }
-              : { bottom: '146px' }
+            : { bottom: '211px' }
           ),
         }}
       >
-        <RightBioSvg />
+        <RightBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
       </div>
 
-      {/* Pete.co Logo - Desktop only (1024-1280px): positioned at bottom of viewport, bottom-aligned with Bio SVGs */}
+      {/* Desktop (>=1024px): Text lockup positioned below gloves */}
       {isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: 'calc(8vh - 59px)' }}>
-          <PeteLogo onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')} />
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '18%' }}>
           <p style={{
-            color: 'rgba(0, 0, 0, 0.6)',
+            color: theme.textColor,
             textAlign: 'center',
             fontFamily: 'GT Pressura Mono',
             fontSize: '12px',
@@ -257,12 +272,11 @@ function App() {
             lineHeight: '15px',
             letterSpacing: '0.36px',
             textTransform: 'uppercase',
-            marginTop: '20px'
           }}>
-            &lt;&lt; Full site coming soon &gt;&gt;
+            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
           </p>
           <p style={{
-            color: 'rgba(0, 0, 0, 0.6)',
+            color: theme.textColor,
             textAlign: 'center',
             fontFamily: 'GT Pressura Mono',
             fontSize: '12px',
@@ -273,20 +287,25 @@ function App() {
             textTransform: 'uppercase',
             marginTop: '4px'
           }}>
-            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
+            《 Full site coming soon 》
           </p>
         </div>
       )}
 
-      {/* Mobile/Tablet/XL Desktop: Logo and text */}
-      {/* XL Desktop (>1280px): bottom of viewport like Desktop */}
-      {/* Tablet (768-1024px): above CTA card */}
-      {/* Mobile (<768px): lower position */}
+      {/* Desktop (>=1024px): Pete Logo at bottom */}
+      {isDesktop && (
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: 'calc(8vh - 59px)' }}>
+          <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
+        </div>
+      )}
+
+      {/* Mobile/Tablet: Text lockup (time/location + coming soon) */}
+      {/* Tablet (768-1024px): vertically center-aligned with Bio SVGs */}
+      {/* Mobile (<768px): higher position */}
       {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: isMobile ? '40px' : isXLDesktop ? 'calc(8vh - 59px)' : '130px' }}>
-          <PeteLogo onClick={() => setThemeMode(themeMode === 'light' ? 'dark' : 'light')} />
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: isMobile ? '140px' : '234px' }}>
           <p style={{
-            color: 'rgba(0, 0, 0, 0.6)',
+            color: theme.textColor,
             textAlign: 'center',
             fontFamily: 'GT Pressura Mono',
             fontSize: '12px',
@@ -295,12 +314,11 @@ function App() {
             lineHeight: '15px',
             letterSpacing: '0.36px',
             textTransform: 'uppercase',
-            marginTop: '20px'
           }}>
-            &lt;&lt; Full site coming soon &gt;&gt;
+            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
           </p>
           <p style={{
-            color: 'rgba(0, 0, 0, 0.6)',
+            color: theme.textColor,
             textAlign: 'center',
             fontFamily: 'GT Pressura Mono',
             fontSize: '12px',
@@ -311,8 +329,15 @@ function App() {
             textTransform: 'uppercase',
             marginTop: '4px'
           }}>
-            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
+            《 Full site coming soon 》
           </p>
+        </div>
+      )}
+
+      {/* Mobile/Tablet: Pete Logo - stays at bottom */}
+      {!isDesktop && (
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: isMobile ? '40px' : '114px' }}>
+          <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
         </div>
       )}
 
