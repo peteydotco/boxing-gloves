@@ -34,6 +34,13 @@ interface ExpandedContent {
     image: string
     href: string
   }
+  nowPlayingCard?: {
+    label: string
+    songTitle: string
+    artist: string
+    albumArt: string
+    href: string
+  }
   actions: {
     label: string
     icon?: 'external' | 'play' | 'calendar' | 'email'
@@ -125,6 +132,13 @@ const cards: CardData[] = [
         { label: 'Rio 2', href: 'https://www.instagram.com/stories/highlights/17948423936818673/' },
         { label: 'Rio 1', href: 'https://www.instagram.com/stories/highlights/18273965395161132/' },
       ],
+      nowPlayingCard: {
+        label: 'Last listened to...',
+        songTitle: 'Un Poco Loco',
+        artist: 'Anthony Gonzalez, Gael García Bernal',
+        albumArt: '/images/coco-album.jpg',
+        href: 'https://open.spotify.com/track/4hfbJIGUfKRqQnWJNZkGuE',
+      },
       actions: [],
     },
   },
