@@ -150,10 +150,37 @@ const cards: CardData[] = [
   },
 ]
 
-// Expanded card dimensions (in pixels)
-const EXPANDED_CARD_WIDTH = 500
-const EXPANDED_CARD_HEIGHT = 880
-const EXPANDED_CARD_GAP = 32
+// Responsive expanded card dimensions calculator
+// Returns viewport-appropriate dimensions for expanded cards
+const getExpandedCardDimensions = () => {
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
+  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080
+
+  // Mobile: maximize card size, show ~24px sliver of adjacent cards
+  if (viewportWidth < 768) {
+    const sliver = 24 // Visible portion of adjacent cards
+    const gap = 8 // Small gap between cards
+    // Card width = viewport - sliver on each side - gap on each side
+    const width = viewportWidth - (sliver * 2) - (gap * 2)
+    // Maximize height - just small padding top/bottom
+    const maxHeight = viewportHeight - 24 // 12px top + 12px bottom
+    const height = maxHeight
+    return { width, height, gap }
+  }
+
+  // Tablet: scale down if needed
+  if (viewportWidth < 1024) {
+    const padding = 24
+    const maxWidth = Math.min(500, viewportWidth - (padding * 2))
+    const maxHeight = viewportHeight - (padding * 2)
+    const aspectRatio = 880 / 500
+    const height = Math.min(maxWidth * aspectRatio, maxHeight)
+    return { width: maxWidth, height, gap: 24 }
+  }
+
+  // Desktop: use original fixed dimensions
+  return { width: 500, height: 880, gap: 32 }
+}
 
 // Stacked cards configuration - rotations and offsets for "roles under my belt" effect
 // Cards stack from bottom to top: first card is deepest, third is closest to CTA
@@ -480,17 +507,24 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     }
   }, [expandedIndex])
 
+  // Track a resize key to force re-render when viewport changes while expanded
+  const [resizeKey, setResizeKey] = React.useState(0)
+
   React.useEffect(() => {
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 1024)
       setIsMobile(window.innerWidth < 768)
+      // Force re-render to recalculate expanded positions if a card is expanded
+      if (expandedIndex !== null) {
+        setResizeKey(prev => prev + 1)
+      }
     }
 
     handleResize()
 
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [expandedIndex])
 
   const topThreeCards = cardsToShow.slice(0, 3)
   const ctaCard = cardsToShow.length > 3 ? cardsToShow[3] : undefined
@@ -502,26 +536,30 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const isExpanded = expandedIndex !== null
 
   // Calculate expanded position for a card in the carousel
-  const getExpandedPosition = (cardIndex: number) => {
+  // Uses resizeKey dependency to recalculate when viewport changes while expanded
+  const getExpandedPosition = React.useCallback((cardIndex: number) => {
+    // resizeKey ensures this recalculates on viewport resize
+    void resizeKey
+    const { width, height, gap } = getExpandedCardDimensions()
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
     const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080
 
     // Center position for the active card
-    const centerX = (viewportWidth - EXPANDED_CARD_WIDTH) / 2
-    const centerY = (viewportHeight - EXPANDED_CARD_HEIGHT) / 2
+    const centerX = (viewportWidth - width) / 2
+    const centerY = (viewportHeight - height) / 2
 
     // Offset from the active card
     const activeIdx = expandedIndex ?? 0
     const offsetFromActive = cardIndex - activeIdx
-    const xOffset = offsetFromActive * (EXPANDED_CARD_WIDTH + EXPANDED_CARD_GAP)
+    const xOffset = offsetFromActive * (width + gap)
 
     return {
       x: centerX + xOffset,
-      y: centerY,
-      width: EXPANDED_CARD_WIDTH,
-      height: EXPANDED_CARD_HEIGHT,
+      y: Math.max(16, centerY), // Ensure minimum top padding
+      width,
+      height,
     }
-  }
+  }, [expandedIndex, resizeKey])
 
   // Cards to render in the main row
   // Mobile: compact Add Role card + top 3 cards
@@ -683,11 +721,12 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                   if (isCtaFocused && isOneOfFirstThree) {
                     const config = stackedCardConfigs[cardIndex]
                     const ctaPos = getExpandedPosition(cardsToShow.length - 1)
+                    const { width, height } = getExpandedCardDimensions()
                     expandedPos = {
                       x: ctaPos.x + config.offsetX,
                       y: ctaPos.y + config.offsetY + 25,
-                      width: EXPANDED_CARD_WIDTH,
-                      height: EXPANDED_CARD_HEIGHT,
+                      width,
+                      height,
                     }
                     stackedRotation = config.rotation
                     stackedScale = config.scale

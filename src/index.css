@@ -90,6 +90,16 @@ canvas {
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* Mobile card scroll - hides scrollbar but allows scrolling */
+.mobile-card-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.mobile-card-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 /* Responsive padding classes */
 /* Mobile/Tablet (<1024px): 12px padding on all sides */
 /* Desktop (≥1024px): 24px padding on all sides */

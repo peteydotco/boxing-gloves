@@ -773,12 +773,24 @@ export function MorphingCard({
         )}
 
         {/* Morphing text content - label and title scale proportionally with card */}
+        {/* On mobile, this becomes a scrollable container for all content */}
         <motion.div
-          className="absolute inset-0 flex flex-col overflow-hidden"
+          className={`absolute inset-0 flex flex-col ${(typeof window !== 'undefined' && window.innerWidth < 768) ? 'mobile-card-scroll' : ''}`}
+          style={{
+            overflowY: (typeof window !== 'undefined' && window.innerWidth < 768) ? 'auto' : 'hidden',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
+          }}
           initial={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
-          animate={{ padding: '24px' }}
+          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '20px 16px' : '24px' }}
           exit={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
           transition={contentSpring}
+          onPointerDown={(e) => {
+            // Allow scrolling on mobile without triggering drag navigation
+            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+              e.stopPropagation()
+            }
+          }}
         >
           {/* Header row with morphing label - uses same copy as collapsed card */}
           <div className="flex items-start justify-between w-full">
@@ -865,81 +877,143 @@ export function MorphingCard({
           </motion.h2>
 
           {/* Date Range + Description - fades in */}
-          <motion.div
-            initial={{ marginTop: '0px', opacity: 0 }}
-            animate={{ marginTop: '24px', opacity: 1 }}
-            exit={{ marginTop: '0px', opacity: 0 }}
-            transition={{
-              marginTop: contentSpring,
-              opacity: { duration: 0.15, ease: 'easeOut' },
-            }}
-          >
-            {expandedContent.dateRange && (
-              <div style={{ marginBottom: '32px' }}>
-                <p
-                  className="font-pressura-ext"
-                  style={{
-                    fontWeight: 350,
-                    fontSize: '19px',
-                    lineHeight: '25px',
-                    color: styles.textColor,
-                  }}
-                >
-                  {expandedContent.dateRange.includes('→') ? (
-                    <>
-                      {expandedContent.dateRange.split('→')[0]}
-                      <span style={{ position: 'relative', top: '-1px' }}>→</span>
-                      {expandedContent.dateRange.split('→')[1]}
-                    </>
-                  ) : (
-                    expandedContent.dateRange
-                  )}
-                </p>
-              </div>
-            )}
-            {expandedContent.description.map((paragraph, i) => (
-              <p
-                key={i}
-                className="font-pressura-ext"
-                style={{
-                  fontWeight: 350,
-                  fontSize: '19px',
-                  lineHeight: '25px',
-                  color: styles.textColor,
-                  minWidth: '452px', // Fixed min-width to prevent text reflow during morph animation
+          {(() => {
+            const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
+            const isMobileViewport = viewportWidth < 768
+
+            return (
+              <motion.div
+                initial={{ marginTop: '0px', opacity: 0 }}
+                animate={{ marginTop: isMobileViewport ? '16px' : '24px', opacity: 1 }}
+                exit={{ marginTop: '0px', opacity: 0 }}
+                transition={{
+                  marginTop: contentSpring,
+                  opacity: { duration: 0.15, ease: 'easeOut' },
                 }}
               >
-                {paragraph}
-              </p>
-            ))}
-          </motion.div>
+                {expandedContent.dateRange && (
+                  <div style={{ marginBottom: isMobileViewport ? '20px' : '32px' }}>
+                    <p
+                      className="font-pressura-ext"
+                      style={{
+                        fontWeight: 350,
+                        fontSize: isMobileViewport ? '17px' : '19px',
+                        lineHeight: isMobileViewport ? '23px' : '25px',
+                        color: styles.textColor,
+                      }}
+                    >
+                      {expandedContent.dateRange.includes('→') ? (
+                        <>
+                          {expandedContent.dateRange.split('→')[0]}
+                          <span style={{ position: 'relative', top: '-1px' }}>→</span>
+                          {expandedContent.dateRange.split('→')[1]}
+                        </>
+                      ) : (
+                        expandedContent.dateRange
+                      )}
+                    </p>
+                  </div>
+                )}
+                {expandedContent.description.map((paragraph, i) => (
+                  <p
+                    key={i}
+                    className="font-pressura-ext"
+                    style={{
+                      fontWeight: 350,
+                      fontSize: isMobileViewport ? '17px' : '19px',
+                      lineHeight: isMobileViewport ? '23px' : '25px',
+                      color: styles.textColor,
+                      minWidth: isMobileViewport ? 'auto' : '452px',
+                    }}
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+
+                {/* On mobile, include bottom content inline for scrolling */}
+                {isMobileViewport && (
+                  <div style={{ marginTop: '24px', paddingBottom: '8px' }}>
+                    {/* Highlights Section (IG Stories) */}
+                    {expandedContent.highlights && expandedContent.highlights.length > 0 && (
+                      <HighlightsContainer
+                        highlights={expandedContent.highlights}
+                        styles={styles}
+                        onHighlightClick={onHighlightClick}
+                        themeMode={themeMode}
+                        variant={card.variant}
+                      />
+                    )}
+
+                    {/* Reflections Card (Video) */}
+                    {expandedContent.reflectionsCard && (
+                      <ReflectionsCard
+                        card={expandedContent.reflectionsCard}
+                        styles={styles}
+                        themeMode={themeMode}
+                        variant={card.variant}
+                      />
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-3 mt-4">
+                      {expandedContent.actions.map((action, i) => {
+                        const Icon = action.icon ? iconMap[action.icon] : null
+                        const isPrimary = action.primary
+
+                        return (
+                          <button
+                            key={i}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
+                            style={{
+                              width: '100%',
+                              height: '56px',
+                              backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
+                              color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
+                              borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
+                            }}
+                          >
+                            {Icon && <Icon className="w-5 h-5" />}
+                            <span className="text-[18px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
+                              {action.label}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )
+          })()}
 
         </motion.div>
 
-        {/* Expanded-only content - absolutely positioned at bottom, animates with card height */}
-        <motion.div
-          className="absolute"
-          style={{
-            left: '24px',
-            right: '24px',
-          }}
-          initial={{
-            bottom: 26 - (expandedPosition.height - collapsedPosition.height),
-            opacity: 0,
-          }}
-          animate={{
-            bottom: 26,
-            opacity: 1,
-          }}
-          exit={{
-            bottom: 26 - (expandedPosition.height - collapsedPosition.height),
-            opacity: 0,
-          }}
-          transition={{
-            bottom: contentSpring,
-            opacity: { duration: 0.15, ease: 'easeOut' },
-          }}
-        >
+        {/* Expanded-only content - absolutely positioned at bottom (desktop only) */}
+        {typeof window !== 'undefined' && window.innerWidth >= 768 && (
+          <motion.div
+            className="absolute"
+            style={{
+              left: '24px',
+              right: '24px',
+            }}
+            initial={{
+              bottom: 26 - (expandedPosition.height - collapsedPosition.height),
+              opacity: 0,
+            }}
+            animate={{
+              bottom: 26,
+              opacity: 1,
+            }}
+            exit={{
+              bottom: 26 - (expandedPosition.height - collapsedPosition.height),
+              opacity: 0,
+            }}
+            transition={{
+              bottom: contentSpring,
+              opacity: { duration: 0.15, ease: 'easeOut' },
+            }}
+          >
             {/* Highlights Section (IG Stories) */}
             {expandedContent.highlights && expandedContent.highlights.length > 0 && (
               <HighlightsContainer
@@ -989,6 +1063,7 @@ export function MorphingCard({
               })}
             </div>
           </motion.div>
+        )}
       </motion.div>
     )
   }
