@@ -6,11 +6,12 @@ import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { useState, useEffect, useRef } from 'react'
 
-// Theme presets for quick toggling (cycles: light → inverted → dark)
+// Theme presets for quick toggling (cycles: light → inverted → dark → darkInverted)
 const themes = {
   light: {
     bgColor: '#FFFFFF',
     spotlightOuter: 'rgba(224,224,224,0.65)',
+    spotlightInverted: false,
     marqueeColor: '#E0E0E0',
     textColor: 'rgba(0, 0, 0, 0.44)',
     logoFill: '#1A1A2E',
@@ -20,6 +21,7 @@ const themes = {
   inverted: {
     bgColor: '#E0E0E0',
     spotlightOuter: 'rgba(255,255,255,0.65)',
+    spotlightInverted: false,
     marqueeColor: '#FFFFFF',
     textColor: 'rgba(0, 0, 0, 0.5)',
     logoFill: '#1A1A2E',
@@ -29,7 +31,18 @@ const themes = {
   dark: {
     bgColor: '#121212',
     spotlightOuter: 'rgba(40,40,40,0.75)',
+    spotlightInverted: false,
     marqueeColor: 'rgba(255,255,255,0.08)',
+    textColor: 'rgba(255, 255, 255, 0.6)',
+    logoFill: '#FFFFFF',
+    bioFill: '#FFFFFF',
+    bioOpacity: 0.6,
+  },
+  darkInverted: {
+    bgColor: '#121212', // Dark gray bg
+    spotlightOuter: 'rgba(18,18,18,0.9)', // #121212 on periphery
+    spotlightInverted: true, // Darkest at edges, lighter at center
+    marqueeColor: '#000000', // Black marquee logos
     textColor: 'rgba(255, 255, 255, 0.6)',
     logoFill: '#FFFFFF',
     bioFill: '#FFFFFF',
@@ -61,14 +74,15 @@ function App() {
     }).format(now)
   })
   const [colonVisible, setColonVisible] = useState(true)
-  const [themeMode, setThemeMode] = useState<'light' | 'inverted' | 'dark'>('light')
+  const [themeMode, setThemeMode] = useState<'light' | 'inverted' | 'dark' | 'darkInverted'>('light')
   const theme = themes[themeMode]
 
-  // Cycle through themes: light → inverted → dark → light
+  // Cycle through themes: light → inverted → dark → darkInverted → light
   const cycleTheme = () => {
     setThemeMode(current => {
       if (current === 'light') return 'inverted'
       if (current === 'inverted') return 'dark'
+      if (current === 'dark') return 'darkInverted'
       return 'light'
     })
   }
@@ -204,7 +218,9 @@ function App() {
         <div
           className="absolute inset-0 z-[5] pointer-events-none"
           style={{
-            background: `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
+            background: theme.spotlightInverted
+              ? `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 15%, ${theme.spotlightOuter} 45%)`
+              : `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
             transition: 'background 0.1s ease-out',
           }}
         />

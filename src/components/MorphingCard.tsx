@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef } from 'react'
-import { SlPlus, SlCheck, SlControlPlay } from 'react-icons/sl'
+import { SlPlus, SlCheck, SlControlPlay, SlSocialInstagram } from 'react-icons/sl'
 import { FiExternalLink, FiPlay, FiCalendar, FiMail } from 'react-icons/fi'
 import React from 'react'
 
@@ -47,9 +47,14 @@ interface MorphingCardProps {
   compactCta?: boolean
   mobileLabel?: string
   emailCopied?: boolean
-  setEmailCopied?: (copied: boolean) => void
-  themeMode?: 'light' | 'inverted' | 'dark'
+  themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
   parallaxOffset?: number
+  isStackedBehind?: boolean // When true, card is displayed as stacked paper behind CTA
+  stackedRotation?: number // Rotation when stacked behind CTA
+  stackedScale?: number // Scale when stacked behind CTA
+  zIndexOverride?: number // Override z-index for stacking order
+  useBouncyTransition?: boolean // When true, use bouncy springs for carousel navigation (not expand/collapse)
+  ctaRotationOvershoot?: number // Rotation overshoot for CTA card when navigating to it (degrees)
 }
 
 // Variant styles shared between collapsed and expanded states
@@ -200,8 +205,8 @@ const variantStylesDark = {
 }
 
 // Helper to get styles based on theme
-const getVariantStyles = (themeMode: 'light' | 'inverted' | 'dark') => {
-  return themeMode === 'dark' ? variantStylesDark : variantStylesLight
+const getVariantStyles = (themeMode: 'light' | 'inverted' | 'dark' | 'darkInverted') => {
+  return (themeMode === 'dark' || themeMode === 'darkInverted') ? variantStylesDark : variantStylesLight
 }
 
 const iconMap = {
@@ -216,6 +221,22 @@ const positionSpring = {
   type: 'spring' as const,
   stiffness: 280,
   damping: 32,
+  mass: 1,
+}
+
+// Bouncier spring for stacked cards' rotation - subtle overshoot
+const stackedRotationSpring = {
+  type: 'spring' as const,
+  stiffness: 250,
+  damping: 22,
+  mass: 1,
+}
+
+// Subtle spring for CTA card when navigating to it - minimal overshoot
+const ctaEntranceSpring = {
+  type: 'spring' as const,
+  stiffness: 280,
+  damping: 26,
   mass: 1,
 }
 
@@ -290,8 +311,8 @@ function HighlightButton({ highlight, styles, onHighlightClick }: HighlightButto
         )}
       </motion.div>
       <span
-        className="font-pressura-mono leading-normal uppercase"
-        style={{ fontSize: '14px', letterSpacing: '0.42px', color: styles.textColor }}
+        className="font-pressura-mono uppercase"
+        style={{ fontSize: '12px', lineHeight: '100%', color: styles.textColor }}
       >
         {highlight.label}
       </span>
@@ -307,7 +328,7 @@ interface ReflectionsCardProps {
     href: string
   }
   styles: typeof variantStylesLight.blue
-  themeMode?: 'light' | 'inverted' | 'dark'
+  themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
   variant?: 'blue' | 'white' | 'red' | 'cta'
 }
 
@@ -315,13 +336,15 @@ function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCard
   const [isHovered, setIsHovered] = useState(false)
 
   // Determine background color based on variant and theme
+  // Uses darker tints than topCard bg for visual hierarchy
   const getBackgroundColor = () => {
+    const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
     if (variant === 'white') {
-      // Squarespace card: swap the bg colors between themes
-      return themeMode === 'dark' ? 'rgba(26,26,46,1)' : 'rgba(22,22,39,1)'
+      // Squarespace card: darker tints
+      return isDark ? 'rgba(18,18,32,1)' : 'rgba(22,22,39,1)'
     }
-    // SVA and other cards: use original blue colors
-    return themeMode === 'dark' ? 'rgba(22,115,255,1)' : '#125CCC'
+    // SVA and other cards: darker blue tints
+    return isDark ? 'rgba(0,60,170,1)' : 'rgba(0,80,210,1)'
   }
 
   return (
@@ -349,16 +372,68 @@ function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCard
       <div
         className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
         style={{
-          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.04)',
+          boxShadow: variant === 'white'
+            ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
+            : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
         }}
       />
+
+      {/* Top bar with play icon and title */}
+      <div
+        className="flex items-center"
+        style={{
+          paddingTop: '10px',
+          paddingBottom: '0px',
+          paddingLeft: '14px',
+          paddingRight: '14px',
+        }}
+      >
+        {/* Play icon - aligned with content left edge */}
+        <motion.div
+          className="flex items-center justify-center shrink-0"
+          style={{
+            width: '30px',
+            height: '30px',
+          }}
+          initial={false}
+          animate={{
+            scale: isHovered ? 1.05 : 1,
+          }}
+          transition={hoverTransition}
+        >
+          {variant === 'blue' ? (
+            <svg width="24" height="24" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginLeft: '2px' }}>
+              <path fillRule="evenodd" clipRule="evenodd" d="M21.6667 4.79171H8.33333V7.70837H21.6667V4.79171ZM23.125 4.79171V7.70837H26.0417V5.52087C26.0417 5.32749 25.9648 5.14202 25.8281 5.00528C25.6914 4.86853 25.5059 4.79171 25.3125 4.79171H23.125ZM4.6875 4.79171H6.875V7.70837H3.95833V5.52087C3.95833 5.32749 4.03516 5.14202 4.1719 5.00528C4.30865 4.86853 4.49411 4.79171 4.6875 4.79171ZM26.0417 9.16671H3.95833V24.4792C3.95833 24.6726 4.03516 24.8581 4.1719 24.9948C4.30865 25.1316 4.49411 25.2084 4.6875 25.2084H25.3125C25.5059 25.2084 25.6914 25.1316 25.8281 24.9948C25.9648 24.8581 26.0417 24.6726 26.0417 24.4792V9.16671ZM4.6875 3.33337C4.10734 3.33337 3.55094 3.56384 3.1407 3.97408C2.73047 4.38431 2.5 4.94071 2.5 5.52087V24.4792C2.5 25.0594 2.73047 25.6158 3.1407 26.026C3.55094 26.4362 4.10734 26.6667 4.6875 26.6667H25.3125C25.8927 26.6667 26.4491 26.4362 26.8593 26.026C27.2695 25.6158 27.5 25.0594 27.5 24.4792V5.52087C27.5 4.94071 27.2695 4.38431 26.8593 3.97408C26.4491 3.56384 25.8927 3.33337 25.3125 3.33337H4.6875ZM17.2765 18.0436L17.5171 17.8934L18.1515 17.4967C18.2039 17.4639 18.2471 17.4184 18.2771 17.3643C18.3071 17.3102 18.3228 17.2494 18.3228 17.1875C18.3228 17.1257 18.3071 17.0649 18.2771 17.0108C18.2471 16.9567 18.2039 16.9111 18.1515 16.8784L17.5171 16.4817L17.2765 16.3315L17.2706 16.3271L14.2708 14.4532L14.246 14.4386L13.8654 14.1994L13.3696 13.8903C13.3144 13.8559 13.2511 13.837 13.1861 13.8354C13.1212 13.8338 13.057 13.8496 13.0002 13.8811C12.9434 13.9126 12.896 13.9587 12.863 14.0147C12.83 14.0707 12.8126 14.1344 12.8125 14.1994V20.1757C12.8124 20.2409 12.8298 20.3049 12.8629 20.3611C12.896 20.4172 12.9435 20.4635 13.0005 20.4951C13.0576 20.5267 13.122 20.5424 13.1872 20.5406C13.2523 20.5388 13.3158 20.5195 13.371 20.4848L13.8654 20.1757L14.2446 19.938L14.2708 19.9219L17.2706 18.048L17.2765 18.0436ZM18.9244 15.6417L14.1425 12.6536C13.8666 12.4813 13.5496 12.386 13.2244 12.3776C12.8992 12.3691 12.5777 12.4478 12.2932 12.6056C12.0087 12.7633 11.7716 12.9943 11.6065 13.2745C11.4414 13.5548 11.3542 13.8741 11.3542 14.1994V20.1757C11.3542 20.501 11.4414 20.8203 11.6065 21.1006C11.7716 21.3808 12.0087 21.6118 12.2932 21.7695C12.5777 21.9272 12.8992 22.006 13.2244 21.9975C13.5496 21.9891 13.8666 21.8938 14.1425 21.7215L18.9244 18.7334C19.1866 18.5695 19.4028 18.3417 19.5526 18.0712C19.7025 17.8008 19.7812 17.4967 19.7812 17.1875C19.7812 16.8784 19.7025 16.5743 19.5526 16.3038C19.4028 16.0334 19.1866 15.8056 18.9244 15.6417Z" fill="white"/>
+            </svg>
+          ) : (
+            <SlControlPlay className="w-4 h-4" style={{ color: 'white' }} />
+          )}
+        </motion.div>
+
+        {/* Title - center aligned */}
+        <span
+          className="font-pressura-ext flex-1 text-center"
+          style={{
+            fontWeight: 350,
+            fontSize: '17px',
+            lineHeight: '23px',
+            color: '#FFFFFF',
+          }}
+        >
+          {card.title}
+        </span>
+
+        {/* Spacer to balance the play icon for true center alignment */}
+        <div className="shrink-0" style={{ width: '30px', height: '30px' }} />
+      </div>
+
       {/* Preview image container */}
       <div
         className="overflow-hidden relative"
         style={{
-          margin: '10px',
-          marginBottom: '10px',
-          width: 'calc(100% - 20px)',
+          margin: '8px',
+          marginTop: '10px',
+          width: 'calc(100% - 16px)',
           height: '234px',
           borderRadius: '4px',
         }}
@@ -382,56 +457,120 @@ function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCard
           }}
         />
       </div>
+    </motion.button>
+  )
+}
 
-      {/* Bottom bar with play icon and title */}
+// HighlightsContainer component - styled like ReflectionsCard
+interface HighlightsContainerProps {
+  highlights: {
+    label: string
+    image?: string
+    href?: string
+  }[]
+  styles: typeof variantStylesLight.blue
+  onHighlightClick?: (label: string) => void
+  themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
+  variant?: 'blue' | 'white' | 'red' | 'cta'
+}
+
+function HighlightsContainer({ highlights, styles, onHighlightClick, themeMode = 'light', variant }: HighlightsContainerProps) {
+  // Determine background color based on variant and theme
+  // Uses darker tints than topCard bg for visual hierarchy
+  const getBackgroundColor = () => {
+    const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
+    if (variant === 'white') {
+      // Squarespace card: darker tints
+      return isDark ? 'rgba(18,18,32,1)' : 'rgba(22,22,39,1)'
+    }
+    if (variant === 'red') {
+      // Rio Rui card: darker red tints
+      return isDark ? 'rgba(160,30,40,1)' : 'rgba(195,35,45,1)'
+    }
+    // SVA and other cards: darker blue tints
+    return isDark ? 'rgba(0,60,170,1)' : 'rgba(0,80,210,1)'
+  }
+
+  return (
+    <div
+      className="w-full rounded-[8px] overflow-hidden relative"
+      style={{
+        backgroundColor: getBackgroundColor(),
+        marginBottom: '16px',
+        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
+      }}
+    >
+      {/* Inner stroke overlay on container */}
+      <div
+        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+        style={{
+          boxShadow: variant === 'white'
+            ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
+            : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+        }}
+      />
+
+      {/* Top bar with Instagram icon and title */}
       <div
         className="flex items-center"
         style={{
-          paddingTop: '4px',
-          paddingBottom: '20px',
-          paddingLeft: '10px',
-          paddingRight: '10px',
+          paddingTop: '10px',
+          paddingBottom: '0px',
+          paddingLeft: '14px',
+          paddingRight: '14px',
         }}
       >
-        {/* Play icon - aligned with thumbnail left edge */}
-        <motion.div
+        {/* Instagram icon - aligned with content left edge */}
+        <div
           className="flex items-center justify-center shrink-0"
           style={{
             width: '30px',
             height: '30px',
           }}
-          initial={false}
-          animate={{
-            scale: isHovered ? 1.05 : 1,
-          }}
-          transition={hoverTransition}
         >
-          {variant === 'blue' ? (
-            <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginLeft: '2px' }}>
-              <path fillRule="evenodd" clipRule="evenodd" d="M21.6667 4.79171H8.33333V7.70837H21.6667V4.79171ZM23.125 4.79171V7.70837H26.0417V5.52087C26.0417 5.32749 25.9648 5.14202 25.8281 5.00528C25.6914 4.86853 25.5059 4.79171 25.3125 4.79171H23.125ZM4.6875 4.79171H6.875V7.70837H3.95833V5.52087C3.95833 5.32749 4.03516 5.14202 4.1719 5.00528C4.30865 4.86853 4.49411 4.79171 4.6875 4.79171ZM26.0417 9.16671H3.95833V24.4792C3.95833 24.6726 4.03516 24.8581 4.1719 24.9948C4.30865 25.1316 4.49411 25.2084 4.6875 25.2084H25.3125C25.5059 25.2084 25.6914 25.1316 25.8281 24.9948C25.9648 24.8581 26.0417 24.6726 26.0417 24.4792V9.16671ZM4.6875 3.33337C4.10734 3.33337 3.55094 3.56384 3.1407 3.97408C2.73047 4.38431 2.5 4.94071 2.5 5.52087V24.4792C2.5 25.0594 2.73047 25.6158 3.1407 26.026C3.55094 26.4362 4.10734 26.6667 4.6875 26.6667H25.3125C25.8927 26.6667 26.4491 26.4362 26.8593 26.026C27.2695 25.6158 27.5 25.0594 27.5 24.4792V5.52087C27.5 4.94071 27.2695 4.38431 26.8593 3.97408C26.4491 3.56384 25.8927 3.33337 25.3125 3.33337H4.6875ZM17.2765 18.0436L17.5171 17.8934L18.1515 17.4967C18.2039 17.4639 18.2471 17.4184 18.2771 17.3643C18.3071 17.3102 18.3228 17.2494 18.3228 17.1875C18.3228 17.1257 18.3071 17.0649 18.2771 17.0108C18.2471 16.9567 18.2039 16.9111 18.1515 16.8784L17.5171 16.4817L17.2765 16.3315L17.2706 16.3271L14.2708 14.4532L14.246 14.4386L13.8654 14.1994L13.3696 13.8903C13.3144 13.8559 13.2511 13.837 13.1861 13.8354C13.1212 13.8338 13.057 13.8496 13.0002 13.8811C12.9434 13.9126 12.896 13.9587 12.863 14.0147C12.83 14.0707 12.8126 14.1344 12.8125 14.1994V20.1757C12.8124 20.2409 12.8298 20.3049 12.8629 20.3611C12.896 20.4172 12.9435 20.4635 13.0005 20.4951C13.0576 20.5267 13.122 20.5424 13.1872 20.5406C13.2523 20.5388 13.3158 20.5195 13.371 20.4848L13.8654 20.1757L14.2446 19.938L14.2708 19.9219L17.2706 18.048L17.2765 18.0436ZM18.9244 15.6417L14.1425 12.6536C13.8666 12.4813 13.5496 12.386 13.2244 12.3776C12.8992 12.3691 12.5777 12.4478 12.2932 12.6056C12.0087 12.7633 11.7716 12.9943 11.6065 13.2745C11.4414 13.5548 11.3542 13.8741 11.3542 14.1994V20.1757C11.3542 20.501 11.4414 20.8203 11.6065 21.1006C11.7716 21.3808 12.0087 21.6118 12.2932 21.7695C12.5777 21.9272 12.8992 22.006 13.2244 21.9975C13.5496 21.9891 13.8666 21.8938 14.1425 21.7215L18.9244 18.7334C19.1866 18.5695 19.4028 18.3417 19.5526 18.0712C19.7025 17.8008 19.7812 17.4967 19.7812 17.1875C19.7812 16.8784 19.7025 16.5743 19.5526 16.3038C19.4028 16.0334 19.1866 15.8056 18.9244 15.6417Z" fill="white"/>
-            </svg>
-          ) : (
-            <SlControlPlay className="w-5 h-5" style={{ color: 'white' }} />
-          )}
-        </motion.div>
+          <SlSocialInstagram className="w-5 h-5" style={{ color: 'white' }} />
+        </div>
 
-        {/* Title - matches Highlights on IG Stories text style */}
+        {/* Title - center aligned */}
         <span
           className="font-pressura-ext flex-1 text-center"
           style={{
             fontWeight: 350,
-            fontSize: '19px',
-            lineHeight: '25px',
+            fontSize: '17px',
+            lineHeight: '23px',
             color: '#FFFFFF',
           }}
         >
-          {card.title}
+          Highlights on IG
         </span>
 
-        {/* Spacer to balance the play icon for true center alignment */}
+        {/* Spacer to balance the icon for true center alignment */}
         <div className="shrink-0" style={{ width: '30px', height: '30px' }} />
       </div>
-    </motion.button>
+
+      {/* Highlights content area */}
+      <div
+        className="overflow-hidden relative"
+        style={{
+          margin: '8px',
+          marginTop: '4px',
+          width: 'calc(100% - 16px)',
+          borderRadius: '4px',
+          padding: '10px 14px',
+        }}
+      >
+        <div className="flex gap-4 justify-center">
+          {highlights.map((highlight, i) => (
+            <HighlightButton
+              key={i}
+              highlight={highlight}
+              styles={styles}
+              onHighlightClick={onHighlightClick}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -447,18 +586,21 @@ export function MorphingCard({
   compactCta = false,
   mobileLabel,
   emailCopied: emailCopiedProp,
-  setEmailCopied: setEmailCopiedProp,
   themeMode = 'light',
   parallaxOffset = 0,
+  isStackedBehind = false,
+  stackedRotation = 0,
+  stackedScale = 1,
+  zIndexOverride,
+  useBouncyTransition = false,
+  ctaRotationOvershoot = 0,
 }: MorphingCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
-  const [emailCopiedLocal, setEmailCopiedLocal] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
-  // Use prop if provided, otherwise use local state
-  const emailCopied = emailCopiedProp ?? emailCopiedLocal
-  const setEmailCopied = setEmailCopiedProp ?? setEmailCopiedLocal
+  // emailCopied state is managed by parent (TopCards)
+  const emailCopied = emailCopiedProp ?? false
 
   const styles = getVariantStyles(themeMode)[card.variant]
   const { expandedContent } = card
@@ -471,12 +613,6 @@ export function MorphingCard({
     setMousePos({ x: xPercent, y: yPercent })
   }
 
-  const handleCtaClick = () => {
-    navigator.clipboard.writeText('hello@petey.co')
-    setEmailCopied(true)
-    setTimeout(() => setEmailCopied(false), 3000)
-  }
-
   // Spotlight gradient for hover state (works for both collapsed and expanded)
   const defaultBorderColor = styles.border
   const spotlightGradient = isHovered
@@ -487,6 +623,56 @@ export function MorphingCard({
 
   const label = mobileLabel || card.label
 
+  // Stacked card behind CTA - render as a static expanded-size card with collapsed appearance
+  if (isStackedBehind) {
+    return (
+      <div
+        className="w-full h-full overflow-hidden"
+        style={{
+          backgroundColor: styles.bg,
+          color: styles.textColor,
+          borderRadius: 16,
+          border: `1px solid ${styles.border}`,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+        }}
+      >
+        {/* Collapsed-style header content */}
+        <div className="flex items-center justify-between p-4" style={{ padding: '16px 20px' }}>
+          <div className="flex flex-col gap-1">
+            <span
+              className="font-pressura-mono uppercase tracking-wider"
+              style={{ fontSize: '12px', letterSpacing: '0.36px', color: styles.secondaryText }}
+            >
+              {card.label}
+            </span>
+            <span
+              className="font-pressura-mono uppercase tracking-wide"
+              style={{ fontSize: '22px', fontWeight: 400, letterSpacing: '0.44px', color: styles.textColor }}
+            >
+              {card.title}
+            </span>
+          </div>
+          <span
+            className="font-pressura-mono uppercase"
+            style={{
+              fontSize: '14px',
+              letterSpacing: '0.42px',
+              color: styles.secondaryText,
+              padding: '4px 8px',
+              backgroundColor: styles.badgeBg,
+              borderRadius: 4,
+            }}
+          >
+            {card.shortcut}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
+  // Determine if this card is stacked (has rotation/scale applied)
+  const isStacked = stackedRotation !== 0 || stackedScale !== 1
+
   // If expanded with collapsedPosition, this is a portal card that animates from collapsed to expanded
   if (isExpanded && collapsedPosition) {
     return (
@@ -496,10 +682,11 @@ export function MorphingCard({
         style={{
           backgroundColor: styles.bg,
           color: styles.textColor,
-          zIndex: 9999,
-          pointerEvents: 'auto',
-          // Parallax offset applied as transform for real-time velocity response
-          transform: `translateX(${parallaxOffset}px)`,
+          zIndex: zIndexOverride ?? 9999,
+          pointerEvents: isStacked ? 'none' : 'auto',
+          // Parallax offset applied via Framer Motion's x property for real-time velocity response
+          x: parallaxOffset,
+          transformOrigin: 'center center',
         }}
         initial={{
           top: collapsedPosition.top,
@@ -507,6 +694,8 @@ export function MorphingCard({
           width: collapsedPosition.width,
           height: collapsedPosition.height,
           borderRadius: 14,
+          rotate: 0,
+          scale: 1,
         }}
         animate={{
           top: expandedPosition.y,
@@ -514,6 +703,8 @@ export function MorphingCard({
           width: expandedPosition.width,
           height: expandedPosition.height,
           borderRadius: 16,
+          rotate: stackedRotation,
+          scale: stackedScale,
         }}
         exit={{
           top: collapsedPosition.top,
@@ -521,17 +712,28 @@ export function MorphingCard({
           width: collapsedPosition.width,
           height: collapsedPosition.height,
           borderRadius: 14,
+          rotate: 0,
+          scale: 1,
         }}
         transition={{
-          // Position gets spring bounce
-          top: positionSpring,
-          left: positionSpring,
+          // Position - use bouncy spring only during carousel navigation, not expand/collapse
+          top: useBouncyTransition ? ctaEntranceSpring : positionSpring,
+          left: useBouncyTransition ? ctaEntranceSpring : positionSpring,
           // Size is critically damped - no bounce
           width: contentSpring,
           height: contentSpring,
           borderRadius: contentSpring,
+          // Rotation/scale - bouncy for stacked cards during carousel nav, normal otherwise
+          rotate: (isStacked && useBouncyTransition) ? stackedRotationSpring : positionSpring,
+          scale: (isStacked && useBouncyTransition) ? stackedRotationSpring : positionSpring,
+          // No transition on x - it should update instantly for real-time parallax
+          x: { duration: 0 },
         }}
-        onMouseEnter={() => setIsHovered(true)}
+        onClick={(e) => {
+          // Stop propagation to prevent the backdrop click handler from closing the card
+          e.stopPropagation()
+        }}
+        onMouseEnter={() => !isStacked && setIsHovered(true)}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -740,40 +942,18 @@ export function MorphingCard({
             opacity: { duration: 0.15, ease: 'easeOut' },
           }}
         >
-            {/* Highlights Section */}
+            {/* Highlights Section (IG Stories) */}
             {expandedContent.highlights && expandedContent.highlights.length > 0 && (
-              <div
-                style={{
-                  marginBottom: '28px',
-                }}
-              >
-                <p
-                  className="font-pressura-ext"
-                  style={{
-                    fontWeight: 350,
-                    fontSize: '19px',
-                    lineHeight: '25px',
-                    color: styles.textColor,
-                    marginBottom: '24px',
-                    textAlign: 'left',
-                  }}
-                >
-                  Highlights on IG Stories –
-                </p>
-                <div className="flex gap-4 justify-start" style={{ paddingLeft: '4px' }}>
-                  {expandedContent.highlights.map((highlight, i) => (
-                    <HighlightButton
-                      key={i}
-                      highlight={highlight}
-                      styles={styles}
-                      onHighlightClick={onHighlightClick}
-                    />
-                  ))}
-                </div>
-              </div>
+              <HighlightsContainer
+                highlights={expandedContent.highlights}
+                styles={styles}
+                onHighlightClick={onHighlightClick}
+                themeMode={themeMode}
+                variant={card.variant}
+              />
             )}
 
-            {/* Reflections Card */}
+            {/* Reflections Card (Video) */}
             {expandedContent.reflectionsCard && (
               <ReflectionsCard
                 card={expandedContent.reflectionsCard}
@@ -833,7 +1013,7 @@ export function MorphingCard({
           : '0 4px 10px rgba(0,0,0,0)',
       }}
       transition={hoverTransition}
-      onClick={card.variant === 'cta' ? handleCtaClick : onClick}
+      onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setIsHovered(false)}
@@ -919,14 +1099,42 @@ export function MorphingCard({
                 {label}
               </div>
               {!hideShortcut && (
-                <div
-                  className="flex items-center justify-center rounded-[4px] shrink-0"
-                  style={{ padding: '4px 12px', backgroundColor: styles.badgeBg }}
-                >
-                  <div className="text-[12px] uppercase font-pressura-mono leading-[100%]" style={{ position: 'relative', top: '-1px' }}>
-                    {card.shortcut}
+                card.variant === 'cta' ? (
+                  // CTA badge with animated width for email copied toast
+                  <motion.div
+                    className="flex items-center justify-center rounded-[4px] shrink-0 overflow-hidden"
+                    style={{ backgroundColor: styles.badgeBg, padding: '4px 0' }}
+                    initial={false}
+                    animate={{
+                      width: emailCopied ? 108 : 44,
+                    }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                  >
+                    <div
+                      className="text-[12px] uppercase font-pressura-mono leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
+                      style={{ position: 'relative', top: '-1px' }}
+                    >
+                      {emailCopied ? (
+                        <>
+                          <SlCheck className="w-3 h-3" style={{ position: 'relative', top: '0.5px' }} />
+                          <span>Email Copied</span>
+                        </>
+                      ) : (
+                        card.shortcut
+                      )}
+                    </div>
+                  </motion.div>
+                ) : (
+                  // Regular badge with padding-based sizing
+                  <div
+                    className="flex items-center justify-center rounded-[4px] shrink-0"
+                    style={{ padding: '4px 12px', backgroundColor: styles.badgeBg }}
+                  >
+                    <div className="text-[12px] uppercase font-pressura-mono leading-[100%]" style={{ position: 'relative', top: '-1px' }}>
+                      {card.shortcut}
+                    </div>
                   </div>
-                </div>
+                )
               )}
             </div>
 
@@ -940,35 +1148,10 @@ export function MorphingCard({
                 letterSpacing: '-0.3px',
               }}
             >
-              {card.variant === 'cta' ? (
+  {card.variant === 'cta' ? (
                 <span className="flex items-center gap-3">
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.span
-                      key={emailCopied ? 'check' : 'plus'}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ duration: 0.15 }}
-                      style={{ display: 'flex', alignItems: 'center' }}
-                    >
-                      {emailCopied ? (
-                        <SlCheck className="w-5 h-5" style={{ color: (styles as typeof variantStylesLight.cta).ctaTitleColor, position: 'relative', top: '1px' }} />
-                      ) : (
-                        <SlPlus className="w-5 h-5" style={{ color: (styles as typeof variantStylesLight.cta).ctaTitleColor, position: 'relative', top: '1px' }} />
-                      )}
-                    </motion.span>
-                  </AnimatePresence>
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.span
-                      key={emailCopied ? 'copied' : 'title'}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      {emailCopied ? 'Email Copied' : card.title}
-                    </motion.span>
-                  </AnimatePresence>
+                  <SlPlus className="w-5 h-5" style={{ color: (styles as typeof variantStylesLight.cta).ctaTitleColor, position: 'relative', top: '1px' }} />
+                  {card.title}
                 </span>
               ) : (
                 card.title
@@ -991,16 +1174,14 @@ export function MorphingCard({
                 color: card.variant === 'cta' ? styles.textColor : undefined,
               }}
             >
-              {card.variant === 'cta' ? 'Copy email to clipboard' : (
-                expandedContent.dateRange.includes('→') ? (
-                  <>
-                    {expandedContent.dateRange.split('→')[0]}
-                    <span style={{ position: 'relative', top: '-1px' }}>→</span>
-                    {expandedContent.dateRange.split('→')[1]}
-                  </>
-                ) : (
-                  expandedContent.dateRange
-                )
+{expandedContent.dateRange.includes('→') ? (
+                <>
+                  {expandedContent.dateRange.split('→')[0]}
+                  <span style={{ position: 'relative', top: '-1px' }}>→</span>
+                  {expandedContent.dateRange.split('→')[1]}
+                </>
+              ) : (
+                expandedContent.dateRange
               )}
             </div>
           </div>

@@ -136,9 +136,11 @@ const cards: CardData[] = [
     variant: 'cta',
     expandedContent: {
       roleLabel: 'ADD NEW ROLE',
-      dateRange: '',
+      dateRange: '89 → Infinity',
       description: [
-        "This slot is reserved for your next collaboration. Let's build something together.",
+        "One of the greatest privileges of working in this space has been the incredible talent and personalities I've gotten to meet and, if I'm lucky, collab with.",
+        "\u00A0",
+        "So let's connect.",
       ],
       actions: [
         { label: 'SCHEDULE A CALL', icon: 'calendar', primary: true },
@@ -153,7 +155,15 @@ const EXPANDED_CARD_WIDTH = 500
 const EXPANDED_CARD_HEIGHT = 880
 const EXPANDED_CARD_GAP = 32
 
-export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: number[], themeMode?: 'light' | 'inverted' | 'dark' } = {}) {
+// Stacked cards configuration - rotations and offsets for "roles under my belt" effect
+// Cards stack from bottom to top: first card is deepest, third is closest to CTA
+const stackedCardConfigs = [
+  { rotation: -6, offsetX: -20, offsetY: 15, scale: 0.88 },   // First card (SVA) - tilted left, furthest back
+  { rotation: 4, offsetX: 15, offsetY: 8, scale: 0.92 },      // Second card (Squarespace) - slight right tilt
+  { rotation: -2, offsetX: -8, offsetY: 2, scale: 0.96 },     // Third card (Rio) - nearly straight, closest to CTA
+]
+
+export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: number[], themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' } = {}) {
   const [isDesktop, setIsDesktop] = React.useState<boolean>(() => {
     return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
   })
@@ -170,6 +180,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   // Track if we're in the middle of closing animation
   const [isClosing, setIsClosing] = React.useState(false)
+
+  // Track if we're navigating within the carousel (vs initial expand/collapse)
+  // This enables bouncy transitions only during carousel navigation
+  const [isNavigating, setIsNavigating] = React.useState(false)
 
   // Track email copied toast state
   const [emailCopied, setEmailCopied] = React.useState(false)
@@ -189,11 +203,13 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       }
     })
     setCardPositions(positions)
+    setIsNavigating(false) // Reset navigation mode on fresh expand
     setExpandedIndex(index)
   }
 
   const handleCloseExpanded = () => {
     setIsClosing(true)
+    setIsNavigating(false) // Reset navigation mode on close
     setExpandedIndex(null)
   }
 
@@ -208,7 +224,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
           e.preventDefault()
           navigator.clipboard.writeText('hello@petey.co')
           setEmailCopied(true)
-          setTimeout(() => setEmailCopied(false), 3000)
+          setTimeout(() => setEmailCopied(false), 2000)
         }
         return
       }
@@ -234,6 +250,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         velocityState.current.rawVelocity += tugStrength
 
         if (!atEnd) {
+          setIsNavigating(true) // Enable bouncy transitions for carousel navigation
           setExpandedIndex((prev) =>
             prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0
           )
@@ -245,6 +262,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         velocityState.current.rawVelocity += tugStrength
 
         if (!atStart) {
+          setIsNavigating(true) // Enable bouncy transitions for carousel navigation
           setExpandedIndex((prev) =>
             prev !== null ? Math.max(prev - 1, 0) : 0
           )
@@ -324,10 +342,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       const hitBoundary = (atStart && scrollingLeft) || (atEnd && scrollingRight)
 
       // Feed velocity into parallax system (much stronger at boundaries for dramatic rubber band)
-      // At boundaries: spring OPPOSITE to scroll direction (like tugging against an anchor)
-      // First card scrolling left -> springs right (anchor on left)
-      // Last card scrolling right -> springs left (anchor on right)
-      const velocityScale = hitBoundary ? -1.2 : 0.5
+      const velocityScale = hitBoundary ? 1.2 : 0.5
       velocityState.current.rawVelocity += e.deltaY * velocityScale
 
       // If at boundary, just apply the tug effect without navigation
@@ -355,6 +370,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
       // Lock and navigate once per gesture
       state.locked = true
+      setIsNavigating(true) // Enable bouncy transitions for carousel navigation
 
       if (e.deltaY > 0) {
         setExpandedIndex((prev) =>
@@ -420,7 +436,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       velocityState.current.rawVelocity += deltaX * 0.6
     } else {
       // Normal navigation: negative so dragging right moves cards left
-      velocityState.current.rawVelocity += -deltaX * 1.5
+      velocityState.current.rawVelocity += -deltaX * 1.2
     }
   }, [expandedIndex, cardsToShow.length])
 
@@ -441,6 +457,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
     // Navigate one card at a time if drag exceeded threshold
     if (Math.abs(totalDrag) >= DRAG_THRESHOLD) {
+      setIsNavigating(true) // Enable bouncy transitions for carousel navigation
       if (totalDrag > 0) {
         // Dragged right -> go to previous card
         setExpandedIndex((prev) => prev !== null ? Math.max(prev - 1, 0) : 0)
@@ -584,7 +601,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     compactCta={isMobileCtaCard}
                     mobileLabel={isMobileCtaCard ? 'ADD ROLE' : undefined}
                     emailCopied={emailCopied}
-                    setEmailCopied={setEmailCopied}
                     themeMode={themeMode}
                   />
                 </div>
@@ -607,7 +623,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                 onClose={handleCloseExpanded}
                 onHighlightClick={(label) => console.log('Highlight clicked:', label)}
                 emailCopied={emailCopied}
-                setEmailCopied={setEmailCopied}
                 themeMode={themeMode}
               />
             </div>
@@ -624,10 +639,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               <motion.div
                 className="fixed inset-0 backdrop-blur-md"
                 style={{ zIndex: 9998 }}
-                initial={{ opacity: 0, backgroundColor: backdropColors[themeMode === 'dark' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'] }}
+                initial={{ opacity: 0, backgroundColor: backdropColors[themeMode === 'dark' || themeMode === 'darkInverted' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'] }}
                 animate={{
                   opacity: 1,
-                  backgroundColor: backdropColors[themeMode === 'dark' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'],
+                  backgroundColor: backdropColors[themeMode === 'dark' || themeMode === 'darkInverted' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'],
                 }}
                 exit={{ opacity: 0 }}
                 transition={{
@@ -639,7 +654,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               {/* Expanded cards - wrapped in drag container */}
               <div
                 className="fixed inset-0 cursor-grab active:cursor-grabbing"
-                style={{ zIndex: 9999, touchAction: 'none' }}
+                style={{ zIndex: 9999, touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
                 onClick={() => {
                   // Only close if it wasn't a drag (minimal movement)
                   if (Math.abs(dragState.current.totalDragDistance) < 10) {
@@ -655,14 +670,51 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                   const isMobileCtaCard = isMobile && card.variant === 'cta'
                   const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
                   const collapsedPos = getCollapsedPosition(card.id)
-                  const expandedPos = getExpandedPosition(cardIndex)
                   const isFocused = cardIndex === expandedIndex
+                  const isCtaFocused = expandedIndex === cardsToShow.length - 1
+                  const isOneOfFirstThree = cardIndex < 3 && cardsToShow.length > 3
+
+                  // When CTA is focused, first 3 cards stack behind it
+                  let expandedPos = getExpandedPosition(cardIndex)
+                  let stackedRotation = 0
+                  let stackedScale = 1
+                  let zIndexOverride: number | undefined
+
+                  if (isCtaFocused && isOneOfFirstThree) {
+                    const config = stackedCardConfigs[cardIndex]
+                    const ctaPos = getExpandedPosition(cardsToShow.length - 1)
+                    expandedPos = {
+                      x: ctaPos.x + config.offsetX,
+                      y: ctaPos.y + config.offsetY + 25,
+                      width: EXPANDED_CARD_WIDTH,
+                      height: EXPANDED_CARD_HEIGHT,
+                    }
+                    stackedRotation = config.rotation
+                    stackedScale = config.scale
+                    // Stack order: first card at bottom (9996), third at top (9998), CTA at 9999
+                    zIndexOverride = 9996 + cardIndex
+                  }
 
                   // Cascading parallax: cards further from focus move more
-                  const distanceFromFocus = cardIndex - (expandedIndex ?? 0)
-                  // Multiplier increases with distance, creating staggered/cascading effect
-                  const cascadeMultiplier = 1 + Math.abs(distanceFromFocus) * 0.7
-                  const cardParallaxOffset = parallaxOffset * cascadeMultiplier
+                  // When stacked behind CTA, use a special staggered parallax based on stack position
+                  let cardParallaxOffset = 0
+                  if (isCtaFocused && isOneOfFirstThree) {
+                    // Stacked cards get inverse cascade - deeper cards (lower index) move more
+                    // This creates a nice "shuffling" feel when scrolling
+                    const stackDepth = 2 - cardIndex // 2, 1, 0 for cards 0, 1, 2
+                    const stackMultiplier = 0.6 + stackDepth * 0.25
+                    cardParallaxOffset = parallaxOffset * stackMultiplier
+                  } else {
+                    const distanceFromFocus = cardIndex - (expandedIndex ?? 0)
+                    // Multiplier increases with distance, creating staggered/cascading effect
+                    const cascadeMultiplier = 1 + Math.abs(distanceFromFocus) * 0.7
+                    cardParallaxOffset = parallaxOffset * cascadeMultiplier
+                  }
+
+                  // Only use bouncy transitions during carousel navigation, not expand/collapse
+                  // CTA card and stacked cards get subtle spring effects when navigating
+                  const isCtaCard = card.variant === 'cta'
+                  const useBouncyTransition = isNavigating && (isCtaCard && isFocused || isOneOfFirstThree && isCtaFocused)
 
                   return (
                     <MorphingCard
@@ -678,9 +730,12 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                       compactCta={isMobileCtaCard}
                       mobileLabel={isMobileCtaCard ? 'ADD ROLE' : undefined}
                       emailCopied={emailCopied}
-                      setEmailCopied={setEmailCopied}
                       themeMode={themeMode}
                       parallaxOffset={cardParallaxOffset}
+                      stackedRotation={stackedRotation}
+                      stackedScale={stackedScale}
+                      zIndexOverride={zIndexOverride}
+                      useBouncyTransition={useBouncyTransition}
                     />
                   )
                 })}
