@@ -54,7 +54,6 @@ interface MorphingCardProps {
   stackedScale?: number // Scale when stacked behind CTA
   zIndexOverride?: number // Override z-index for stacking order
   useBouncyTransition?: boolean // When true, use bouncy springs for carousel navigation (not expand/collapse)
-  ctaRotationOvershoot?: number // Rotation overshoot for CTA card when navigating to it (degrees)
 }
 
 // Variant styles shared between collapsed and expanded states
@@ -593,7 +592,6 @@ export function MorphingCard({
   stackedScale = 1,
   zIndexOverride,
   useBouncyTransition = false,
-  ctaRotationOvershoot = 0,
 }: MorphingCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
