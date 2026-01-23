@@ -445,8 +445,10 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false 
       <div
         className="overflow-hidden relative"
         style={{
-          margin: isMobile ? '10px' : '14px',
+          marginLeft: isMobile ? '10px' : '14px',
+          marginRight: isMobile ? '10px' : '14px',
           marginTop: isMobile ? '8px' : '10px',
+          marginBottom: isMobile ? '8px' : '14px',
           width: isMobile ? 'calc(100% - 20px)' : 'calc(100% - 28px)',
           height: isMobile ? '160px' : '234px',
           borderRadius: '4px',
@@ -1221,8 +1223,8 @@ export function MorphingCard({
             style={{
               left: '16px',
               right: '16px',
-              bottom: '20px',
-              gap: '20px',
+              bottom: '16px',
+              gap: '24px',
             }}
           >
             {/* Highlights Section (IG Stories) - cascade index 0 */}
