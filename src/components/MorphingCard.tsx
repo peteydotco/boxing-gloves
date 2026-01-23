@@ -920,10 +920,37 @@ export function MorphingCard({
           animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '20px 16px' : '24px' }}
           exit={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
           transition={contentSpring}
-          onPointerDown={(e) => {
-            // Allow scrolling on mobile without triggering drag navigation
+          onTouchStart={(e) => {
+            // Track touch start position for direction detection
+            const touch = e.touches[0]
+            ;(e.currentTarget as HTMLElement).dataset.touchStartX = String(touch.clientX)
+            ;(e.currentTarget as HTMLElement).dataset.touchStartY = String(touch.clientY)
+            ;(e.currentTarget as HTMLElement).dataset.touchDirection = ''
+          }}
+          onTouchMove={(e) => {
+            // On mobile, detect swipe direction to decide whether to allow vertical scroll
+            // or let horizontal swipe propagate to parent for card navigation
             if (typeof window !== 'undefined' && window.innerWidth < 768) {
-              e.stopPropagation()
+              const target = e.currentTarget as HTMLElement
+              const startX = parseFloat(target.dataset.touchStartX || '0')
+              const startY = parseFloat(target.dataset.touchStartY || '0')
+              const touch = e.touches[0]
+              const deltaX = Math.abs(touch.clientX - startX)
+              const deltaY = Math.abs(touch.clientY - startY)
+
+              // If direction not yet determined, check which axis has more movement
+              if (!target.dataset.touchDirection) {
+                if (deltaX > 10 || deltaY > 10) {
+                  target.dataset.touchDirection = deltaX > deltaY ? 'horizontal' : 'vertical'
+                }
+              }
+
+              // If horizontal swipe, don't prevent default - let it propagate for card navigation
+              // If vertical scroll, this element handles it naturally
+              if (target.dataset.touchDirection === 'horizontal') {
+                // Let the event bubble up to the parent drag container
+                return
+              }
             }
           }}
         >

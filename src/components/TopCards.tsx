@@ -343,6 +343,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     totalDragDistance: 0,
   })
 
+  // Ref for the expanded drag container (for native touch event listeners)
+  // Using state to trigger re-render when ref is set, ensuring useEffect runs after mount
+  const [dragContainer, setDragContainer] = React.useState<HTMLDivElement | null>(null)
+
   // Animation frame for smooth velocity decay
   React.useEffect(() => {
     if (expandedIndex === null) {
@@ -468,6 +472,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const handlePointerDown = React.useCallback((e: React.PointerEvent) => {
     if (expandedIndex === null) return
 
+    // Prevent default to stop mobile browsers from intercepting touch
+    e.preventDefault()
+
     const state = dragState.current
     state.isDragging = true
     state.startX = e.clientX
@@ -478,12 +485,19 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     boundaryDragState.current.isDraggingAtBoundary = false
 
     // Capture pointer for reliable tracking outside element
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    try {
+      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    } catch {
+      // Pointer capture may fail on some mobile browsers, continue without it
+    }
   }, [expandedIndex])
 
   const handlePointerMove = React.useCallback((e: React.PointerEvent) => {
     const state = dragState.current
     if (!state.isDragging || expandedIndex === null) return
+
+    // Prevent default to stop mobile browsers from scrolling/navigating
+    e.preventDefault()
 
     const now = performance.now()
     const deltaX = e.clientX - state.lastX
@@ -529,7 +543,11 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     }
 
     state.isDragging = false
-    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    try {
+      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch {
+      // Pointer capture release may fail if capture wasn't set
+    }
 
     const totalDrag = state.totalDragDistance
 
@@ -558,6 +576,100 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       }
     }
   }, [expandedIndex, cardsToShow.length, CAROUSEL_CONFIG.dragThreshold, CAROUSEL_CONFIG.momentumMultiplier, CAROUSEL_CONFIG.enableBoundarySpringBack, CAROUSEL_CONFIG.springBackMultiplier])
+
+  // Native touch event handlers for mobile browsers
+  // Required because React's synthetic events don't allow { passive: false }
+  React.useEffect(() => {
+    const container = dragContainer
+    if (!container || expandedIndex === null) return
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return
+
+      const touch = e.touches[0]
+      const state = dragState.current
+      state.isDragging = true
+      state.startX = touch.clientX
+      state.lastX = touch.clientX
+      state.lastTime = performance.now()
+      state.dragVelocity = 0
+      state.totalDragDistance = 0
+      boundaryDragState.current.isDraggingAtBoundary = false
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const state = dragState.current
+      if (!state.isDragging || e.touches.length !== 1) return
+
+      const touch = e.touches[0]
+      const now = performance.now()
+      const deltaX = touch.clientX - state.lastX
+      const deltaTime = now - state.lastTime
+
+      // Prevent default to stop browser from scrolling/navigating
+      e.preventDefault()
+
+      if (deltaTime > 0) {
+        state.dragVelocity = deltaX / deltaTime * 16
+      }
+
+      state.totalDragDistance += deltaX
+      state.lastX = touch.clientX
+      state.lastTime = now
+
+      const atStart = expandedIndex === 0
+      const atEnd = expandedIndex === cardsToShow.length - 1
+      const draggingLeft = deltaX < 0
+      const draggingRight = deltaX > 0
+      const draggingOutward = (atStart && draggingRight) || (atEnd && draggingLeft)
+
+      if (draggingOutward) {
+        boundaryDragState.current.isDraggingAtBoundary = true
+        velocityState.current.rawVelocity += deltaX * CAROUSEL_CONFIG.boundaryDragMultiplier
+      } else {
+        velocityState.current.rawVelocity += -deltaX * CAROUSEL_CONFIG.normalDragMultiplier
+      }
+    }
+
+    const handleTouchEnd = () => {
+      const state = dragState.current
+      if (!state.isDragging) return
+
+      state.isDragging = false
+      const totalDrag = state.totalDragDistance
+
+      if (CAROUSEL_CONFIG.enableBoundarySpringBack && boundaryDragState.current.isDraggingAtBoundary && Math.abs(totalDrag) > 5) {
+        const springImpulse = -totalDrag * CAROUSEL_CONFIG.springBackMultiplier
+        velocityState.current.rawVelocity = springImpulse
+        velocityState.current.smoothVelocity = 0
+        boundaryDragState.current.isDraggingAtBoundary = false
+        return
+      }
+
+      velocityState.current.rawVelocity += -state.dragVelocity * CAROUSEL_CONFIG.momentumMultiplier
+
+      if (Math.abs(totalDrag) >= CAROUSEL_CONFIG.dragThreshold) {
+        if (totalDrag < 0) {
+          setExpandedIndex((prev) => prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0)
+        } else {
+          setExpandedIndex((prev) => prev !== null ? Math.max(prev - 1, 0) : 0)
+        }
+      }
+    }
+
+    // Add listeners with { passive: false } to allow preventDefault
+    container.addEventListener('touchstart', handleTouchStart, { passive: true })
+    container.addEventListener('touchmove', handleTouchMove, { passive: false })
+    container.addEventListener('touchend', handleTouchEnd, { passive: true })
+    container.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart)
+      container.removeEventListener('touchmove', handleTouchMove)
+      container.removeEventListener('touchend', handleTouchEnd)
+      container.removeEventListener('touchcancel', handleTouchEnd)
+    }
+  }, [expandedIndex, cardsToShow.length, dragContainer])
 
   // Lock body scroll when expanded
   React.useEffect(() => {
@@ -592,9 +704,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   const topThreeCards = cardsToShow.slice(0, 3)
   const ctaCard = cardsToShow.length > 3 ? cardsToShow[3] : undefined
-  // Mobile: show compact Add Role card first, then top 3 cards
+  // Mobile: show top 3 cards, then compact Add Role card last (matches larger breakpoints)
   // Tablet/Desktop: show only top 3 cards (CTA card is separate at bottom for tablet, inline for desktop)
-  const mobileCards = ctaCard ? [ctaCard, ...topThreeCards] : topThreeCards
+  const mobileCards = ctaCard ? [...topThreeCards, ctaCard] : topThreeCards
   const isSplitMode = cardIndices && cardIndices.length < cards.length
 
   const isExpanded = expandedIndex !== null
@@ -755,6 +867,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
               {/* Expanded cards - wrapped in drag container */}
               <div
+                ref={setDragContainer}
                 className="fixed inset-0 cursor-grab active:cursor-grabbing"
                 style={{ zIndex: 9999, touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
                 onClick={() => {
