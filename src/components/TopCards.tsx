@@ -405,9 +405,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       const state = wheelState.current
       const timeSinceLastNav = now - state.lastNavTime
 
-      // Require 300ms cooldown after navigation before allowing another
+      // Require cooldown after navigation before allowing another
       // This prevents trackpad momentum from triggering multiple navigations
-      if (timeSinceLastNav < 300) {
+      if (timeSinceLastNav < 180) {
         state.lastDelta = delta
         state.lastTime = now
         return
@@ -418,18 +418,18 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       const lastDirection = Math.sign(state.lastDelta)
 
       // Ignore small deltas (trackpad noise/oscillation)
-      const minDelta = 5
+      const minDelta = 8
       if (Math.abs(delta) < minDelta) {
         return
       }
 
       // Detect new gesture: requires time gap (direction change alone isn't enough
       // as trackpad momentum can oscillate)
-      const isNewGesture = timeSinceLast > 120
+      const isNewGesture = timeSinceLast > 80
 
       // If direction changed, require longer gap to prevent oscillation-triggered navigation
       const directionChanged = direction !== lastDirection && lastDirection !== 0
-      if (directionChanged && timeSinceLast < 250) {
+      if (directionChanged && timeSinceLast < 150) {
         state.lastDelta = delta
         state.lastTime = now
         return
