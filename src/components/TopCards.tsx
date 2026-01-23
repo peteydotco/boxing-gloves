@@ -183,7 +183,7 @@ const getExpandedCardDimensions = () => {
   // Mobile: maximize card size, show ~24px sliver of adjacent cards
   if (viewportWidth < 768) {
     const sliver = 24 // Visible portion of adjacent cards
-    const gap = 8 // Small gap between cards
+    const gap = 12 // Gap between cards (increased for better visual separation)
     // Card width = viewport - sliver on each side - gap on each side
     const width = viewportWidth - (sliver * 2) - (gap * 2)
     // Maximize height - just small padding top/bottom

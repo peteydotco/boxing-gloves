@@ -336,9 +336,10 @@ interface ReflectionsCardProps {
   styles: typeof variantStylesLight.blue
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
   variant?: 'blue' | 'white' | 'red' | 'cta'
+  isMobile?: boolean
 }
 
-function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCardProps) {
+function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false }: ReflectionsCardProps) {
   const [isHovered, setIsHovered] = useState(false)
 
   // Determine background color based on variant and theme
@@ -395,18 +396,18 @@ function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCard
       <div
         className="flex items-center"
         style={{
-          paddingTop: '10px',
+          paddingTop: isMobile ? '8px' : '10px',
           paddingBottom: '0px',
-          paddingLeft: '14px',
-          paddingRight: '14px',
+          paddingLeft: isMobile ? '10px' : '14px',
+          paddingRight: isMobile ? '10px' : '14px',
         }}
       >
         {/* Play icon - aligned with content left edge */}
         <motion.div
           className="flex items-center justify-center shrink-0"
           style={{
-            width: '30px',
-            height: '30px',
+            width: isMobile ? '24px' : '30px',
+            height: isMobile ? '24px' : '30px',
           }}
           initial={false}
           animate={{
@@ -428,8 +429,8 @@ function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCard
           className="font-pressura-ext flex-1 text-center"
           style={{
             fontWeight: 350,
-            fontSize: '17px',
-            lineHeight: '23px',
+            fontSize: isMobile ? '14px' : '17px',
+            lineHeight: isMobile ? '18px' : '23px',
             color: '#FFFFFF',
           }}
         >
@@ -437,17 +438,17 @@ function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCard
         </span>
 
         {/* Spacer to balance the play icon for true center alignment */}
-        <div className="shrink-0" style={{ width: '30px', height: '30px' }} />
+        <div className="shrink-0" style={{ width: isMobile ? '24px' : '30px', height: isMobile ? '24px' : '30px' }} />
       </div>
 
       {/* Preview image container */}
       <div
         className="overflow-hidden relative"
         style={{
-          margin: '8px',
-          marginTop: '10px',
-          width: 'calc(100% - 16px)',
-          height: '234px',
+          margin: isMobile ? '10px' : '14px',
+          marginTop: isMobile ? '8px' : '10px',
+          width: isMobile ? 'calc(100% - 20px)' : 'calc(100% - 28px)',
+          height: isMobile ? '160px' : '234px',
           borderRadius: '4px',
         }}
       >
@@ -541,17 +542,17 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
 
       {/* Content area - taller layout with larger album art */}
       <div
-        className="flex items-center gap-4"
+        className="flex items-center gap-3"
         style={{
-          padding: isMobile ? '12px' : '12px 14px',
+          padding: isMobile ? '10px' : '12px 14px',
         }}
       >
         {/* Album art - larger size to match Highlights section height */}
         <motion.div
           className="shrink-0 rounded-[6px] overflow-hidden relative"
           style={{
-            width: isMobile ? '72px' : '80px',
-            height: isMobile ? '72px' : '80px',
+            width: isMobile ? '56px' : '80px',
+            height: isMobile ? '56px' : '80px',
           }}
           initial={false}
           animate={{
@@ -579,7 +580,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
           <span
             className="font-pressura-mono uppercase"
             style={{
-              fontSize: '11px',
+              fontSize: isMobile ? '10px' : '11px',
               letterSpacing: '0.33px',
               color: 'rgba(255,255,255,0.6)',
               lineHeight: '1.2',
@@ -591,10 +592,10 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
           <span
             className="font-pressura truncate w-full text-left"
             style={{
-              fontSize: isMobile ? '17px' : '19px',
+              fontSize: isMobile ? '14px' : '19px',
               color: '#FFFFFF',
               lineHeight: '1.3',
-              marginTop: '4px',
+              marginTop: isMobile ? '2px' : '4px',
             }}
           >
             {card.songTitle}
@@ -604,10 +605,10 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
             className="font-pressura-ext truncate w-full text-left"
             style={{
               fontWeight: 350,
-              fontSize: isMobile ? '14px' : '15px',
+              fontSize: isMobile ? '12px' : '15px',
               color: 'rgba(255,255,255,0.75)',
               lineHeight: '1.3',
-              marginTop: '2px',
+              marginTop: isMobile ? '1px' : '2px',
             }}
           >
             {card.artist}
@@ -618,8 +619,8 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
         <div
           className="shrink-0 flex items-center justify-center"
           style={{
-            width: '28px',
-            height: '28px',
+            width: isMobile ? '22px' : '28px',
+            height: isMobile ? '22px' : '28px',
           }}
         >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.6)">
@@ -684,10 +685,11 @@ interface DescriptionContainerProps {
 function DescriptionContainer({ description, styles, isMobile = false }: DescriptionContainerProps) {
   return (
     <div
-      className="w-full"
       style={{
-        // Desktop: fixed width prevents text reflow during card transition
-        width: isMobile ? undefined : '452px', // 500px card - 24px*2 card padding = 452px
+        // Fixed width prevents text reflow during card transition
+        // Mobile: viewport - 64px (card margin) - 32px (card padding) = viewport - 96px
+        // Desktop: 500px card - 48px padding = 452px
+        width: isMobile ? 'calc(100vw - 96px)' : '452px',
       }}
     >
       {description.map((paragraph, i) => (
@@ -1047,8 +1049,9 @@ export function MorphingCard({
 
             return (
               <motion.div
+                className={isMobileViewport ? 'flex flex-col flex-1' : ''}
                 initial={{ marginTop: '0px', opacity: 0 }}
-                animate={{ marginTop: isMobileViewport ? '16px' : '24px', opacity: 1 }}
+                animate={{ marginTop: isMobileViewport ? '36px' : '24px', opacity: 1 }}
                 exit={{ marginTop: '0px', opacity: 0 }}
                 transition={{
                   marginTop: contentSpring,
@@ -1088,72 +1091,6 @@ export function MorphingCard({
                     isMobile={isMobileViewport}
                   />
                 )}
-
-                {/* Mobile: render remaining content inline for scrolling */}
-                {isMobileViewport && (
-                  <div className="flex flex-col" style={{ paddingBottom: '8px', gap: '36px', marginTop: '36px' }}>
-
-                    {/* Highlights Section (IG Stories) - below description */}
-                    {expandedContent.highlights && expandedContent.highlights.length > 0 && (
-                      <HighlightsContainer
-                        highlights={expandedContent.highlights}
-                        styles={styles}
-                        onHighlightClick={onHighlightClick}
-                      />
-                    )}
-
-                    {/* Now Playing Card (Music) - below description, same position as Highlights */}
-                    {expandedContent.nowPlayingCard && (
-                      <NowPlayingCard
-                        card={expandedContent.nowPlayingCard}
-                        styles={styles}
-                        themeMode={themeMode}
-                        variant={card.variant}
-                        isMobile={true}
-                      />
-                    )}
-
-                    {/* Reflections Card (Video) */}
-                    {expandedContent.reflectionsCard && (
-                      <ReflectionsCard
-                        card={expandedContent.reflectionsCard}
-                        styles={styles}
-                        themeMode={themeMode}
-                        variant={card.variant}
-                      />
-                    )}
-
-                    {/* Action Buttons */}
-                    {expandedContent.actions.length > 0 && (
-                      <div className="flex flex-col gap-3">
-                        {expandedContent.actions.map((action, i) => {
-                          const Icon = action.icon ? iconMap[action.icon] : null
-                          const isPrimary = action.primary
-
-                          return (
-                            <button
-                              key={i}
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
-                              style={{
-                                width: '100%',
-                                height: '56px',
-                                backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
-                                color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
-                                borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
-                              }}
-                            >
-                              {Icon && <Icon className="w-5 h-5" />}
-                              <span className="text-[18px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
-                                {action.label}
-                              </span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
               </motion.div>
             )
           })()}
@@ -1180,8 +1117,8 @@ export function MorphingCard({
               />
             </div>
 
-            {/* Bottom content - slides up into place */}
-            <motion.div
+            {/* Bottom content - cascading fade in at final position */}
+            <div
               className="absolute flex flex-col"
               style={{
                 left: '24px',
@@ -1189,55 +1126,161 @@ export function MorphingCard({
                 bottom: '24px',
                 gap: '36px',
               }}
-              initial={{
-                opacity: 0,
-                y: expandedPosition.height - collapsedPosition.height,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              exit={{
-                opacity: 0,
-                y: expandedPosition.height - collapsedPosition.height,
-              }}
-              transition={{
-                y: contentSpring,
-                opacity: { duration: 0.15, ease: 'easeOut' },
-              }}
             >
-              {/* Highlights Section (IG Stories) */}
+              {/* Highlights Section (IG Stories) - cascade index 0 */}
               {expandedContent.highlights && expandedContent.highlights.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.18 } } }}
+                  exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.12 } } }}
+                >
+                  <HighlightsContainer
+                    highlights={expandedContent.highlights}
+                    styles={styles}
+                    onHighlightClick={onHighlightClick}
+                  />
+                </motion.div>
+              )}
+
+              {/* Now Playing Card (Music) - cascade index 1 */}
+              {expandedContent.nowPlayingCard && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.26 } } }}
+                  exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.08 } } }}
+                >
+                  <NowPlayingCard
+                    card={expandedContent.nowPlayingCard}
+                    styles={styles}
+                    themeMode={themeMode}
+                    variant={card.variant}
+                    isMobile={false}
+                  />
+                </motion.div>
+              )}
+
+              {/* Reflections Card (Video) - cascade index 2 */}
+              {expandedContent.reflectionsCard && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.34 } } }}
+                  exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.04 } } }}
+                >
+                  <ReflectionsCard
+                    card={expandedContent.reflectionsCard}
+                    styles={styles}
+                    themeMode={themeMode}
+                    variant={card.variant}
+                  />
+                </motion.div>
+              )}
+
+              {/* Action Buttons - cascade index 3 */}
+              {expandedContent.actions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.42 } } }}
+                  exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn' } } }}
+                >
+                  <div className="flex flex-col gap-3">
+                    {expandedContent.actions.map((action, i) => {
+                      const Icon = action.icon ? iconMap[action.icon] : null
+                      const isPrimary = action.primary
+
+                      return (
+                        <button
+                          key={i}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
+                          style={{
+                            width: '100%',
+                            height: '65px',
+                            backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
+                            color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
+                            borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
+                          }}
+                        >
+                          {Icon && <Icon className="w-5 h-5" />}
+                          <span className="text-[20px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
+                            {action.label}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Mobile bottom content - cascading fade in at final position */}
+        {typeof window !== 'undefined' && window.innerWidth < 768 && (
+          <div
+            className="absolute flex flex-col"
+            style={{
+              left: '16px',
+              right: '16px',
+              bottom: '20px',
+              gap: '20px',
+            }}
+          >
+            {/* Highlights Section (IG Stories) - cascade index 0 */}
+            {expandedContent.highlights && expandedContent.highlights.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.18 } } }}
+                exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.12 } } }}
+              >
                 <HighlightsContainer
                   highlights={expandedContent.highlights}
                   styles={styles}
                   onHighlightClick={onHighlightClick}
                 />
-              )}
+              </motion.div>
+            )}
 
-              {/* Now Playing Card (Music) */}
-              {expandedContent.nowPlayingCard && (
+            {/* Now Playing Card (Music) - cascade index 1 */}
+            {expandedContent.nowPlayingCard && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.26 } } }}
+                exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.08 } } }}
+              >
                 <NowPlayingCard
                   card={expandedContent.nowPlayingCard}
                   styles={styles}
                   themeMode={themeMode}
                   variant={card.variant}
-                  isMobile={false}
+                  isMobile={true}
                 />
-              )}
+              </motion.div>
+            )}
 
-              {/* Reflections Card (Video) */}
-              {expandedContent.reflectionsCard && (
+            {/* Reflections Card (Video) - cascade index 2 */}
+            {expandedContent.reflectionsCard && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.34 } } }}
+                exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.04 } } }}
+              >
                 <ReflectionsCard
                   card={expandedContent.reflectionsCard}
                   styles={styles}
                   themeMode={themeMode}
                   variant={card.variant}
+                  isMobile={true}
                 />
-              )}
+              </motion.div>
+            )}
 
-              {/* Action Buttons */}
-              {expandedContent.actions.length > 0 && (
+            {/* Action Buttons - cascade index 3 */}
+            {expandedContent.actions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.42 } } }}
+                exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn' } } }}
+              >
                 <div className="flex flex-col gap-3">
                   {expandedContent.actions.map((action, i) => {
                     const Icon = action.icon ? iconMap[action.icon] : null
@@ -1250,23 +1293,23 @@ export function MorphingCard({
                         className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
                         style={{
                           width: '100%',
-                          height: '65px',
+                          height: '56px',
                           backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
                           color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
                           borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
                         }}
                       >
                         {Icon && <Icon className="w-5 h-5" />}
-                        <span className="text-[20px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
+                        <span className="text-[18px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
                           {action.label}
                         </span>
                       </button>
                     )
                   })}
                 </div>
-              )}
-            </motion.div>
-          </>
+              </motion.div>
+            )}
+          </div>
         )}
       </motion.div>
     )
