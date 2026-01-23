@@ -21,16 +21,16 @@ const CAROUSEL_CONFIG = {
 // Light/inverted themes use brighter versions, dark theme uses darker shades
 const backdropColors = {
   light: {
-    blue: 'rgba(0,100,255,0.6)',
-    white: 'rgba(26,26,46,0.6)',
-    red: 'rgba(235,45,55,0.6)',
-    cta: 'rgba(0,0,0,0.6)',
+    blue: 'rgba(0,100,255,0.48)',
+    white: 'rgba(45,35,80,0.48)', // More saturated purple for Squarespace
+    red: 'rgba(235,45,55,0.48)',
+    cta: 'rgba(0,0,0,0.48)',
   },
   dark: {
-    blue: 'rgba(0,75,200,0.7)',
-    white: 'rgba(19,19,35,0.7)',
-    red: 'rgba(185,35,45,0.7)',
-    cta: 'rgba(35,35,35,0.75)',
+    blue: 'rgba(0,75,200,0.48)',
+    white: 'rgba(40,30,70,0.48)', // More saturated purple for Squarespace
+    red: 'rgba(185,35,45,0.48)',
+    cta: 'rgba(35,35,35,0.48)',
   },
 }
 
@@ -407,7 +407,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
       // Require cooldown after navigation before allowing another
       // This prevents trackpad momentum from triggering multiple navigations
-      if (timeSinceLastNav < 180) {
+      // 350ms ensures even strong flicks only advance one card
+      if (timeSinceLastNav < 350) {
         state.lastDelta = delta
         state.lastTime = now
         return
@@ -739,8 +740,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
             <>
               {/* Backdrop - samples bg color from focused card, smoothly transitions */}
               <motion.div
-                className="fixed inset-0 backdrop-blur-md"
-                style={{ zIndex: 9998 }}
+                className="fixed inset-0"
+                style={{ zIndex: 9998, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
                 initial={{ opacity: 0, backgroundColor: backdropColors[themeMode === 'dark' || themeMode === 'darkInverted' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'] }}
                 animate={{
                   opacity: 1,
