@@ -996,11 +996,11 @@ export function MorphingCard({
             transition={contentSpring}
           >
             {card.variant === 'cta' ? (
-              <span className="flex items-center gap-3">
+              <span className="flex items-center gap-2">
                 <motion.span
                   style={{ display: 'flex', alignItems: 'center' }}
                   initial={{ width: 20, height: 20 }}
-                  animate={{ width: 24, height: 24 }}
+                  animate={{ width: 20, height: 20 }}
                   exit={{ width: 20, height: 20 }}
                   transition={contentSpring}
                 >
