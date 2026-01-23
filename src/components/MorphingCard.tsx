@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef } from 'react'
-import { SlPlus, SlControlPlay, SlSocialInstagram } from 'react-icons/sl'
+import { SlPlus, SlControlPlay } from 'react-icons/sl'
 import { FiExternalLink, FiPlay, FiCalendar, FiMail } from 'react-icons/fi'
 import React from 'react'
 
@@ -238,11 +238,11 @@ const stackedRotationSpring = {
   mass: 1,
 }
 
-// Subtle spring for CTA card when navigating to it - minimal overshoot
+// Bouncy spring for card navigation - subtle overshoot for satisfying settle (preset 5)
 const ctaEntranceSpring = {
   type: 'spring' as const,
-  stiffness: 280,
-  damping: 26,
+  stiffness: 300,
+  damping: 28,
   mass: 1,
 }
 
@@ -348,6 +348,13 @@ function ReflectionsCard({ card, themeMode = 'light', variant }: ReflectionsCard
     if (variant === 'white') {
       // Squarespace card: darker tints
       return isDark ? 'rgba(18,18,32,1)' : 'rgba(22,22,39,1)'
+    }
+    if (variant === 'red') {
+      // Rio card: darker red tints (matching NowPlayingCard)
+      return isDark ? 'rgba(160,30,40,1)' : 'rgba(195,35,45,1)'
+    }
+    if (variant === 'cta') {
+      return isDark ? 'rgba(40,40,40,1)' : 'rgba(230,230,230,1)'
     }
     // SVA and other cards: darker blue tints
     return isDark ? 'rgba(0,60,170,1)' : 'rgba(0,80,210,1)'
@@ -532,23 +539,23 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
         }}
       />
 
-      {/* Content area */}
+      {/* Content area - taller layout with larger album art */}
       <div
-        className="flex items-center gap-3"
+        className="flex items-center gap-4"
         style={{
-          padding: isMobile ? '12px' : '14px 16px',
+          padding: isMobile ? '12px' : '12px 14px',
         }}
       >
-        {/* Album art */}
+        {/* Album art - larger size to match Highlights section height */}
         <motion.div
-          className="shrink-0 rounded-[4px] overflow-hidden relative"
+          className="shrink-0 rounded-[6px] overflow-hidden relative"
           style={{
-            width: isMobile ? '52px' : '56px',
-            height: isMobile ? '52px' : '56px',
+            width: isMobile ? '72px' : '80px',
+            height: isMobile ? '72px' : '80px',
           }}
           initial={false}
           animate={{
-            scale: isHovered ? 1.05 : 1,
+            scale: isHovered ? 1.03 : 1,
           }}
           transition={hoverTransition}
         >
@@ -559,7 +566,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
           />
           {/* Inner stroke on album art */}
           <div
-            className="absolute inset-0 rounded-[4px] pointer-events-none"
+            className="absolute inset-0 rounded-[6px] pointer-events-none"
             style={{
               boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
             }}
@@ -584,10 +591,10 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
           <span
             className="font-pressura truncate w-full text-left"
             style={{
-              fontSize: isMobile ? '15px' : '17px',
+              fontSize: isMobile ? '17px' : '19px',
               color: '#FFFFFF',
               lineHeight: '1.3',
-              marginTop: '2px',
+              marginTop: '4px',
             }}
           >
             {card.songTitle}
@@ -597,9 +604,10 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
             className="font-pressura-ext truncate w-full text-left"
             style={{
               fontWeight: 350,
-              fontSize: isMobile ? '13px' : '14px',
+              fontSize: isMobile ? '14px' : '15px',
               color: 'rgba(255,255,255,0.75)',
               lineHeight: '1.3',
+              marginTop: '2px',
             }}
           >
             {card.artist}
@@ -610,11 +618,11 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
         <div
           className="shrink-0 flex items-center justify-center"
           style={{
-            width: '24px',
-            height: '24px',
+            width: '28px',
+            height: '28px',
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.6)">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.6)">
             <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
           </svg>
         </div>
@@ -623,7 +631,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
   )
 }
 
-// HighlightsContainer component - styled like ReflectionsCard
+// HighlightsContainer component - simple container for highlight buttons
 interface HighlightsContainerProps {
   highlights: {
     label: string
@@ -632,178 +640,70 @@ interface HighlightsContainerProps {
   }[]
   styles: typeof variantStylesLight.blue
   onHighlightClick?: (label: string) => void
-  themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
-  variant?: 'blue' | 'white' | 'red' | 'cta'
 }
 
-function HighlightsContainer({ highlights, styles, onHighlightClick, themeMode = 'light', variant }: HighlightsContainerProps) {
-  // Determine background color based on variant and theme
-  // Uses darker tints than topCard bg for visual hierarchy
-  const getBackgroundColor = () => {
-    const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
-    if (variant === 'white') {
-      // Squarespace card: darker tints
-      return isDark ? 'rgba(18,18,32,1)' : 'rgba(22,22,39,1)'
-    }
-    if (variant === 'red') {
-      // Rio Rui card: darker red tints
-      return isDark ? 'rgba(160,30,40,1)' : 'rgba(195,35,45,1)'
-    }
-    // SVA and other cards: darker blue tints
-    return isDark ? 'rgba(0,60,170,1)' : 'rgba(0,80,210,1)'
-  }
-
+function HighlightsContainer({ highlights, styles, onHighlightClick }: HighlightsContainerProps) {
   return (
-    <div
-      className="w-full rounded-[8px] overflow-hidden relative"
-      style={{
-        backgroundColor: getBackgroundColor(),
-        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
-      }}
-    >
-      {/* Inner stroke overlay on container */}
-      <div
-        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+    <div className="w-full">
+      {/* Section title */}
+      <p
+        className="font-pressura-ext"
         style={{
-          boxShadow: variant === 'white'
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
-            : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
-        }}
-      />
-
-      {/* Top bar with Instagram icon and title */}
-      <div
-        className="flex items-center"
-        style={{
-          paddingTop: '10px',
-          paddingBottom: '0px',
-          paddingLeft: '14px',
-          paddingRight: '14px',
+          fontWeight: 350,
+          fontSize: '17px',
+          lineHeight: '23px',
+          color: styles.textColor,
+          marginBottom: '16px',
         }}
       >
-        {/* Instagram icon - aligned with content left edge */}
-        <div
-          className="flex items-center justify-center shrink-0"
-          style={{
-            width: '30px',
-            height: '30px',
-          }}
-        >
-          <SlSocialInstagram className="w-5 h-5" style={{ color: 'white' }} />
-        </div>
-
-        {/* Title - center aligned */}
-        <span
-          className="font-pressura-ext flex-1 text-center"
-          style={{
-            fontWeight: 350,
-            fontSize: '17px',
-            lineHeight: '23px',
-            color: '#FFFFFF',
-          }}
-        >
-          Highlights on IG
-        </span>
-
-        {/* Spacer to balance the icon for true center alignment */}
-        <div className="shrink-0" style={{ width: '30px', height: '30px' }} />
-      </div>
+        Highlights on IG
+      </p>
 
       {/* Highlights content area */}
-      <div
-        className="overflow-hidden relative"
-        style={{
-          margin: '8px',
-          marginTop: '4px',
-          width: 'calc(100% - 16px)',
-          borderRadius: '4px',
-          padding: '10px 14px',
-        }}
-      >
-        <div className="flex gap-4 justify-center">
-          {highlights.map((highlight, i) => (
-            <HighlightButton
-              key={i}
-              highlight={highlight}
-              styles={styles}
-              onHighlightClick={onHighlightClick}
-            />
-          ))}
-        </div>
+      <div className="flex gap-4 justify-start">
+        {highlights.map((highlight, i) => (
+          <HighlightButton
+            key={i}
+            highlight={highlight}
+            styles={styles}
+            onHighlightClick={onHighlightClick}
+          />
+        ))}
       </div>
     </div>
   )
 }
 
-// DescriptionContainer component - styled like HighlightsContainer and ReflectionsCard
+// DescriptionContainer component - simple text container for description paragraphs
 interface DescriptionContainerProps {
   description: React.ReactNode[]
   styles: typeof variantStylesLight.blue
-  themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
-  variant?: 'blue' | 'white' | 'red' | 'cta'
   isMobile?: boolean
-  minHeight?: number
 }
 
-function DescriptionContainer({ description, styles, themeMode = 'light', variant, isMobile = false, minHeight }: DescriptionContainerProps) {
-  // Determine background color based on variant and theme
-  const getBackgroundColor = () => {
-    const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
-    if (variant === 'white') {
-      return isDark ? 'rgba(18,18,32,1)' : 'rgba(22,22,39,1)'
-    }
-    if (variant === 'red') {
-      return isDark ? 'rgba(160,30,40,1)' : 'rgba(195,35,45,1)'
-    }
-    if (variant === 'cta') {
-      return isDark ? 'rgba(40,40,40,1)' : 'rgba(230,230,230,1)'
-    }
-    // SVA and other cards: darker blue tints
-    return isDark ? 'rgba(0,60,170,1)' : 'rgba(0,80,210,1)'
-  }
-
+function DescriptionContainer({ description, styles, isMobile = false }: DescriptionContainerProps) {
   return (
     <div
-      className="w-full rounded-[8px] overflow-hidden relative"
+      className="w-full"
       style={{
-        backgroundColor: getBackgroundColor(),
-        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
-        minHeight: minHeight ? `${minHeight}px` : undefined,
+        // Desktop: fixed width prevents text reflow during card transition
+        width: isMobile ? undefined : '452px', // 500px card - 24px*2 card padding = 452px
       }}
     >
-      {/* Inner stroke overlay on container */}
-      <div
-        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
-        style={{
-          boxShadow: variant === 'white' || variant === 'cta'
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
-            : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
-        }}
-      />
-
-      {/* Content area */}
-      {/* Desktop: fixed width prevents text reflow during card transition */}
-      <div
-        style={{
-          padding: isMobile ? '16px' : '18px 20px',
-          width: isMobile ? undefined : '452px', // 500px card - 24px*2 card padding = 452px
-        }}
-      >
-        {description.map((paragraph, i) => (
-          <p
-            key={i}
-            className="font-pressura-ext"
-            style={{
-              fontWeight: 350,
-              fontSize: isMobile ? '15px' : '17px',
-              lineHeight: isMobile ? '21px' : '23px',
-              color: styles.textColor,
-            }}
-          >
-            {paragraph}
-          </p>
-        ))}
-      </div>
+      {description.map((paragraph, i) => (
+        <p
+          key={i}
+          className="font-pressura-ext"
+          style={{
+            fontWeight: 350,
+            fontSize: isMobile ? '15px' : '17px',
+            lineHeight: isMobile ? '21px' : '23px',
+            color: styles.textColor,
+          }}
+        >
+          {paragraph}
+        </p>
+      ))}
     </div>
   )
 }
@@ -1128,7 +1028,7 @@ export function MorphingCard({
                   opacity: { duration: 0.15, ease: 'easeOut' },
                 }}
               >
-                {/* Date Range - displayed above the container */}
+                {/* Date Range - displayed above the description */}
                 {expandedContent.dateRange && (
                   <p
                     className="font-pressura-ext"
@@ -1137,7 +1037,7 @@ export function MorphingCard({
                       fontSize: isMobileViewport ? '15px' : '17px',
                       lineHeight: isMobileViewport ? '21px' : '23px',
                       color: styles.textColor,
-                      marginBottom: isMobileViewport ? '12px' : '16px',
+                      marginBottom: '24px',
                       opacity: 0.9,
                     }}
                   >
@@ -1154,23 +1054,28 @@ export function MorphingCard({
                 )}
 
                 {/* Description Container - mobile only (desktop renders in bottom section) */}
-                {/* SVA and Squarespace (blue/white variants) share same minHeight for consistency */}
                 {isMobileViewport && (
                   <DescriptionContainer
                     description={expandedContent.description}
                     styles={styles}
-                    themeMode={themeMode}
-                    variant={card.variant}
                     isMobile={isMobileViewport}
-                    minHeight={(card.variant === 'blue' || card.variant === 'white') ? 137 : undefined}
                   />
                 )}
 
                 {/* Mobile: render remaining content inline for scrolling */}
                 {isMobileViewport && (
-                  <div className="flex flex-col" style={{ paddingBottom: '8px', gap: '16px', marginTop: '16px' }}>
+                  <div className="flex flex-col" style={{ paddingBottom: '8px', gap: '36px', marginTop: '36px' }}>
 
-                    {/* Now Playing Card (Music) - at top */}
+                    {/* Highlights Section (IG Stories) - below description */}
+                    {expandedContent.highlights && expandedContent.highlights.length > 0 && (
+                      <HighlightsContainer
+                        highlights={expandedContent.highlights}
+                        styles={styles}
+                        onHighlightClick={onHighlightClick}
+                      />
+                    )}
+
+                    {/* Now Playing Card (Music) - below description, same position as Highlights */}
                     {expandedContent.nowPlayingCard && (
                       <NowPlayingCard
                         card={expandedContent.nowPlayingCard}
@@ -1178,17 +1083,6 @@ export function MorphingCard({
                         themeMode={themeMode}
                         variant={card.variant}
                         isMobile={true}
-                      />
-                    )}
-
-                    {/* Highlights Section (IG Stories) */}
-                    {expandedContent.highlights && expandedContent.highlights.length > 0 && (
-                      <HighlightsContainer
-                        highlights={expandedContent.highlights}
-                        styles={styles}
-                        onHighlightClick={onHighlightClick}
-                        themeMode={themeMode}
-                        variant={card.variant}
                       />
                     )}
 
@@ -1203,32 +1097,34 @@ export function MorphingCard({
                     )}
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col gap-3">
-                      {expandedContent.actions.map((action, i) => {
-                        const Icon = action.icon ? iconMap[action.icon] : null
-                        const isPrimary = action.primary
+                    {expandedContent.actions.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        {expandedContent.actions.map((action, i) => {
+                          const Icon = action.icon ? iconMap[action.icon] : null
+                          const isPrimary = action.primary
 
-                        return (
-                          <button
-                            key={i}
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
-                            style={{
-                              width: '100%',
-                              height: '56px',
-                              backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
-                              color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
-                              borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
-                            }}
-                          >
-                            {Icon && <Icon className="w-5 h-5" />}
-                            <span className="text-[18px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
-                              {action.label}
-                            </span>
-                          </button>
-                        )
-                      })}
-                    </div>
+                          return (
+                            <button
+                              key={i}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
+                              style={{
+                                width: '100%',
+                                height: '56px',
+                                backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
+                                color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
+                                borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
+                              }}
+                            >
+                              {Icon && <Icon className="w-5 h-5" />}
+                              <span className="text-[18px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
+                                {action.label}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </motion.div>
@@ -1240,30 +1136,47 @@ export function MorphingCard({
         {/* Expanded-only content - absolutely positioned at bottom (desktop only) */}
         {typeof window !== 'undefined' && window.innerWidth >= 768 && (
           <motion.div
-            className="absolute flex flex-col"
+            className="absolute flex flex-col justify-end"
             style={{
               left: '24px',
               right: '24px',
-              gap: '16px',
+              bottom: '24px',
+              gap: '36px',
             }}
             initial={{
-              bottom: 26 - (expandedPosition.height - collapsedPosition.height),
               opacity: 0,
+              y: expandedPosition.height - collapsedPosition.height,
             }}
             animate={{
-              bottom: 26,
               opacity: 1,
+              y: 0,
             }}
             exit={{
-              bottom: 26 - (expandedPosition.height - collapsedPosition.height),
               opacity: 0,
+              y: expandedPosition.height - collapsedPosition.height,
             }}
             transition={{
-              bottom: contentSpring,
+              y: contentSpring,
               opacity: { duration: 0.15, ease: 'easeOut' },
             }}
           >
-            {/* Now Playing Card (Music) - at top */}
+            {/* Description Container - desktop only */}
+            <DescriptionContainer
+              description={expandedContent.description}
+              styles={styles}
+              isMobile={false}
+            />
+
+            {/* Highlights Section (IG Stories) - below description */}
+            {expandedContent.highlights && expandedContent.highlights.length > 0 && (
+              <HighlightsContainer
+                highlights={expandedContent.highlights}
+                styles={styles}
+                onHighlightClick={onHighlightClick}
+              />
+            )}
+
+            {/* Now Playing Card (Music) - below description, same position as Highlights */}
             {expandedContent.nowPlayingCard && (
               <NowPlayingCard
                 card={expandedContent.nowPlayingCard}
@@ -1271,28 +1184,6 @@ export function MorphingCard({
                 themeMode={themeMode}
                 variant={card.variant}
                 isMobile={false}
-              />
-            )}
-
-            {/* Description Container - desktop only */}
-            {/* SVA and Squarespace (blue/white variants) share same minHeight for consistency */}
-            <DescriptionContainer
-              description={expandedContent.description}
-              styles={styles}
-              themeMode={themeMode}
-              variant={card.variant}
-              isMobile={false}
-              minHeight={(card.variant === 'blue' || card.variant === 'white') ? 151 : undefined}
-            />
-
-            {/* Highlights Section (IG Stories) */}
-            {expandedContent.highlights && expandedContent.highlights.length > 0 && (
-              <HighlightsContainer
-                highlights={expandedContent.highlights}
-                styles={styles}
-                onHighlightClick={onHighlightClick}
-                themeMode={themeMode}
-                variant={card.variant}
               />
             )}
 
@@ -1307,32 +1198,34 @@ export function MorphingCard({
             )}
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-3">
-              {expandedContent.actions.map((action, i) => {
-                const Icon = action.icon ? iconMap[action.icon] : null
-                const isPrimary = action.primary
+            {expandedContent.actions.length > 0 && (
+              <div className="flex flex-col gap-3">
+                {expandedContent.actions.map((action, i) => {
+                  const Icon = action.icon ? iconMap[action.icon] : null
+                  const isPrimary = action.primary
 
-                return (
-                  <button
-                    key={i}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
-                    style={{
-                      width: '100%',
-                      height: '65px',
-                      backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
-                      color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
-                      borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
-                    }}
-                  >
-                    {Icon && <Icon className="w-5 h-5" />}
-                    <span className="text-[20px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
-                      {action.label}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+                  return (
+                    <button
+                      key={i}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
+                      style={{
+                        width: '100%',
+                        height: '65px',
+                        backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
+                        color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
+                        borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
+                      }}
+                    >
+                      {Icon && <Icon className="w-5 h-5" />}
+                      <span className="text-[20px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
+                        {action.label}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </motion.div>
         )}
       </motion.div>

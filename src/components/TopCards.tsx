@@ -3,6 +3,20 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MorphingCard } from './MorphingCard'
 import { createPortal } from 'react-dom'
 
+// Carousel tuning configuration (preset 5: dampened spring)
+const CAROUSEL_CONFIG = {
+  dragThreshold: 50,
+  normalDragMultiplier: 1.0,
+  boundaryDragMultiplier: 1.8,
+  momentumMultiplier: 8,
+  velocityDecay: 0.70,
+  parallaxMultiplier: 0.20,
+  boundaryVelocityScale: 2.5,
+  normalVelocityScale: 0.5,
+  enableBoundarySpringBack: false,
+  springBackMultiplier: 0,
+}
+
 // Backdrop colors that sample from each card variant's bg
 // Light/inverted themes use brighter versions, dark theme uses darker shades
 const backdropColors = {
@@ -121,16 +135,7 @@ const cards: CardData[] = [
       roleLabel: 'NEW DAD TO',
       dateRange: '2023 → Present',
       description: [
-        'Full-time dad duties: snacks, adventures, and answering "why?" approximately 400 times per day.',
-        '\u00A0',
-        'Currently leveling up in LEGO engineering, bedtime story voice acting, and playground diplomacy.',
-      ],
-      highlights: [
-        { label: 'Rio 5', href: 'https://www.instagram.com/stories/highlights/17999753420661811/' },
-        { label: 'Rio 4', href: 'https://www.instagram.com/stories/highlights/18028911476420720/' },
-        { label: 'Rio 3', href: 'https://www.instagram.com/stories/highlights/18034957247227258/' },
-        { label: 'Rio 2', href: 'https://www.instagram.com/stories/highlights/17948423936818673/' },
-        { label: 'Rio 1', href: 'https://www.instagram.com/stories/highlights/18273965395161132/' },
+        'Full-time dad duties: snacks, adventures, and answering "why?" approximately 400 times per day. Currently leveling up in LEGO engineering, bedtime story voice acting, and playground diplomacy.',
       ],
       nowPlayingCard: {
         label: 'Last listened to...',
@@ -138,6 +143,11 @@ const cards: CardData[] = [
         artist: 'Anthony Gonzalez, Gael García Bernal',
         albumArt: '/images/coco-album.jpg',
         href: 'https://open.spotify.com/track/4hfbJIGUfKRqQnWJNZkGuE',
+      },
+      reflectionsCard: {
+        title: "Cookie Monster's Favorite Shape",
+        image: '/images/rio-video-preview.jpg',
+        href: 'https://www.youtube.com/watch?v=gfNalVIrdOw',
       },
       actions: [],
     },
@@ -222,9 +232,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   // Track if we're in the middle of closing animation
   const [isClosing, setIsClosing] = React.useState(false)
 
-  // Track if we're navigating within the carousel (vs initial expand/collapse)
-  // This enables bouncy transitions only during carousel navigation
-  const [isNavigating, setIsNavigating] = React.useState(false)
 
   // Track email copied toast state
   const [emailCopied, setEmailCopied] = React.useState(false)
@@ -244,13 +251,11 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       }
     })
     setCardPositions(positions)
-    setIsNavigating(false) // Reset navigation mode on fresh expand
     setExpandedIndex(index)
   }
 
   const handleCloseExpanded = () => {
     setIsClosing(true)
-    setIsNavigating(false) // Reset navigation mode on close
     setExpandedIndex(null)
   }
 
@@ -270,13 +275,21 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         return
       }
 
-      // Number keys 1-4 to open cards (when not expanded)
-      if (expandedIndex === null) {
-        const keyNum = parseInt(e.key, 10)
-        if (keyNum >= 1 && keyNum <= cardsToShow.length) {
-          capturePositionsAndExpand(keyNum - 1)
-          return
+      // Number keys 1-4 to open/close/jump between cards
+      const keyNum = parseInt(e.key, 10)
+      if (keyNum >= 1 && keyNum <= cardsToShow.length) {
+        const targetIndex = keyNum - 1
+        if (expandedIndex === null) {
+          // Not expanded - open the card
+          capturePositionsAndExpand(targetIndex)
+        } else if (expandedIndex === targetIndex) {
+          // Same card - close it
+          handleCloseExpanded()
+        } else {
+          // Different card - jump to it with bouncy transition
+                    setExpandedIndex(targetIndex)
         }
+        return
       }
 
       // ESC and arrow keys only work when expanded
@@ -291,7 +304,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         velocityState.current.rawVelocity += tugStrength
 
         if (!atEnd) {
-          setIsNavigating(true) // Enable bouncy transitions for carousel navigation
           setExpandedIndex((prev) =>
             prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0
           )
@@ -303,7 +315,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         velocityState.current.rawVelocity += tugStrength
 
         if (!atStart) {
-          setIsNavigating(true) // Enable bouncy transitions for carousel navigation
           setExpandedIndex((prev) =>
             prev !== null ? Math.max(prev - 1, 0) : 0
           )
@@ -351,73 +362,93 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       const dampFactor = 1 - Math.exp(-25 * deltaTime) // ~25 = instant response for sharp tug
       state.smoothVelocity += (state.rawVelocity - state.smoothVelocity) * dampFactor
 
-      // Decay raw velocity - very fast decay for quick snap back
-      state.rawVelocity *= Math.pow(0.65, deltaTime * 60) // Aggressive decay for tug-and-release feel
+      // Decay raw velocity - configurable decay for different feels
+      state.rawVelocity *= Math.pow(CAROUSEL_CONFIG.velocityDecay, deltaTime * 60)
 
       // Apply parallax offset based on smoothed velocity
-      // Multiplier controls effect strength (negative = cards push in scroll direction)
-      const parallaxMultiplier = 0.18 // Noticeable tug
-      setParallaxOffset(state.smoothVelocity * parallaxMultiplier)
+      setParallaxOffset(state.smoothVelocity * CAROUSEL_CONFIG.parallaxMultiplier)
 
       animationId = requestAnimationFrame(animate)
     }
 
     animationId = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(animationId)
-  }, [expandedIndex])
+  }, [expandedIndex, CAROUSEL_CONFIG.velocityDecay, CAROUSEL_CONFIG.parallaxMultiplier])
 
   // Wheel navigation when expanded - one card per scroll gesture
-  const wheelState = React.useRef({ lastDelta: 0, lastTime: 0, locked: false })
+  const wheelState = React.useRef({ lastDelta: 0, lastTime: 0, lastNavTime: 0 })
   React.useEffect(() => {
     if (expandedIndex === null) return
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
 
+      // Use deltaX for horizontal scrolling (trackpad swipe), fall back to deltaY for vertical
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+
       const atStart = expandedIndex === 0
       const atEnd = expandedIndex === cardsToShow.length - 1
-      const scrollingLeft = e.deltaY < 0
-      const scrollingRight = e.deltaY > 0
+      const goingNext = delta > 0
+      const goingPrev = delta < 0
 
       // Rubber band at boundaries - apply tug but don't navigate
-      const hitBoundary = (atStart && scrollingLeft) || (atEnd && scrollingRight)
+      const hitBoundary = (atStart && goingPrev) || (atEnd && goingNext)
 
-      // Feed velocity into parallax system (much stronger at boundaries for dramatic rubber band)
-      const velocityScale = hitBoundary ? 1.2 : 0.5
-      velocityState.current.rawVelocity += e.deltaY * velocityScale
+      // Feed velocity into parallax system (configurable boundary strength)
+      const velocityScale = hitBoundary ? CAROUSEL_CONFIG.boundaryVelocityScale : CAROUSEL_CONFIG.normalVelocityScale
+      velocityState.current.rawVelocity += -delta * velocityScale
 
       // If at boundary, just apply the tug effect without navigation
       if (hitBoundary) return
 
       const now = Date.now()
       const state = wheelState.current
-      const timeSinceLast = now - state.lastTime
-      const direction = Math.sign(e.deltaY)
-      const lastDirection = Math.sign(state.lastDelta)
+      const timeSinceLastNav = now - state.lastNavTime
 
-      // Detect new gesture: direction change, or gap in events (>50ms = new flick)
-      const isNewGesture = direction !== lastDirection || timeSinceLast > 50
-
-      if (isNewGesture) {
-        // New gesture - unlock and navigate
-        state.locked = false
+      // Require 300ms cooldown after navigation before allowing another
+      // This prevents trackpad momentum from triggering multiple navigations
+      if (timeSinceLastNav < 300) {
+        state.lastDelta = delta
+        state.lastTime = now
+        return
       }
 
-      state.lastDelta = e.deltaY
+      const timeSinceLast = now - state.lastTime
+      const direction = Math.sign(delta)
+      const lastDirection = Math.sign(state.lastDelta)
+
+      // Ignore small deltas (trackpad noise/oscillation)
+      const minDelta = 5
+      if (Math.abs(delta) < minDelta) {
+        return
+      }
+
+      // Detect new gesture: requires time gap (direction change alone isn't enough
+      // as trackpad momentum can oscillate)
+      const isNewGesture = timeSinceLast > 120
+
+      // If direction changed, require longer gap to prevent oscillation-triggered navigation
+      const directionChanged = direction !== lastDirection && lastDirection !== 0
+      if (directionChanged && timeSinceLast < 250) {
+        state.lastDelta = delta
+        state.lastTime = now
+        return
+      }
+
+      state.lastDelta = delta
       state.lastTime = now
 
-      // If locked from current gesture's momentum, ignore
-      if (state.locked) return
+      // Only navigate on new gestures
+      if (!isNewGesture) return
 
-      // Lock and navigate once per gesture
-      state.locked = true
-      setIsNavigating(true) // Enable bouncy transitions for carousel navigation
+      // Record navigation time to enforce cooldown
+      state.lastNavTime = now
 
-      if (e.deltaY > 0) {
+      if (delta > 0) {
         setExpandedIndex((prev) =>
           prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0
         )
-      } else if (e.deltaY < 0) {
+      } else if (delta < 0) {
         setExpandedIndex((prev) =>
           prev !== null ? Math.max(prev - 1, 0) : 0
         )
@@ -426,11 +457,14 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
     window.addEventListener('wheel', handleWheel, { passive: false })
     return () => window.removeEventListener('wheel', handleWheel)
-  }, [expandedIndex, cardsToShow.length])
+  }, [expandedIndex, cardsToShow.length, CAROUSEL_CONFIG.boundaryVelocityScale, CAROUSEL_CONFIG.normalVelocityScale])
+
+  // Drag state for tracking boundary drags
+  const boundaryDragState = React.useRef({
+    isDraggingAtBoundary: false,
+  })
 
   // Drag navigation handlers for expanded cards
-  const DRAG_THRESHOLD = 100 // pixels to trigger navigation
-
   const handlePointerDown = React.useCallback((e: React.PointerEvent) => {
     if (expandedIndex === null) return
 
@@ -441,6 +475,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     state.lastTime = performance.now()
     state.dragVelocity = 0
     state.totalDragDistance = 0
+    boundaryDragState.current.isDraggingAtBoundary = false
 
     // Capture pointer for reliable tracking outside element
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
@@ -472,14 +507,19 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     // At boundaries dragging "outward" (first card right, last card left), spring in drag direction
     const draggingOutward = (atStart && draggingRight) || (atEnd && draggingLeft)
 
+    // Track if we're dragging at a boundary for spring-back on release
     if (draggingOutward) {
-      // Spring in the drag direction (positive deltaX = card moves right)
-      velocityState.current.rawVelocity += deltaX * 0.6
-    } else {
-      // Normal navigation: negative so dragging right moves cards left
-      velocityState.current.rawVelocity += -deltaX * 1.2
+      boundaryDragState.current.isDraggingAtBoundary = true
     }
-  }, [expandedIndex, cardsToShow.length])
+
+    if (draggingOutward) {
+      // Rubber band at boundaries - configurable drag distance
+      velocityState.current.rawVelocity += deltaX * CAROUSEL_CONFIG.boundaryDragMultiplier
+    } else {
+      // Normal navigation: swipe left = next card, swipe right = previous card
+      velocityState.current.rawVelocity += -deltaX * CAROUSEL_CONFIG.normalDragMultiplier
+    }
+  }, [expandedIndex, cardsToShow.length, CAROUSEL_CONFIG.boundaryDragMultiplier, CAROUSEL_CONFIG.normalDragMultiplier])
 
   const handlePointerUp = React.useCallback((e: React.PointerEvent) => {
     const state = dragState.current
@@ -493,21 +533,31 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
     const totalDrag = state.totalDragDistance
 
+    // If we were dragging at a boundary, apply spring-back impulse
+    if (CAROUSEL_CONFIG.enableBoundarySpringBack && boundaryDragState.current.isDraggingAtBoundary && Math.abs(totalDrag) > 5) {
+      // Spring impulse in opposite direction, proportional to drag distance
+      const springImpulse = -totalDrag * CAROUSEL_CONFIG.springBackMultiplier
+      velocityState.current.rawVelocity = springImpulse
+      velocityState.current.smoothVelocity = 0
+      boundaryDragState.current.isDraggingAtBoundary = false
+      return // Don't navigate when springing back
+    }
+
     // Apply momentum from drag velocity
-    velocityState.current.rawVelocity += -state.dragVelocity * 8
+    velocityState.current.rawVelocity += -state.dragVelocity * CAROUSEL_CONFIG.momentumMultiplier
 
     // Navigate one card at a time if drag exceeded threshold
-    if (Math.abs(totalDrag) >= DRAG_THRESHOLD) {
-      setIsNavigating(true) // Enable bouncy transitions for carousel navigation
-      if (totalDrag > 0) {
-        // Dragged right -> go to previous card
-        setExpandedIndex((prev) => prev !== null ? Math.max(prev - 1, 0) : 0)
-      } else {
-        // Dragged left -> go to next card
+    // Swipe left = next card, swipe right = previous card
+    if (Math.abs(totalDrag) >= CAROUSEL_CONFIG.dragThreshold) {
+      if (totalDrag < 0) {
+        // Swiped left -> go to next card
         setExpandedIndex((prev) => prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0)
+      } else {
+        // Swiped right -> go to previous card
+        setExpandedIndex((prev) => prev !== null ? Math.max(prev - 1, 0) : 0)
       }
     }
-  }, [expandedIndex, cardsToShow.length])
+  }, [expandedIndex, cardsToShow.length, CAROUSEL_CONFIG.dragThreshold, CAROUSEL_CONFIG.momentumMultiplier, CAROUSEL_CONFIG.enableBoundarySpringBack, CAROUSEL_CONFIG.springBackMultiplier])
 
   // Lock body scroll when expanded
   React.useEffect(() => {
@@ -764,10 +814,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     cardParallaxOffset = parallaxOffset * cascadeMultiplier
                   }
 
-                  // Only use bouncy transitions during carousel navigation, not expand/collapse
-                  // CTA card and stacked cards get subtle spring effects when navigating
-                  const isCtaCard = card.variant === 'cta'
-                  const useBouncyTransition = isNavigating && (isCtaCard && isFocused || isOneOfFirstThree && isCtaFocused)
+                  // Always use bouncy transitions for all cards
+                  // This gives a satisfying spring effect on both navigation and close
+                  const useBouncyTransition = true
 
                   return (
                     <MorphingCard
