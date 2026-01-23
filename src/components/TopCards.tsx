@@ -407,8 +407,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
       // Require cooldown after navigation before allowing another
       // This prevents trackpad momentum from triggering multiple navigations
-      // 350ms ensures even strong flicks only advance one card
-      if (timeSinceLastNav < 350) {
+      if (timeSinceLastNav < 220) {
         state.lastDelta = delta
         state.lastTime = now
         return
