@@ -1028,7 +1028,7 @@ export function MorphingCard({
                   opacity: { duration: 0.15, ease: 'easeOut' },
                 }}
               >
-                {/* Date Range - displayed above the description */}
+                {/* Date Range - displayed below the title */}
                 {expandedContent.dateRange && (
                   <p
                     className="font-pressura-ext"
@@ -1037,7 +1037,7 @@ export function MorphingCard({
                       fontSize: isMobileViewport ? '15px' : '17px',
                       lineHeight: isMobileViewport ? '21px' : '23px',
                       color: styles.textColor,
-                      marginBottom: '24px',
+                      marginBottom: isMobileViewport ? '24px' : '0px', // Desktop: no margin since description is centered separately
                       opacity: 0.9,
                     }}
                   >
@@ -1133,100 +1133,113 @@ export function MorphingCard({
 
         </motion.div>
 
-        {/* Expanded-only content - absolutely positioned at bottom (desktop only) */}
+        {/* Expanded-only content - desktop only */}
+        {/* Description centered in middle, bottom content slides up from bottom */}
         {typeof window !== 'undefined' && window.innerWidth >= 768 && (
-          <motion.div
-            className="absolute flex flex-col justify-end"
-            style={{
-              left: '24px',
-              right: '24px',
-              bottom: '24px',
-              gap: '36px',
-            }}
-            initial={{
-              opacity: 0,
-              y: expandedPosition.height - collapsedPosition.height,
-            }}
-            animate={{
-              opacity: 1,
-              y: 0,
-            }}
-            exit={{
-              opacity: 0,
-              y: expandedPosition.height - collapsedPosition.height,
-            }}
-            transition={{
-              y: contentSpring,
-              opacity: { duration: 0.15, ease: 'easeOut' },
-            }}
-          >
-            {/* Description Container - desktop only */}
-            <DescriptionContainer
-              description={expandedContent.description}
-              styles={styles}
-              isMobile={false}
-            />
-
-            {/* Highlights Section (IG Stories) - below description */}
-            {expandedContent.highlights && expandedContent.highlights.length > 0 && (
-              <HighlightsContainer
-                highlights={expandedContent.highlights}
+          <>
+            {/* Description Container - vertically centered, positioned from top only to avoid movement during card resize */}
+            <div
+              className="absolute"
+              style={{
+                left: '24px',
+                right: '24px',
+                top: '180px', // Fixed position below header
+              }}
+            >
+              <DescriptionContainer
+                description={expandedContent.description}
                 styles={styles}
-                onHighlightClick={onHighlightClick}
-              />
-            )}
-
-            {/* Now Playing Card (Music) - below description, same position as Highlights */}
-            {expandedContent.nowPlayingCard && (
-              <NowPlayingCard
-                card={expandedContent.nowPlayingCard}
-                styles={styles}
-                themeMode={themeMode}
-                variant={card.variant}
                 isMobile={false}
               />
-            )}
+            </div>
 
-            {/* Reflections Card (Video) */}
-            {expandedContent.reflectionsCard && (
-              <ReflectionsCard
-                card={expandedContent.reflectionsCard}
-                styles={styles}
-                themeMode={themeMode}
-                variant={card.variant}
-              />
-            )}
+            {/* Bottom content - slides up into place */}
+            <motion.div
+              className="absolute flex flex-col"
+              style={{
+                left: '24px',
+                right: '24px',
+                bottom: '24px',
+                gap: '36px',
+              }}
+              initial={{
+                opacity: 0,
+                y: expandedPosition.height - collapsedPosition.height,
+              }}
+              animate={{
+                opacity: 1,
+                y: 0,
+              }}
+              exit={{
+                opacity: 0,
+                y: expandedPosition.height - collapsedPosition.height,
+              }}
+              transition={{
+                y: contentSpring,
+                opacity: { duration: 0.15, ease: 'easeOut' },
+              }}
+            >
+              {/* Highlights Section (IG Stories) */}
+              {expandedContent.highlights && expandedContent.highlights.length > 0 && (
+                <HighlightsContainer
+                  highlights={expandedContent.highlights}
+                  styles={styles}
+                  onHighlightClick={onHighlightClick}
+                />
+              )}
 
-            {/* Action Buttons */}
-            {expandedContent.actions.length > 0 && (
-              <div className="flex flex-col gap-3">
-                {expandedContent.actions.map((action, i) => {
-                  const Icon = action.icon ? iconMap[action.icon] : null
-                  const isPrimary = action.primary
+              {/* Now Playing Card (Music) */}
+              {expandedContent.nowPlayingCard && (
+                <NowPlayingCard
+                  card={expandedContent.nowPlayingCard}
+                  styles={styles}
+                  themeMode={themeMode}
+                  variant={card.variant}
+                  isMobile={false}
+                />
+              )}
 
-                  return (
-                    <button
-                      key={i}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
-                      style={{
-                        width: '100%',
-                        height: '65px',
-                        backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
-                        color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
-                        borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
-                      }}
-                    >
-                      {Icon && <Icon className="w-5 h-5" />}
-                      <span className="text-[20px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
-                        {action.label}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </motion.div>
+              {/* Reflections Card (Video) */}
+              {expandedContent.reflectionsCard && (
+                <ReflectionsCard
+                  card={expandedContent.reflectionsCard}
+                  styles={styles}
+                  themeMode={themeMode}
+                  variant={card.variant}
+                />
+              )}
+
+              {/* Action Buttons */}
+              {expandedContent.actions.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  {expandedContent.actions.map((action, i) => {
+                    const Icon = action.icon ? iconMap[action.icon] : null
+                    const isPrimary = action.primary
+
+                    return (
+                      <button
+                        key={i}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
+                        style={{
+                          width: '100%',
+                          height: '65px',
+                          backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
+                          color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
+                          borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
+                        }}
+                      >
+                        {Icon && <Icon className="w-5 h-5" />}
+                        <span className="text-[20px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
+                          {action.label}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </motion.div>
+          </>
         )}
       </motion.div>
     )
