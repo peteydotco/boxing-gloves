@@ -1,5 +1,5 @@
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { Environment, Lightformer, Stats } from '@react-three/drei'
+import { Environment, Lightformer } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { HangingSpheres } from './HangingSpheres'
@@ -275,7 +275,6 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
         style={{ background: 'transparent', pointerEvents: 'auto' }}
       >
         <Suspense fallback={null}>
-          <Stats className="fps-stats" />
           <ShadowMapUpdater />
 
           <MouseFollowGroup>
