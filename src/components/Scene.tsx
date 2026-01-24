@@ -6,31 +6,14 @@ import { HangingSpheres } from './HangingSpheres'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
+import type { Settings, ShadowSettings } from '../types'
 
 // Global ref for mouse position - updated by App.tsx, read by Scene internals
 // This avoids React re-renders when mouse moves
 export const mousePositionRef = { current: { x: 0.5, y: 0.5 } }
 
-export interface Settings {
-  // Ball
-  color: string
-  metalness: number
-  roughness: number
-  envMapIntensity: number
-  radius: number
-  // Physics
-  mass: number
-  restitution: number
-  friction: number
-  linearDamping: number
-  gravity: number
-  springStrength: number
-  // String
-  stringLength: number
-  stringThickness: number
-  stringColor: string
-  ropeDamping: number
-}
+// Re-export Settings type for backwards compatibility
+export type { Settings, ShadowSettings } from '../types'
 
 function ShadowMapUpdater() {
   const { gl } = useThree()
@@ -227,18 +210,6 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
       <ambientLight intensity={0.6} />
     </>
   )
-}
-
-interface ShadowSettings {
-  lightX: number
-  lightY: number
-  lightZ: number
-  shadowMapSize: number
-  shadowCameraBounds: number
-  shadowCameraFar: number
-  shadowRadius: number
-  shadowBias: number
-  shadowOpacity: number
 }
 
 // Mouse follow rotation wrapper for the gloves

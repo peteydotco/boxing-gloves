@@ -5,51 +5,23 @@ import { RiPushpinLine } from 'react-icons/ri'
 import { IoIosPlay } from 'react-icons/io'
 import { FiExternalLink, FiPlay, FiCalendar, FiMail } from 'react-icons/fi'
 import React from 'react'
-
-interface ExpandedContent {
-  roleLabel: string
-  dateRange: string
-  description: React.ReactNode[]
-  highlights?: {
-    label: string
-    image?: string
-    href?: string
-  }[]
-  reflectionsCard?: {
-    title: string
-    image: string
-    href: string
-  }
-  nowPlayingCard?: {
-    label: string
-    songTitle: string
-    artist: string
-    albumArt: string
-    href: string
-  }
-  actions: {
-    label: string
-    icon?: 'external' | 'play' | 'calendar' | 'email'
-    href?: string
-    primary?: boolean
-  }[]
-}
-
-interface CardData {
-  id: string
-  label: string
-  title: string
-  shortcut: string
-  variant: 'blue' | 'white' | 'red' | 'cta'
-  expandedContent: ExpandedContent
-}
+import type { CardData, VariantStyle, ThemeMode } from '../types'
+import { variantStylesLight, getVariantStyles } from '../constants/themes'
+import {
+  positionSpring,
+  stackedRotationSpring,
+  ctaEntranceSpring,
+  mobileCollapseSpring,
+  contentSpring,
+  hoverTransition,
+} from '../constants/animation'
 
 interface MorphingCardProps {
   card: CardData
   isExpanded: boolean
   expandedPosition: { x: number; y: number; width: number; height: number }
   collapsedPosition?: { top: number; left: number; width: number; height: number }
-  exitPosition?: { top: number; left: number; width: number; height: number } // Separate exit position for mobile
+  exitPosition?: { top: number; left: number; width: number; height: number }
   onClick: () => void
   onClose: () => void
   onHighlightClick?: (label: string) => void
@@ -57,165 +29,13 @@ interface MorphingCardProps {
   compactCta?: boolean
   mobileLabel?: string
   emailCopied?: boolean
-  themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
+  themeMode?: ThemeMode
   parallaxOffset?: number
-  isStackedBehind?: boolean // When true, card is displayed as stacked paper behind CTA
-  stackedRotation?: number // Rotation when stacked behind CTA
-  stackedScale?: number // Scale when stacked behind CTA
-  zIndexOverride?: number // Override z-index for stacking order
-  useBouncyTransition?: boolean // When true, use bouncy springs for carousel navigation (not expand/collapse)
-}
-
-// Variant styles shared between collapsed and expanded states
-// Light/inverted theme styles
-const variantStylesLight = {
-  blue: {
-    bg: 'rgba(0,100,255,1)',
-    textColor: '#FFFFFF',
-    secondaryText: 'rgba(255,255,255,0.85)',
-    border: 'rgba(255,255,255,0.12)',
-    expandedBorder: 'rgba(255,255,255,1)',
-    badgeBg: 'rgba(0,0,0,0.2)',
-    primaryButtonBg: '#FFFFFF',
-    primaryButtonText: '#000000',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: '#125CCC',
-    secondaryButtonText: '#FFFFFF',
-    secondaryButtonBorder: 'rgba(0,0,0,0.2)',
-    highlightBorder: '#FFFFFF',
-    highlightShadow: 'rgba(0,0,0,0.25)',
-    dividerColor: 'rgba(255,255,255,0.3)',
-  },
-  white: {
-    bg: 'rgba(26,26,46,1)',
-    textColor: '#FFFFFF',
-    secondaryText: 'rgba(255,255,255,0.85)',
-    border: 'rgba(255,255,255,0.12)',
-    expandedBorder: 'rgba(255,255,255,1)',
-    badgeBg: 'rgba(0,0,0,0.2)',
-    primaryButtonBg: '#FFFFFF',
-    primaryButtonText: '#000000',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: 'rgba(255,255,255,0.15)',
-    secondaryButtonText: '#FFFFFF',
-    secondaryButtonBorder: 'rgba(0,0,0,0.2)',
-    highlightBorder: '#FFFFFF',
-    highlightShadow: 'rgba(0,0,0,0.25)',
-    dividerColor: 'rgba(255,255,255,0.3)',
-  },
-  red: {
-    bg: 'rgba(235,45,55,1)',
-    textColor: '#FFFFFF',
-    secondaryText: 'rgba(255,255,255,0.85)',
-    border: 'rgba(255,255,255,0.12)',
-    expandedBorder: 'rgba(255,255,255,1)',
-    badgeBg: 'rgba(0,0,0,0.2)',
-    primaryButtonBg: '#FFFFFF',
-    primaryButtonText: '#000000',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: 'rgba(200,50,50,1)',
-    secondaryButtonText: '#FFFFFF',
-    secondaryButtonBorder: 'rgba(0,0,0,0.2)',
-    highlightBorder: '#FFFFFF',
-    highlightShadow: 'rgba(0,0,0,0.25)',
-    dividerColor: 'rgba(255,255,255,0.3)',
-  },
-  cta: {
-    bg: '#F6F6F6',
-    textColor: 'rgba(0,0,0,0.55)',
-    secondaryText: 'rgba(0,0,0,0.7)',
-    ctaTitleColor: 'rgba(0,0,0,0.75)',
-    border: 'rgba(0,0,0,0.08)',
-    expandedBorder: 'rgba(0,0,0,0.12)',
-    badgeBg: 'rgba(0,0,0,0.12)',
-    primaryButtonBg: 'rgba(0,0,0,0.87)',
-    primaryButtonText: '#FFFFFF',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: 'rgba(0,0,0,0.08)',
-    secondaryButtonText: 'rgba(0,0,0,0.87)',
-    secondaryButtonBorder: 'rgba(0,0,0,0.1)',
-    highlightBorder: 'rgba(0,0,0,0.2)',
-    highlightShadow: 'rgba(0,0,0,0.1)',
-    dividerColor: 'rgba(0,0,0,0.12)',
-  },
-}
-
-// Dark theme styles - moderately darker backgrounds (split difference)
-const variantStylesDark = {
-  blue: {
-    bg: 'rgba(0,80,210,1)',
-    textColor: '#FFFFFF',
-    secondaryText: 'rgba(255,255,255,0.85)',
-    border: 'rgba(255,255,255,0.12)',
-    expandedBorder: 'rgba(255,255,255,1)',
-    badgeBg: 'rgba(0,0,0,0.25)',
-    primaryButtonBg: '#FFFFFF',
-    primaryButtonText: '#000000',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: '#0050B5',
-    secondaryButtonText: '#FFFFFF',
-    secondaryButtonBorder: 'rgba(0,0,0,0.2)',
-    highlightBorder: '#FFFFFF',
-    highlightShadow: 'rgba(0,0,0,0.25)',
-    dividerColor: 'rgba(255,255,255,0.3)',
-  },
-  white: {
-    bg: 'rgba(22,22,39,1)',
-    textColor: '#FFFFFF',
-    secondaryText: 'rgba(255,255,255,0.85)',
-    border: 'rgba(255,255,255,0.12)',
-    expandedBorder: 'rgba(255,255,255,1)',
-    badgeBg: 'rgba(0,0,0,0.25)',
-    primaryButtonBg: '#FFFFFF',
-    primaryButtonText: '#000000',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: 'rgba(255,255,255,0.12)',
-    secondaryButtonText: '#FFFFFF',
-    secondaryButtonBorder: 'rgba(0,0,0,0.2)',
-    highlightBorder: '#FFFFFF',
-    highlightShadow: 'rgba(0,0,0,0.25)',
-    dividerColor: 'rgba(255,255,255,0.3)',
-  },
-  red: {
-    bg: 'rgba(195,35,45,1)',
-    textColor: '#FFFFFF',
-    secondaryText: 'rgba(255,255,255,0.85)',
-    border: 'rgba(255,255,255,0.12)',
-    expandedBorder: 'rgba(255,255,255,1)',
-    badgeBg: 'rgba(0,0,0,0.25)',
-    primaryButtonBg: '#FFFFFF',
-    primaryButtonText: '#000000',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: 'rgba(170,42,42,1)',
-    secondaryButtonText: '#FFFFFF',
-    secondaryButtonBorder: 'rgba(0,0,0,0.2)',
-    highlightBorder: '#FFFFFF',
-    highlightShadow: 'rgba(0,0,0,0.25)',
-    dividerColor: 'rgba(255,255,255,0.3)',
-  },
-  cta: {
-    bg: 'rgba(32,32,32,1)',
-    textColor: 'rgba(255,255,255,0.55)',
-    secondaryText: 'rgba(255,255,255,0.85)',
-    ctaTitleColor: 'rgba(255,255,255,0.75)',
-    border: 'rgba(255,255,255,0.1)',
-    expandedBorder: 'rgba(255,255,255,0.2)',
-    badgeBg: 'rgba(255,255,255,0.12)',
-    primaryButtonBg: 'rgba(255,255,255,0.9)',
-    primaryButtonText: '#000000',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: 'rgba(255,255,255,0.1)',
-    secondaryButtonText: 'rgba(255,255,255,0.9)',
-    secondaryButtonBorder: 'rgba(255,255,255,0.15)',
-    highlightBorder: 'rgba(255,255,255,0.3)',
-    highlightShadow: 'rgba(0,0,0,0.2)',
-    dividerColor: 'rgba(255,255,255,0.15)',
-  },
-}
-
-// Helper to get styles based on theme
-const getVariantStyles = (themeMode: 'light' | 'inverted' | 'dark' | 'darkInverted') => {
-  return (themeMode === 'dark' || themeMode === 'darkInverted') ? variantStylesDark : variantStylesLight
+  isStackedBehind?: boolean
+  stackedRotation?: number
+  stackedScale?: number
+  zIndexOverride?: number
+  useBouncyTransition?: boolean
 }
 
 const iconMap = {
@@ -225,53 +45,6 @@ const iconMap = {
   email: FiMail,
 }
 
-// Spring for card container position - smooth ease with subtle settle
-const positionSpring = {
-  type: 'spring' as const,
-  stiffness: 280,
-  damping: 32,
-  mass: 1,
-}
-
-// Bouncier spring for stacked cards' rotation - subtle overshoot
-const stackedRotationSpring = {
-  type: 'spring' as const,
-  stiffness: 250,
-  damping: 22,
-  mass: 1,
-}
-
-// Bouncy spring for card navigation - subtle overshoot for satisfying settle (preset 5)
-const ctaEntranceSpring = {
-  type: 'spring' as const,
-  stiffness: 300,
-  damping: 28,
-  mass: 1,
-}
-
-// Smooth spring for mobile collapse - critically damped, no bounce, buttery smooth
-const mobileCollapseSpring = {
-  type: 'spring' as const,
-  stiffness: 260,
-  damping: 32,
-  mass: 0.9,
-}
-
-// Faster critically damped spring for internal content (fonts, padding) - finishes before position
-const contentSpring = {
-  type: 'spring' as const,
-  stiffness: 400,
-  damping: 35,
-  mass: 0.8,
-}
-
-// Tween for hover interactions - matches CSS transition timing
-const hoverTransition = {
-  type: 'tween' as const,
-  duration: 0.25,
-  ease: [0.33, 1, 0.68, 1] as [number, number, number, number], // easeOutCubic
-}
-
 // HighlightButton component with hover state
 interface HighlightButtonProps {
   highlight: {
@@ -279,7 +52,7 @@ interface HighlightButtonProps {
     image?: string
     href?: string
   }
-  styles: typeof variantStylesLight.blue
+  styles: VariantStyle
   onHighlightClick?: (label: string) => void
   isMobile?: boolean
 }

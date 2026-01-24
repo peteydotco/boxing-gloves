@@ -4,7 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@react-three/rapier'
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
-import type { Settings } from './Scene'
+import type { Settings } from '../types'
 import glovesModelUrl from '../assets/optimized-gloves.glb?url'
 
 // Rope segments for smooth curve
