@@ -299,34 +299,35 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       savedScrollPosition.current = targetScrollPosition
 
       // Pre-calculate exit positions for all cards BEFORE clearing expandedIndex
-      // This ensures stable values during the exit animation
+      // Use the actual DOM positions captured at expand time, adjusted for scroll delta
+      // This avoids pixel mismatches from mathematical calculations vs DOM layout
       const newExitPositions = new Map<string, { top: number; left: number; width: number; height: number }>()
+      const currentScrollPosition = scrollContainerRef.current?.scrollLeft ?? 0
+      const scrollDelta = currentScrollPosition - targetScrollPosition
+
       visibleCards.forEach((card) => {
         const cardIdx = cardsToShow.findIndex((c) => c.id === card.id)
         const isCtaCard = card.variant === 'cta'
         const collapsedPos = cardPositions.get(card.id)
-        const cardHeight = collapsedPos?.height ?? 91
 
-        let exitLeft: number
-        let exitWidth: number
+        // Use actual captured DOM positions, adjusted for scroll change
+        // The captured left was relative to viewport at capture time (with currentScrollPosition)
+        // We need the position relative to viewport at targetScrollPosition
+        const fallbackLeft = isCtaCard
+          ? containerPadding + (3 * (regularCardWidth + gap))
+          : containerPadding + (cardIdx * (regularCardWidth + gap))
+        const fallbackWidth = isCtaCard ? ctaCardWidth : regularCardWidth
 
-        if (isCtaCard) {
-          // CTA card: fixed position at the end
-          const ctaAbsoluteLeft = containerPadding + (3 * (regularCardWidth + gap))
-          exitLeft = ctaAbsoluteLeft - targetScrollPosition
-          exitWidth = ctaCardWidth
-        } else {
-          // Regular cards: position based on index
-          const cardAbsoluteLeft = containerPadding + (cardIdx * (regularCardWidth + gap))
-          exitLeft = cardAbsoluteLeft - targetScrollPosition
-          exitWidth = regularCardWidth
-        }
+        // exitLeft = where the card should appear on screen after scroll restoration
+        const exitLeft = (collapsedPos?.left ?? fallbackLeft) + scrollDelta
+        const exitWidth = collapsedPos?.width ?? fallbackWidth
+        const exitHeight = collapsedPos?.height ?? 91
 
         newExitPositions.set(card.id, {
           top: Math.round(collapsedPos?.top ?? 0),
           left: Math.round(exitLeft),
           width: Math.round(exitWidth),
-          height: Math.round(cardHeight),
+          height: Math.round(exitHeight),
         })
       })
       setMobileExitPositions(newExitPositions)
