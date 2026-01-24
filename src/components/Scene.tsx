@@ -1,10 +1,8 @@
 import { Canvas, useThree, useFrame } from '@react-three/fiber'
-import { Environment, Lightformer } from '@react-three/drei'
+import { Environment, Lightformer, Stats } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { HangingSpheres } from './HangingSpheres'
-import { EffectComposer, Bloom } from '@react-three/postprocessing'
-import { BlendFunction } from 'postprocessing'
 import * as THREE from 'three'
 import type { Settings, ShadowSettings } from '../types'
 
@@ -277,6 +275,7 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
         style={{ background: 'transparent', pointerEvents: 'auto' }}
       >
         <Suspense fallback={null}>
+          <Stats className="fps-stats" />
           <ShadowMapUpdater />
 
           <MouseFollowGroup>
@@ -321,16 +320,6 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
               />
             </group>
           </Environment>
-
-          {/* Post-processing effects - Very subtle bloom */}
-          <EffectComposer>
-            <Bloom
-              intensity={0.1}
-              luminanceThreshold={0.95}
-              luminanceSmoothing={0.95}
-              blendFunction={BlendFunction.ADD}
-            />
-          </EffectComposer>
         </Suspense>
       </Canvas>
     </div>
