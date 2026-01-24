@@ -88,7 +88,7 @@ export const cards: CardData[] = [
     variant: 'cta',
     expandedContent: {
       roleLabel: 'ADD NEW ROLE',
-      dateRange: '89 → Infinity',
+      dateRange: '1989 → Infinity',
       description: [
         "One of the greatest privileges of working in this space has been the incredible talent and personalities I've gotten to meet and, if I'm lucky, collab with.",
         "\u00A0",
