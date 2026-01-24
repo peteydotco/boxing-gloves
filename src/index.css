@@ -171,3 +171,12 @@ canvas {
 .animate-marquee-right-slow {
   animation: marquee-right 800s linear infinite;
 }
+
+/* Static noise animation for TV effect */
+@keyframes staticNoise {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-5%, 5%); }
+  50% { transform: translate(5%, -5%); }
+  75% { transform: translate(-5%, -5%); }
+  100% { transform: translate(5%, 5%); }
+}

@@ -180,10 +180,10 @@ const getExpandedCardDimensions = () => {
   const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
   const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080
 
-  // Mobile: maximize card size, show ~16px sliver of adjacent cards
+  // Mobile: maximize card size, show small sliver of adjacent cards
   if (viewportWidth < 768) {
-    const sliver = 16 // Visible portion of adjacent cards
-    const gap = 20 // Gap between cards
+    const sliver = 8 // Visible portion of adjacent cards
+    const gap = 12 // Gap between cards
     // Card width = viewport - sliver on each side - gap on each side
     const width = viewportWidth - (sliver * 2) - (gap * 2)
     // Maximize height - just small padding top/bottom
@@ -231,6 +231,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   // Track if we're in the middle of closing animation
   const [isClosing, setIsClosing] = React.useState(false)
+  // Track which card was expanded when closing (for exit animation)
+  const closingCardIndex = React.useRef<number | null>(null)
 
 
   // Track email copied toast state
@@ -242,8 +244,17 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   // Refs to track card elements
   const cardRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map())
 
+  // Ref for horizontal scroll container (mobile)
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
+  // Store scroll position when expanding to restore on collapse
+  const savedScrollPosition = React.useRef<number>(0)
+
   // Capture all card positions before expanding
   const capturePositionsAndExpand = (index: number) => {
+    // Save scroll position before expanding (for mobile)
+    if (scrollContainerRef.current) {
+      savedScrollPosition.current = scrollContainerRef.current.scrollLeft
+    }
     const positions = new Map<string, DOMRect>()
     cardRefs.current.forEach((el, id) => {
       if (el) {
@@ -255,6 +266,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   }
 
   const handleCloseExpanded = () => {
+    closingCardIndex.current = expandedIndex
     setIsClosing(true)
     setExpandedIndex(null)
   }
@@ -583,6 +595,11 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     const container = dragContainer
     if (!container || expandedIndex === null) return
 
+    // Local Y tracking for swipe-to-dismiss (mobile only)
+    let startY = 0
+    let totalDragY = 0
+    const SWIPE_DOWN_THRESHOLD = 100 // px to dismiss
+
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return
 
@@ -595,6 +612,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       state.dragVelocity = 0
       state.totalDragDistance = 0
       boundaryDragState.current.isDraggingAtBoundary = false
+
+      // Track Y for swipe-to-dismiss
+      startY = touch.clientY
+      totalDragY = 0
     }
 
     const handleTouchMove = (e: TouchEvent) => {
@@ -617,6 +638,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       state.lastX = touch.clientX
       state.lastTime = now
 
+      // Track Y movement
+      totalDragY = touch.clientY - startY
+
       const atStart = expandedIndex === 0
       const atEnd = expandedIndex === cardsToShow.length - 1
       const draggingLeft = deltaX < 0
@@ -636,10 +660,17 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       if (!state.isDragging) return
 
       state.isDragging = false
-      const totalDrag = state.totalDragDistance
+      const totalDragX = state.totalDragDistance
 
-      if (CAROUSEL_CONFIG.enableBoundarySpringBack && boundaryDragState.current.isDraggingAtBoundary && Math.abs(totalDrag) > 5) {
-        const springImpulse = -totalDrag * CAROUSEL_CONFIG.springBackMultiplier
+      // Check for swipe-down-to-dismiss on mobile
+      // Only dismiss if: downward movement, Y dominates X, and past threshold
+      if (isMobile && totalDragY > SWIPE_DOWN_THRESHOLD && totalDragY > Math.abs(totalDragX)) {
+        handleCloseExpanded()
+        return
+      }
+
+      if (CAROUSEL_CONFIG.enableBoundarySpringBack && boundaryDragState.current.isDraggingAtBoundary && Math.abs(totalDragX) > 5) {
+        const springImpulse = -totalDragX * CAROUSEL_CONFIG.springBackMultiplier
         velocityState.current.rawVelocity = springImpulse
         velocityState.current.smoothVelocity = 0
         boundaryDragState.current.isDraggingAtBoundary = false
@@ -648,8 +679,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
       velocityState.current.rawVelocity += -state.dragVelocity * CAROUSEL_CONFIG.momentumMultiplier
 
-      if (Math.abs(totalDrag) >= CAROUSEL_CONFIG.dragThreshold) {
-        if (totalDrag < 0) {
+      if (Math.abs(totalDragX) >= CAROUSEL_CONFIG.dragThreshold) {
+        if (totalDragX < 0) {
           setExpandedIndex((prev) => prev !== null ? Math.min(prev + 1, cardsToShow.length - 1) : 0)
         } else {
           setExpandedIndex((prev) => prev !== null ? Math.max(prev - 1, 0) : 0)
@@ -669,7 +700,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       container.removeEventListener('touchend', handleTouchEnd)
       container.removeEventListener('touchcancel', handleTouchEnd)
     }
-  }, [expandedIndex, cardsToShow.length, dragContainer])
+  }, [expandedIndex, cardsToShow.length, dragContainer, isMobile, handleCloseExpanded])
 
   // Lock body scroll when expanded
   React.useEffect(() => {
@@ -710,6 +741,13 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const isSplitMode = cardIndices && cardIndices.length < cards.length
 
   const isExpanded = expandedIndex !== null
+
+  // Restore scroll position when cards become visible again
+  React.useLayoutEffect(() => {
+    if (!isExpanded && !isClosing && scrollContainerRef.current && savedScrollPosition.current > 0) {
+      scrollContainerRef.current.scrollLeft = savedScrollPosition.current
+    }
+  }, [isExpanded, isClosing])
 
   // Calculate expanded position for a card in the carousel
   // Uses resizeKey dependency to recalculate when viewport changes while expanded
@@ -758,6 +796,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         <div className="mx-auto" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
           {/* Cards row */}
           <div
+            ref={scrollContainerRef}
             className="flex scrollbar-hide"
             style={{
               perspective: '1000px',
@@ -846,7 +885,14 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
       {/* Expanded overlay - rendered in portal to escape stacking context */}
       {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence onExitComplete={() => setIsClosing(false)}>
+        <AnimatePresence onExitComplete={() => {
+            // Restore scroll position before showing cards to prevent shift
+            if (scrollContainerRef.current) {
+              scrollContainerRef.current.scrollLeft = savedScrollPosition.current
+            }
+            closingCardIndex.current = null
+            setIsClosing(false)
+          }}>
           {isExpanded && (
             <>
               {/* Backdrop - samples bg color from focused card, smoothly transitions */}
@@ -885,8 +931,13 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                   const isMobileCtaCard = isMobile && card.variant === 'cta'
                   const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
                   const collapsedPos = getCollapsedPosition(card.id)
-                  const isFocused = cardIndex === expandedIndex
-                  const isCtaFocused = expandedIndex === cardsToShow.length - 1
+                  // During close animation (when expandedIndex is null but we're still animating),
+                  // show badges on ALL cards so they animate from ESC to shortcut key
+                  const isClosingAnimation = expandedIndex === null && closingCardIndex.current !== null
+                  const isFocused = isClosingAnimation ? true : cardIndex === expandedIndex
+                  // For stacking logic, use the closing card index during exit animation
+                  const focusIndex = expandedIndex ?? closingCardIndex.current
+                  const isCtaFocused = focusIndex === cardsToShow.length - 1
                   const isOneOfFirstThree = cardIndex < 3 && cardsToShow.length > 3
 
                   // When CTA is focused, first 3 cards stack behind it
@@ -921,7 +972,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     const stackMultiplier = 0.6 + stackDepth * 0.25
                     cardParallaxOffset = parallaxOffset * stackMultiplier
                   } else {
-                    const distanceFromFocus = cardIndex - (expandedIndex ?? 0)
+                    const distanceFromFocus = cardIndex - (focusIndex ?? 0)
                     // Multiplier increases with distance, creating staggered/cascading effect
                     const cascadeMultiplier = 1 + Math.abs(distanceFromFocus) * 0.7
                     cardParallaxOffset = parallaxOffset * cascadeMultiplier

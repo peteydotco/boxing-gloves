@@ -319,7 +319,7 @@ function App() {
       {/* Tablet (768-1024px): vertically center-aligned with Bio SVGs */}
       {/* Mobile (<768px): higher position */}
       {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: isMobile ? '140px' : '234px' }}>
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: isMobile ? '110px' : '234px' }}>
           <p style={{
             color: theme.textColor,
             textAlign: 'center',
@@ -352,7 +352,7 @@ function App() {
 
       {/* Mobile/Tablet: Pete Logo - stays at bottom */}
       {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: isMobile ? '40px' : '114px' }}>
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: isMobile ? '16px' : '114px' }}>
           <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
         </div>
       )}
