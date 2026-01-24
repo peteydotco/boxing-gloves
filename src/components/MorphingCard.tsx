@@ -1150,10 +1150,10 @@ export function MorphingCard({
             <motion.div
               className="font-pressura-mono leading-normal text-left uppercase"
               style={{ color: styles.textColor, fontSize: '13px', letterSpacing: '0.39px', transformOrigin: 'top left', whiteSpace: 'nowrap' }}
-              initial={{ scale: 1, marginTop: '0px' }}
-              animate={{ scale: 14 / 13, marginTop: '1px' }}
-              exit={{ scale: 1, marginTop: '0px' }}
-              transition={contentSpring}
+              initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
+              animate={{ scale: 14 / 13, marginTop: '1px', opacity: 1 }}
+              exit={{ scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1 }}
+              transition={compactCta ? { ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } } : contentSpring}
             >
               {label}
             </motion.div>
@@ -1169,8 +1169,8 @@ export function MorphingCard({
               style={{ backgroundColor: styles.badgeBg }}
               initial={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
               animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: card.variant === 'cta' ? '8px' : '16px', paddingRight: card.variant === 'cta' ? '8px' : '16px', opacity: hideShortcut ? 0 : 1 }}
-              // Always show badge during exit animation (opacity: 1) so shortcut animates back
-              exit={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: 1 }}
+              // Show badge during exit animation so shortcut animates back (but not on mobile where hideShortcut is true)
+              exit={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
               transition={contentSpring}
             >
               {/* Badge text - same size as collapsed card */}
@@ -1207,13 +1207,14 @@ export function MorphingCard({
           {/* Uses transform scale instead of fontSize to prevent text reflow during transition */}
           {/* white-space: nowrap prevents text from re-wrapping during scale animation */}
           {/* Mobile uses smaller scale (26/18) to fit within narrower container */}
+          {/* For compactCta (mobile CTA), fade out quickly on exit since collapsed state has different layout */}
           <motion.h2
             className={`leading-normal text-left w-full uppercase ${card.variant === 'cta' ? 'font-pressura-light' : 'font-pressura'}`}
             style={{ color: card.variant === 'cta' ? (styles as typeof variantStylesLight.cta).ctaTitleColor : styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px', fontSize: '18px', whiteSpace: 'nowrap' }}
-            initial={{ scale: 1, marginTop: '0px' }}
-            animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : 32 / 18, marginTop: '4px' }}
-            exit={{ scale: 1, marginTop: '0px' }}
-            transition={contentSpring}
+            initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
+            animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : 32 / 18, marginTop: '4px', opacity: 1 }}
+            exit={{ scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1 }}
+            transition={compactCta ? { ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } } : contentSpring}
           >
             {card.variant === 'cta' ? (
               <span className="flex items-center gap-3">
@@ -1589,6 +1590,26 @@ export function MorphingCard({
               )}
             </motion.div>
           </>
+        )}
+
+        {/* Mobile CTA: Collapsed content overlay - fades in during exit animation */}
+        {compactCta && (
+          <motion.div
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none"
+            style={{ padding: '12px 12px 20px 12px' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 1 }}
+            transition={{ opacity: { duration: 0.15, delay: 0.05 } }}
+          >
+            <div
+              className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-center uppercase"
+              style={{ color: styles.textColor }}
+            >
+              Add Role
+            </div>
+            <SlPlus className="w-5 h-5" style={{ color: styles.textColor }} />
+          </motion.div>
         )}
 
       </motion.div>

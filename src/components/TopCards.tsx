@@ -248,6 +248,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
   // Store scroll position when expanding to restore on collapse
   const savedScrollPosition = React.useRef<number>(0)
+  // Track the original card index that was tapped to expand (for mobile position calculations)
+  const originalExpandedIndex = React.useRef<number | null>(null)
 
   // Capture all card positions before expanding
   const capturePositionsAndExpand = (index: number) => {
@@ -255,6 +257,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     if (scrollContainerRef.current) {
       savedScrollPosition.current = scrollContainerRef.current.scrollLeft
     }
+    // Track original expanded index for mobile position calculations
+    originalExpandedIndex.current = index
     const positions = new Map<string, DOMRect>()
     cardRefs.current.forEach((el, id) => {
       if (el) {
@@ -267,6 +271,16 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   const handleCloseExpanded = () => {
     closingCardIndex.current = expandedIndex
+
+    // Update saved scroll position to the current expanded card's position (for mobile)
+    // so that when we collapse, we scroll to where the user navigated to
+    if (isMobile && expandedIndex !== null && scrollContainerRef.current) {
+      const cardWidth = 243 // Regular card width on mobile
+      const gap = 8 // Gap between cards (0.5rem)
+      // Calculate scroll position to show the current card
+      savedScrollPosition.current = expandedIndex * (cardWidth + gap)
+    }
+
     setIsClosing(true)
     setExpandedIndex(null)
   }
@@ -782,8 +796,28 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const visibleCards = isMobile ? mobileCards : (isDesktop && ctaCard ? [...topThreeCards, ctaCard] : topThreeCards)
 
   // Get collapsed position for a card
-  const getCollapsedPosition = (cardId: string) => {
+  // On mobile, only recalculate positions if user swiped to a different card than originally opened
+  const getCollapsedPosition = (cardId: string, cardIndex: number) => {
     const rect = cardPositions.get(cardId)
+
+    // On mobile, check if we need to recalculate positions
+    // Only recalculate if the current/closing card differs from the original opened card
+    const targetIndex = isClosing ? closingCardIndex.current : expandedIndex
+    const hasSwiped = targetIndex !== null && targetIndex !== originalExpandedIndex.current
+
+    if (isMobile && hasSwiped && rect) {
+      const cardWidth = 243
+      const gap = 8
+      const containerPadding = 4 // Approximate left padding after margin adjustment
+
+      // Position this card relative to the target card being at the start of viewport
+      const targetCardLeft = containerPadding
+      const offsetFromTargetCard = (cardIndex - targetIndex) * (cardWidth + gap)
+      const newLeft = targetCardLeft + offsetFromTargetCard
+
+      return { top: rect.top, left: newLeft, width: rect.width, height: rect.height }
+    }
+
     if (rect) {
       return { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
     }
@@ -891,6 +925,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               scrollContainerRef.current.scrollLeft = savedScrollPosition.current
             }
             closingCardIndex.current = null
+            originalExpandedIndex.current = null
             setIsClosing(false)
           }}>
           {isExpanded && (
@@ -930,11 +965,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                 {visibleCards.map((card) => {
                   const isMobileCtaCard = isMobile && card.variant === 'cta'
                   const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
-                  const collapsedPos = getCollapsedPosition(card.id)
-                  // During close animation (when expandedIndex is null but we're still animating),
-                  // show badges on ALL cards so they animate from ESC to shortcut key
-                  const isClosingAnimation = expandedIndex === null && closingCardIndex.current !== null
-                  const isFocused = isClosingAnimation ? true : cardIndex === expandedIndex
+                  const collapsedPos = getCollapsedPosition(card.id, cardIndex)
                   // For stacking logic, use the closing card index during exit animation
                   const focusIndex = expandedIndex ?? closingCardIndex.current
                   const isCtaFocused = focusIndex === cardsToShow.length - 1
@@ -992,7 +1023,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                       onClick={() => {}}
                       onClose={handleCloseExpanded}
                       onHighlightClick={(label) => console.log('Highlight clicked:', label)}
-                      hideShortcut={isMobile || !isFocused}
+                      hideShortcut={isMobile}
                       compactCta={isMobileCtaCard}
                       mobileLabel={isMobileCtaCard ? 'ADD ROLE' : undefined}
                       emailCopied={emailCopied}
