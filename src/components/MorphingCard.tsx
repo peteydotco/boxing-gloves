@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef } from 'react'
 import { SlPlus, SlControlPlay, SlSocialInstagram } from 'react-icons/sl'
+import { RiPushpinLine } from 'react-icons/ri'
 import { IoIosPlay } from 'react-icons/io'
 import { FiExternalLink, FiPlay, FiCalendar, FiMail } from 'react-icons/fi'
 import React from 'react'
@@ -1334,13 +1335,27 @@ export function MorphingCard({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeOut' } } }}
                   >
-                    {/* Highlights Section (IG Stories) */}
+                    {/* Highlights label + Section (IG Stories) */}
                     {expandedContent.highlights && expandedContent.highlights.length > 0 && (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.18 } } }}
                         exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.12 } } }}
                       >
+                        <p
+                          className="font-pressura-ext flex items-center gap-2"
+                          style={{
+                            fontWeight: 350,
+                            fontSize: '15px',
+                            lineHeight: '21px',
+                            color: styles.textColor,
+                            opacity: 0.9,
+                            marginBottom: '12px',
+                          }}
+                        >
+                          <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
+                          <span style={{ marginLeft: '-1px' }}>Pinned for you</span>
+                        </p>
                         <HighlightsContainer
                           highlights={expandedContent.highlights}
                           styles={styles}
@@ -1350,13 +1365,30 @@ export function MorphingCard({
                       </motion.div>
                     )}
 
-                    {/* Now Playing Card (Music) */}
+                    {/* Now Playing Card (Music) - with Highlights label for Rio */}
                     {expandedContent.nowPlayingCard && (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.26 } } }}
                         exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.08 } } }}
                       >
+                        {/* Show Highlights label for Rio (no IG highlights, but has nowPlayingCard) */}
+                        {!expandedContent.highlights && (
+                          <p
+                            className="font-pressura-ext flex items-center gap-2"
+                            style={{
+                              fontWeight: 350,
+                              fontSize: '15px',
+                              lineHeight: '21px',
+                              color: styles.textColor,
+                              opacity: 0.9,
+                              marginBottom: '12px',
+                            }}
+                          >
+                            <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
+                            <span style={{ marginLeft: '-1px' }}>Pinned for you</span>
+                          </p>
+                        )}
                         <NowPlayingCard
                           card={expandedContent.nowPlayingCard}
                           styles={styles}
