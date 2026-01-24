@@ -477,7 +477,6 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
           marginTop: isMobile ? '10px' : '10px',
           marginBottom: isMobile ? '10px' : '14px',
           width: isMobile ? 'calc(100% - 20px)' : 'calc(100% - 28px)',
-          height: isMobile ? '160px' : '234px',
           borderRadius: '6px',
           transformOrigin: 'center center',
           border: `${isMobile ? 3 : 3}px solid rgba(255,255,255,0.9)`,
@@ -491,8 +490,8 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
         <img
           src={card.image}
           alt={card.title}
-          className="w-full h-full object-cover"
-          style={{ borderRadius: '4px' }}
+          className="w-full h-auto"
+          style={{ borderRadius: '4px', display: 'block' }}
         />
         {/* Mobile: Chip badge - bottom left */}
         {isMobile && mobileChip && (
@@ -1354,7 +1353,7 @@ export function MorphingCard({
                           }}
                         >
                           <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
-                          <span style={{ marginLeft: '-1px' }}>Pinned for you</span>
+                          <span style={{ marginLeft: '-1px' }}>Pinned memories</span>
                         </p>
                         <HighlightsContainer
                           highlights={expandedContent.highlights}
@@ -1386,7 +1385,7 @@ export function MorphingCard({
                             }}
                           >
                             <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
-                            <span style={{ marginLeft: '-1px' }}>Pinned for you</span>
+                            <span style={{ marginLeft: '-1px' }}>Pinned memories</span>
                           </p>
                         )}
                         <NowPlayingCard
