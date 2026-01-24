@@ -233,6 +233,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const [isClosing, setIsClosing] = React.useState(false)
   // Track which card was expanded when closing (for exit animation)
   const closingCardIndex = React.useRef<number | null>(null)
+  // Store exit positions for mobile cards (calculated at close time, before expandedIndex is cleared)
+  const [mobileExitPositions, setMobileExitPositions] = React.useState<Map<string, { top: number; left: number; width: number; height: number }>>(new Map())
 
 
   // Track email copied toast state
@@ -248,8 +250,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
   // Store scroll position when expanding to restore on collapse
   const savedScrollPosition = React.useRef<number>(0)
-  // Track the original card index that was tapped to expand (for mobile position calculations)
-  const originalExpandedIndex = React.useRef<number | null>(null)
 
   // Capture all card positions before expanding
   const capturePositionsAndExpand = (index: number) => {
@@ -257,8 +257,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     if (scrollContainerRef.current) {
       savedScrollPosition.current = scrollContainerRef.current.scrollLeft
     }
-    // Track original expanded index for mobile position calculations
-    originalExpandedIndex.current = index
     const positions = new Map<string, DOMRect>()
     cardRefs.current.forEach((el, id) => {
       if (el) {
@@ -269,21 +267,87 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     setExpandedIndex(index)
   }
 
+  // Track if close has been triggered (to sequence exit positions before clearing expandedIndex)
+  const [closeTriggered, setCloseTriggered] = React.useState(false)
+
   const handleCloseExpanded = () => {
     closingCardIndex.current = expandedIndex
 
     // Update saved scroll position to the current expanded card's position (for mobile)
     // so that when we collapse, we scroll to where the user navigated to
-    if (isMobile && expandedIndex !== null && scrollContainerRef.current) {
-      const cardWidth = 243 // Regular card width on mobile
-      const gap = 8 // Gap between cards (0.5rem)
-      // Calculate scroll position to show the current card
-      savedScrollPosition.current = expandedIndex * (cardWidth + gap)
-    }
+    if (isMobile && expandedIndex !== null) {
+      const regularCardWidth = 243
+      const ctaCardWidth = 115
+      const gap = 8
+      const containerPadding = 12
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 375
 
-    setIsClosing(true)
-    setExpandedIndex(null)
+      // Calculate the scroll position that will be restored
+      // For CTA card (index 3), we need to scroll so it's visible at the right edge
+      // For regular cards, scroll to show them at the left
+      let targetScrollPosition: number
+      if (expandedIndex === 3) {
+        // CTA card: scroll so it's visible at the right side of viewport
+        // CTA absolute position = containerPadding + (3 * (regularCardWidth + gap))
+        // We want: ctaAbsoluteLeft - scrollPosition + ctaCardWidth = viewportWidth - containerPadding
+        // So: scrollPosition = ctaAbsoluteLeft + ctaCardWidth - viewportWidth + containerPadding
+        const ctaAbsoluteLeft = containerPadding + (3 * (regularCardWidth + gap))
+        targetScrollPosition = ctaAbsoluteLeft + ctaCardWidth - viewportWidth + containerPadding
+      } else {
+        targetScrollPosition = expandedIndex * (regularCardWidth + gap)
+      }
+      savedScrollPosition.current = targetScrollPosition
+
+      // Pre-calculate exit positions for all cards BEFORE clearing expandedIndex
+      // This ensures stable values during the exit animation
+      const newExitPositions = new Map<string, { top: number; left: number; width: number; height: number }>()
+      visibleCards.forEach((card) => {
+        const cardIdx = cardsToShow.findIndex((c) => c.id === card.id)
+        const isCtaCard = card.variant === 'cta'
+        const collapsedPos = cardPositions.get(card.id)
+        const cardHeight = collapsedPos?.height ?? 91
+
+        let exitLeft: number
+        let exitWidth: number
+
+        if (isCtaCard) {
+          // CTA card: fixed position at the end
+          const ctaAbsoluteLeft = containerPadding + (3 * (regularCardWidth + gap))
+          exitLeft = ctaAbsoluteLeft - targetScrollPosition
+          exitWidth = ctaCardWidth
+        } else {
+          // Regular cards: position based on index
+          const cardAbsoluteLeft = containerPadding + (cardIdx * (regularCardWidth + gap))
+          exitLeft = cardAbsoluteLeft - targetScrollPosition
+          exitWidth = regularCardWidth
+        }
+
+        newExitPositions.set(card.id, {
+          top: collapsedPos?.top ?? 0,
+          left: exitLeft,
+          width: exitWidth,
+          height: cardHeight,
+        })
+      })
+      setMobileExitPositions(newExitPositions)
+      // Trigger close sequence - useEffect will clear expandedIndex after render
+      setCloseTriggered(true)
+    } else {
+      // Desktop: just close immediately
+      setIsClosing(true)
+      setExpandedIndex(null)
+    }
   }
+
+  // Effect to clear expandedIndex AFTER exit positions have been rendered
+  // This ensures Framer Motion captures the correct exit position props
+  React.useEffect(() => {
+    if (closeTriggered) {
+      setCloseTriggered(false)
+      setIsClosing(true)
+      setExpandedIndex(null)
+    }
+  }, [closeTriggered])
 
   // Handle ESC key, arrow keys for navigation, number keys to open cards, and ⌘+C to copy email
   React.useEffect(() => {
@@ -795,29 +859,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   // Desktop: top 3 cards + full CTA card inline
   const visibleCards = isMobile ? mobileCards : (isDesktop && ctaCard ? [...topThreeCards, ctaCard] : topThreeCards)
 
-  // Get collapsed position for a card
-  // On mobile, only recalculate positions if user swiped to a different card than originally opened
-  const getCollapsedPosition = (cardId: string, cardIndex: number) => {
+  // Get collapsed position for a card (used for initial/opening animation)
+  // Exit position is calculated separately and passed via exitPosition prop
+  const getCollapsedPosition = (cardId: string) => {
     const rect = cardPositions.get(cardId)
-
-    // On mobile, check if we need to recalculate positions
-    // Only recalculate if the current/closing card differs from the original opened card
-    const targetIndex = isClosing ? closingCardIndex.current : expandedIndex
-    const hasSwiped = targetIndex !== null && targetIndex !== originalExpandedIndex.current
-
-    if (isMobile && hasSwiped && rect) {
-      const cardWidth = 243
-      const gap = 8
-      const containerPadding = 4 // Approximate left padding after margin adjustment
-
-      // Position this card relative to the target card being at the start of viewport
-      const targetCardLeft = containerPadding
-      const offsetFromTargetCard = (cardIndex - targetIndex) * (cardWidth + gap)
-      const newLeft = targetCardLeft + offsetFromTargetCard
-
-      return { top: rect.top, left: newLeft, width: rect.width, height: rect.height }
-    }
-
     if (rect) {
       return { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
     }
@@ -925,7 +970,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               scrollContainerRef.current.scrollLeft = savedScrollPosition.current
             }
             closingCardIndex.current = null
-            originalExpandedIndex.current = null
             setIsClosing(false)
           }}>
           {isExpanded && (
@@ -965,7 +1009,11 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                 {visibleCards.map((card) => {
                   const isMobileCtaCard = isMobile && card.variant === 'cta'
                   const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
-                  const collapsedPos = getCollapsedPosition(card.id, cardIndex)
+                  const collapsedPos = getCollapsedPosition(card.id)
+
+                  // Get mobile exit position from pre-calculated values (stored in handleCloseExpanded)
+                  // This ensures stable exit positions that don't change during the animation
+                  const mobileExitPos = isMobile ? mobileExitPositions.get(card.id) : undefined
                   // For stacking logic, use the closing card index during exit animation
                   const focusIndex = expandedIndex ?? closingCardIndex.current
                   const isCtaFocused = focusIndex === cardsToShow.length - 1
@@ -1019,6 +1067,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                       card={card}
                       isExpanded={true}
                       collapsedPosition={collapsedPos}
+                      exitPosition={mobileExitPos}
                       expandedPosition={expandedPos}
                       onClick={() => {}}
                       onClose={handleCloseExpanded}

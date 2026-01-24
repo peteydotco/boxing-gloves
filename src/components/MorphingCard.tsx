@@ -48,6 +48,7 @@ interface MorphingCardProps {
   isExpanded: boolean
   expandedPosition: { x: number; y: number; width: number; height: number }
   collapsedPosition?: { top: number; left: number; width: number; height: number }
+  exitPosition?: { top: number; left: number; width: number; height: number } // Separate exit position for mobile
   onClick: () => void
   onClose: () => void
   onHighlightClick?: (label: string) => void
@@ -868,6 +869,7 @@ export function MorphingCard({
   isExpanded,
   expandedPosition,
   collapsedPosition,
+  exitPosition,
   onClick,
   onClose,
   onHighlightClick,
@@ -999,10 +1001,10 @@ export function MorphingCard({
           scale: stackedScale,
         }}
         exit={{
-          top: collapsedPosition.top,
-          left: collapsedPosition.left,
-          width: collapsedPosition.width,
-          height: collapsedPosition.height,
+          top: (exitPosition ?? collapsedPosition).top,
+          left: (exitPosition ?? collapsedPosition).left,
+          width: (exitPosition ?? collapsedPosition).width,
+          height: (exitPosition ?? collapsedPosition).height,
           borderRadius: 14,
           rotate: 0,
           scale: 1,
