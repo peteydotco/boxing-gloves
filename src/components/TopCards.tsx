@@ -323,10 +323,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         }
 
         newExitPositions.set(card.id, {
-          top: collapsedPos?.top ?? 0,
-          left: exitLeft,
-          width: exitWidth,
-          height: cardHeight,
+          top: Math.round(collapsedPos?.top ?? 0),
+          left: Math.round(exitLeft),
+          width: Math.round(exitWidth),
+          height: Math.round(cardHeight),
         })
       })
       setMobileExitPositions(newExitPositions)

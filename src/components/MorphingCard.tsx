@@ -249,6 +249,14 @@ const ctaEntranceSpring = {
   mass: 1,
 }
 
+// Smooth spring for mobile collapse - critically damped, no bounce, buttery smooth
+const mobileCollapseSpring = {
+  type: 'spring' as const,
+  stiffness: 260,
+  damping: 32,
+  mass: 0.9,
+}
+
 // Faster critically damped spring for internal content (fonts, padding) - finishes before position
 const contentSpring = {
   type: 'spring' as const,
@@ -983,10 +991,10 @@ export function MorphingCard({
           transformOrigin: 'center center',
         }}
         initial={{
-          top: collapsedPosition.top,
-          left: collapsedPosition.left,
-          width: collapsedPosition.width,
-          height: collapsedPosition.height,
+          top: Math.round(collapsedPosition.top),
+          left: Math.round(collapsedPosition.left),
+          width: Math.round(collapsedPosition.width),
+          height: Math.round(collapsedPosition.height),
           borderRadius: 14,
           rotate: 0,
           scale: 1,
@@ -1001,13 +1009,22 @@ export function MorphingCard({
           scale: stackedScale,
         }}
         exit={{
-          top: (exitPosition ?? collapsedPosition).top,
-          left: (exitPosition ?? collapsedPosition).left,
-          width: (exitPosition ?? collapsedPosition).width,
-          height: (exitPosition ?? collapsedPosition).height,
+          top: Math.round((exitPosition ?? collapsedPosition).top),
+          left: Math.round((exitPosition ?? collapsedPosition).left),
+          width: Math.round((exitPosition ?? collapsedPosition).width),
+          height: Math.round((exitPosition ?? collapsedPosition).height),
           borderRadius: 14,
           rotate: 0,
           scale: 1,
+          transition: {
+            top: mobileCollapseSpring,
+            left: mobileCollapseSpring,
+            width: mobileCollapseSpring,
+            height: mobileCollapseSpring,
+            borderRadius: mobileCollapseSpring,
+            rotate: mobileCollapseSpring,
+            scale: mobileCollapseSpring,
+          },
         }}
         transition={{
           // Position - use bouncy spring for carousel nav AND for exit (collapse) animation
