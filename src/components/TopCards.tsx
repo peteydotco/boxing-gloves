@@ -5,8 +5,13 @@ import { createPortal } from 'react-dom'
 import { CAROUSEL_CONFIG, backdropColors } from '../constants'
 import { cards, stackedCardConfigs } from '../data/cards'
 
+// Canonical card dimensions - the "ideal" size we design for
+const CANONICAL_CARD_WIDTH = 500
+const CANONICAL_CARD_HEIGHT = 880
+
 // Responsive expanded card dimensions calculator
 // Returns viewport-appropriate dimensions for expanded cards
+// On shallow viewports, proportionally scales the card while maintaining aspect ratio
 const getExpandedCardDimensions = () => {
   const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
   const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080
@@ -20,21 +25,29 @@ const getExpandedCardDimensions = () => {
     // Maximize height - just small padding top/bottom
     const maxHeight = viewportHeight - 24 // 12px top + 12px bottom
     const height = maxHeight
-    return { width, height, gap }
+    return { width, height, gap, scale: 1 }
   }
 
-  // Tablet: scale down if needed
-  if (viewportWidth < 1024) {
-    const padding = 24
-    const maxWidth = Math.min(500, viewportWidth - (padding * 2))
-    const maxHeight = viewportHeight - (padding * 2)
-    const aspectRatio = 880 / 500
-    const height = Math.min(maxWidth * aspectRatio, maxHeight)
-    return { width: maxWidth, height, gap: 24 }
-  }
+  // Tablet and Desktop: scale proportionally to fit viewport
+  const verticalPadding = 48 // 24px top + 24px bottom
+  const horizontalPadding = viewportWidth < 1024 ? 48 : 64
+  const maxAvailableHeight = viewportHeight - verticalPadding
+  const maxAvailableWidth = viewportWidth - horizontalPadding
 
-  // Desktop: use original fixed dimensions
-  return { width: 500, height: 880, gap: 32 }
+  // Calculate scale factor to fit within available space while maintaining aspect ratio
+  const scaleByHeight = maxAvailableHeight / CANONICAL_CARD_HEIGHT
+  const scaleByWidth = maxAvailableWidth / CANONICAL_CARD_WIDTH
+
+  // Use the smaller scale to ensure card fits both dimensions
+  // Cap at 1.0 so we never scale up beyond canonical size
+  const scale = Math.min(1, scaleByHeight, scaleByWidth)
+
+  // Apply scale to get final dimensions
+  const width = Math.round(CANONICAL_CARD_WIDTH * scale)
+  const height = Math.round(CANONICAL_CARD_HEIGHT * scale)
+  const gap = viewportWidth < 1024 ? 24 : 32
+
+  return { width, height, gap, scale }
 }
 
 export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: number[], themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' } = {}) {
@@ -96,9 +109,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const handleCloseExpanded = () => {
     closingCardIndex.current = expandedIndex
 
-    // Update saved scroll position to the current expanded card's position (for mobile)
+    // Update saved scroll position to the current expanded card's position (for mobile & tablet)
     // so that when we collapse, we scroll to where the user navigated to
-    if (isMobile && expandedIndex !== null) {
+    if (!isDesktop && expandedIndex !== null) {
       const regularCardWidth = 243
       const ctaCardWidth = 115
       const gap = 8
@@ -637,8 +650,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   const topThreeCards = cardsToShow.slice(0, 3)
   const ctaCard = cardsToShow.length > 3 ? cardsToShow[3] : undefined
-  // Mobile: show top 3 cards, then compact Add Role card last (matches larger breakpoints)
-  // Tablet/Desktop: show only top 3 cards (CTA card is separate at bottom for tablet, inline for desktop)
+  // Mobile & Tablet: all 4 cards in horizontal scroll (CTA is compact)
+  // Desktop: all 4 cards inline, full-width
   const mobileCards = ctaCard ? [...topThreeCards, ctaCard] : topThreeCards
   const isSplitMode = cardIndices && cardIndices.length < cards.length
 
@@ -656,7 +669,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const getExpandedPosition = React.useCallback((cardIndex: number) => {
     // resizeKey ensures this recalculates on viewport resize
     void resizeKey
-    const { width, height, gap } = getExpandedCardDimensions()
+    const { width, height, gap, scale } = getExpandedCardDimensions()
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
     const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080
 
@@ -674,14 +687,14 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       y: Math.max(16, centerY), // Ensure minimum top padding
       width,
       height,
+      scale,
     }
   }, [expandedIndex, resizeKey])
 
   // Cards to render in the main row
-  // Mobile: compact Add Role card + top 3 cards
-  // Tablet: only top 3 cards (CTA card is in fixed bottom position)
-  // Desktop: top 3 cards + full CTA card inline
-  const visibleCards = isMobile ? mobileCards : (isDesktop && ctaCard ? [...topThreeCards, ctaCard] : topThreeCards)
+  // Mobile & Tablet: all 4 cards in horizontal scroll
+  // Desktop: top 3 cards + full CTA card inline (no scroll)
+  const visibleCards = isDesktop ? (ctaCard ? [...topThreeCards, ctaCard] : topThreeCards) : mobileCards
 
   // Get collapsed position for a card (used for initial/opening animation)
   // Exit position is calculated separately and passed via exitPosition prop
@@ -704,12 +717,13 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
             style={{
               perspective: '1000px',
               gap: isDesktop ? '1rem' : '0.5rem',
-              justifyContent: isMobile ? 'flex-start' : 'center',
-              overflowX: isMobile ? 'auto' : 'visible',
+              justifyContent: isDesktop ? 'center' : 'flex-start',
+              overflowX: isDesktop ? 'visible' : 'auto',
               overflowY: 'visible',
               transition: 'gap 0.3s ease, justify-content 0.3s ease, margin 0.3s ease, padding 0.3s ease',
               pointerEvents: 'auto',
-              ...(isMobile && {
+              // Mobile & Tablet: horizontal scroll with edge-to-edge margins
+              ...(!isDesktop && {
                 marginLeft: '-0.75rem',
                 marginRight: '-0.75rem',
                 marginTop: '-20px',
@@ -723,24 +737,28 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
           >
             {visibleCards.map((card) => {
               const isCtaCard = card.variant === 'cta'
-              const isMobileCtaCard = isMobile && isCtaCard
               const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
+
+              // For mobile & tablet, CTA card is compact
+              const isCompactCtaCard = !isDesktop && isCtaCard
 
               return (
                 <div
                   key={card.id}
                   ref={(el) => { cardRefs.current.set(card.id, el) }}
                   style={{
-                    ...(isMobile
+                    // Desktop: flex cards that share space
+                    // Mobile & Tablet: fixed-width cards in horizontal scroll
+                    ...(isDesktop
                       ? {
-                          flex: '0 0 auto',
-                          minWidth: isMobileCtaCard ? '115px' : '243px',
-                          maxWidth: isMobileCtaCard ? '115px' : '243px',
-                          width: isMobileCtaCard ? '115px' : '243px',
-                        }
-                      : {
                           flex: '1 1 0%',
                           minWidth: 0,
+                        }
+                      : {
+                          flex: '0 0 auto',
+                          minWidth: isCompactCtaCard ? '115px' : '243px',
+                          maxWidth: isCompactCtaCard ? '115px' : '243px',
+                          width: isCompactCtaCard ? '115px' : '243px',
                         }),
                     // Hide when expanded or closing (cards are rendered in portal)
                     visibility: (isExpanded || isClosing) ? 'hidden' : 'visible',
@@ -753,9 +771,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     onClick={() => capturePositionsAndExpand(cardIndex)}
                     onClose={handleCloseExpanded}
                     onHighlightClick={(label) => console.log('Highlight clicked:', label)}
-                    hideShortcut={isMobile}
-                    compactCta={isMobileCtaCard}
-                    mobileLabel={isMobileCtaCard ? 'ADD ROLE' : undefined}
+                    hideShortcut={!isDesktop}
+                    compactCta={isCompactCtaCard}
+                    mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
                     emailCopied={emailCopied}
                     themeMode={themeMode}
                   />
@@ -764,25 +782,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
             })}
           </div>
 
-          {/* CTA card - Tablet only: fixed bottom */}
-          {!isDesktop && !isMobile && ctaCard && !isExpanded && (
-            <div
-              ref={(el) => { cardRefs.current.set(ctaCard.id, el) }}
-              className="fixed bottom-0 left-0 right-0 padding-responsive z-20"
-              style={{ perspective: '1000px' }}
-            >
-              <MorphingCard
-                card={ctaCard}
-                isExpanded={false}
-                expandedPosition={getExpandedPosition(cardsToShow.length - 1)}
-                onClick={() => capturePositionsAndExpand(cardsToShow.length - 1)}
-                onClose={handleCloseExpanded}
-                onHighlightClick={(label) => console.log('Highlight clicked:', label)}
-                emailCopied={emailCopied}
-                themeMode={themeMode}
-              />
-            </div>
-          )}
         </div>
       </div>
 
@@ -831,7 +830,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                 onPointerCancel={handlePointerUp}
               >
                 {visibleCards.map((card) => {
-                  const isMobileCtaCard = isMobile && card.variant === 'cta'
+                  // Tablet + Mobile: CTA card is compact
+                  const isCompactCtaCard = !isDesktop && card.variant === 'cta'
                   const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
                   const collapsedPos = getCollapsedPosition(card.id)
 
@@ -852,12 +852,13 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                   if (isCtaFocused && isOneOfFirstThree) {
                     const config = stackedCardConfigs[cardIndex]
                     const ctaPos = getExpandedPosition(cardsToShow.length - 1)
-                    const { width, height } = getExpandedCardDimensions()
+                    const { width, height, scale } = getExpandedCardDimensions()
                     expandedPos = {
                       x: ctaPos.x + config.offsetX,
                       y: ctaPos.y + config.offsetY + 25,
                       width,
                       height,
+                      scale,
                     }
                     stackedRotation = config.rotation
                     stackedScale = config.scale
@@ -896,9 +897,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                       onClick={() => {}}
                       onClose={handleCloseExpanded}
                       onHighlightClick={(label) => console.log('Highlight clicked:', label)}
-                      hideShortcut={isMobile}
-                      compactCta={isMobileCtaCard}
-                      mobileLabel={isMobileCtaCard ? 'ADD ROLE' : undefined}
+                      hideShortcut={!isDesktop}
+                      compactCta={isCompactCtaCard}
+                      mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
                       emailCopied={emailCopied}
                       themeMode={themeMode}
                       parallaxOffset={cardParallaxOffset}
@@ -906,6 +907,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                       stackedScale={stackedScale}
                       zIndexOverride={zIndexOverride}
                       useBouncyTransition={useBouncyTransition}
+                      isFocused={cardIndex === expandedIndex}
                     />
                   )
                 })}

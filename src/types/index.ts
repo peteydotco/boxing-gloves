@@ -15,6 +15,8 @@ export interface ExpandedContent {
     title: string
     image: string
     href: string
+    previewFrames?: string[] // Array of keyframe images for slideshow preview
+    previewVideo?: string // Video file for autoplay thumbnail (webm/mp4)
   }
   nowPlayingCard?: {
     label: string

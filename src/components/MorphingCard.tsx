@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useRef } from 'react'
-import { SlPlus, SlControlPlay, SlSocialInstagram } from 'react-icons/sl'
+import { useState, useRef, useEffect } from 'react'
+import { SlPlus } from 'react-icons/sl'
 import { RiPushpinLine } from 'react-icons/ri'
-import { IoIosPlay } from 'react-icons/io'
+import { CiPlay1 } from 'react-icons/ci'
 import { FiExternalLink, FiPlay, FiCalendar, FiMail } from 'react-icons/fi'
+import { SiApplemusic } from 'react-icons/si'
 import React from 'react'
 import type { CardData, VariantStyle, ThemeMode } from '../types'
 import { variantStylesLight, getVariantStyles } from '../constants/themes'
@@ -19,7 +20,7 @@ import {
 interface MorphingCardProps {
   card: CardData
   isExpanded: boolean
-  expandedPosition: { x: number; y: number; width: number; height: number }
+  expandedPosition: { x: number; y: number; width: number; height: number; scale?: number }
   collapsedPosition?: { top: number; left: number; width: number; height: number }
   exitPosition?: { top: number; left: number; width: number; height: number }
   onClick: () => void
@@ -36,6 +37,7 @@ interface MorphingCardProps {
   stackedScale?: number
   zIndexOverride?: number
   useBouncyTransition?: boolean
+  isFocused?: boolean // True when this card is the currently focused card in the carousel
 }
 
 const iconMap = {
@@ -147,26 +149,76 @@ interface ReflectionsCardProps {
     image: string
     href: string
   }
-  styles: typeof variantStylesLight.blue
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
   variant?: 'blue' | 'white' | 'red' | 'cta'
   isMobile?: boolean
-  mobileChip?: {
+  chip?: {
     icon: 'play' | 'slides'
     text: string
   }
+  previewFrames?: string[] // Array of preview frame images for slideshow
+  previewVideo?: string // Video file for autoplay thumbnail (webm/mp4)
+  isActive?: boolean // Only run slideshow when card is focused/expanded
 }
 
-function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false, mobileChip }: ReflectionsCardProps) {
+function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false, chip, previewFrames, previewVideo, isActive = true }: ReflectionsCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
+
+  // Autoplay slideshow effect - cycle through preview frames only when active
+  useEffect(() => {
+    if (!previewFrames || previewFrames.length <= 1 || !isActive) return
+
+    const interval = setInterval(() => {
+      setCurrentFrameIndex(prev => (prev + 1) % previewFrames.length)
+    }, 8000) // Change frame every 8 seconds
+
+    return () => clearInterval(interval)
+  }, [previewFrames, isActive])
+
+  // State for mobile auto-play after delay
+  const [mobileVideoActive, setMobileVideoActive] = useState(false)
+
+  // Mobile: auto-play video after 5 seconds when card is active
+  useEffect(() => {
+    if (!isMobile || !previewVideo || !isActive) {
+      setMobileVideoActive(false)
+      return
+    }
+
+    const timer = setTimeout(() => {
+      setMobileVideoActive(true)
+    }, 5000)
+
+    return () => clearTimeout(timer)
+  }, [isMobile, previewVideo, isActive])
+
+  // Control video playback - hover on desktop (only if focused), timer on mobile
+  const shouldShowVideo = isMobile ? mobileVideoActive : (isHovered && isActive)
+
+  useEffect(() => {
+    if (!videoRef.current || !previewVideo) return
+
+    if (shouldShowVideo && isActive) {
+      videoRef.current.currentTime = 0 // Reset to start
+      videoRef.current.play().catch(() => {
+        // Autoplay may be blocked, that's ok
+      })
+    } else {
+      videoRef.current.pause()
+    }
+  }, [shouldShowVideo, isActive, previewVideo])
+  // White variant in dark theme has light bg, needs dark text
+  const isInvertedWhite = variant === 'white' && isDark
 
   // Determine background color based on variant and theme
   // Uses darker tints than topCard bg for visual hierarchy
   const getBackgroundColor = () => {
-    const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
     if (variant === 'white') {
-      // Squarespace card: darker tints
-      return isDark ? 'rgba(18,18,32,1)' : 'rgba(22,22,39,1)'
+      // Squarespace card: darker tints of the card bg
+      return isDark ? 'rgba(210,210,218,1)' : 'rgba(22,22,39,1)'
     }
     if (variant === 'red') {
       // Rio card: darker red tints (matching NowPlayingCard)
@@ -197,57 +249,13 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
       <div
         className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
         style={{
-          boxShadow: variant === 'white'
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
-            : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+          boxShadow: isInvertedWhite
+            ? 'inset 0 0 0 1px rgba(0,0,0,0.06)'
+            : (variant === 'white')
+              ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
+              : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
         }}
       />
-
-      {/* Top bar with play icon and title - hidden on mobile */}
-      {!isMobile && (
-        <div
-          className="flex items-center"
-          style={{
-            paddingTop: '10px',
-            paddingBottom: '0px',
-            paddingLeft: '14px',
-            paddingRight: '14px',
-          }}
-        >
-          {/* Play icon - aligned with content left edge */}
-          <div
-            className="flex items-center justify-center shrink-0"
-            style={{
-              width: '30px',
-              height: '30px',
-            }}
-          >
-            {variant === 'blue' ? (
-              <svg width="24" height="24" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginLeft: '2px' }}>
-                <path fillRule="evenodd" clipRule="evenodd" d="M21.6667 4.79171H8.33333V7.70837H21.6667V4.79171ZM23.125 4.79171V7.70837H26.0417V5.52087C26.0417 5.32749 25.9648 5.14202 25.8281 5.00528C25.6914 4.86853 25.5059 4.79171 25.3125 4.79171H23.125ZM4.6875 4.79171H6.875V7.70837H3.95833V5.52087C3.95833 5.32749 4.03516 5.14202 4.1719 5.00528C4.30865 4.86853 4.49411 4.79171 4.6875 4.79171ZM26.0417 9.16671H3.95833V24.4792C3.95833 24.6726 4.03516 24.8581 4.1719 24.9948C4.30865 25.1316 4.49411 25.2084 4.6875 25.2084H25.3125C25.5059 25.2084 25.6914 25.1316 25.8281 24.9948C25.9648 24.8581 26.0417 24.6726 26.0417 24.4792V9.16671ZM4.6875 3.33337C4.10734 3.33337 3.55094 3.56384 3.1407 3.97408C2.73047 4.38431 2.5 4.94071 2.5 5.52087V24.4792C2.5 25.0594 2.73047 25.6158 3.1407 26.026C3.55094 26.4362 4.10734 26.6667 4.6875 26.6667H25.3125C25.8927 26.6667 26.4491 26.4362 26.8593 26.026C27.2695 25.6158 27.5 25.0594 27.5 24.4792V5.52087C27.5 4.94071 27.2695 4.38431 26.8593 3.97408C26.4491 3.56384 25.8927 3.33337 25.3125 3.33337H4.6875ZM17.2765 18.0436L17.5171 17.8934L18.1515 17.4967C18.2039 17.4639 18.2471 17.4184 18.2771 17.3643C18.3071 17.3102 18.3228 17.2494 18.3228 17.1875C18.3228 17.1257 18.3071 17.0649 18.2771 17.0108C18.2471 16.9567 18.2039 16.9111 18.1515 16.8784L17.5171 16.4817L17.2765 16.3315L17.2706 16.3271L14.2708 14.4532L14.246 14.4386L13.8654 14.1994L13.3696 13.8903C13.3144 13.8559 13.2511 13.837 13.1861 13.8354C13.1212 13.8338 13.057 13.8496 13.0002 13.8811C12.9434 13.9126 12.896 13.9587 12.863 14.0147C12.83 14.0707 12.8126 14.1344 12.8125 14.1994V20.1757C12.8124 20.2409 12.8298 20.3049 12.8629 20.3611C12.896 20.4172 12.9435 20.4635 13.0005 20.4951C13.0576 20.5267 13.122 20.5424 13.1872 20.5406C13.2523 20.5388 13.3158 20.5195 13.371 20.4848L13.8654 20.1757L14.2446 19.938L14.2708 19.9219L17.2706 18.048L17.2765 18.0436ZM18.9244 15.6417L14.1425 12.6536C13.8666 12.4813 13.5496 12.386 13.2244 12.3776C12.8992 12.3691 12.5777 12.4478 12.2932 12.6056C12.0087 12.7633 11.7716 12.9943 11.6065 13.2745C11.4414 13.5548 11.3542 13.8741 11.3542 14.1994V20.1757C11.3542 20.501 11.4414 20.8203 11.6065 21.1006C11.7716 21.3808 12.0087 21.6118 12.2932 21.7695C12.5777 21.9272 12.8992 22.006 13.2244 21.9975C13.5496 21.9891 13.8666 21.8938 14.1425 21.7215L18.9244 18.7334C19.1866 18.5695 19.4028 18.3417 19.5526 18.0712C19.7025 17.8008 19.7812 17.4967 19.7812 17.1875C19.7812 16.8784 19.7025 16.5743 19.5526 16.3038C19.4028 16.0334 19.1866 15.8056 18.9244 15.6417Z" fill="white"/>
-              </svg>
-            ) : (
-              <SlControlPlay className="w-4 h-4" style={{ color: 'white' }} />
-            )}
-          </div>
-
-          {/* Title - center aligned */}
-          <span
-            className="font-pressura-ext flex-1 text-center"
-            style={{
-              fontWeight: 350,
-              fontSize: '18px',
-              lineHeight: '24px',
-              color: '#FFFFFF',
-            }}
-          >
-            {card.title}
-          </span>
-
-          {/* Spacer to balance the play icon for true center alignment */}
-          <div className="shrink-0" style={{ width: '30px', height: '30px' }} />
-        </div>
-      )}
 
       {/* Preview image container with static noise overlay that clears */}
       <motion.div
@@ -255,52 +263,112 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
         style={{
           marginLeft: isMobile ? '10px' : '14px',
           marginRight: isMobile ? '10px' : '14px',
-          marginTop: isMobile ? '10px' : '10px',
+          marginTop: isMobile ? '10px' : '14px',
           marginBottom: isMobile ? '10px' : '14px',
           width: isMobile ? 'calc(100% - 20px)' : 'calc(100% - 28px)',
           borderRadius: '6px',
           transformOrigin: 'center center',
           border: `${isMobile ? 3 : 3}px solid rgba(255,255,255,0.9)`,
         }}
-        initial={false}
+        initial={isMobile ? false : { scale: 0.25, opacity: 0 }}
         animate={{
           scale: isHovered ? 1.03 : 1,
+          opacity: 1,
+          transition: isMobile ? hoverTransition : {
+            scale: { type: 'spring', stiffness: 300, damping: 20 },
+            opacity: { duration: 0.2, ease: 'easeOut' }
+          }
         }}
+        whileHover={{ scale: 1.03 }}
         transition={hoverTransition}
       >
-        <img
-          src={card.image}
-          alt={card.title}
-          className="w-full h-auto"
-          style={{ borderRadius: '4px', display: 'block' }}
-        />
-        {/* Mobile: Chip badge - bottom left */}
-        {isMobile && mobileChip && (
+        {/* Preview container - video on hover, or static image/slideshow */}
+        <div className="relative w-full" style={{ aspectRatio: '16/9' }}>
+          {previewVideo ? (
+            // Video mode - show thumbnail by default, video on hover (desktop) or after 5s (mobile)
+            <>
+              {/* Static thumbnail - visible by default */}
+              <img
+                src={card.image}
+                alt={card.title}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  borderRadius: '4px',
+                  opacity: shouldShowVideo ? 0 : 1,
+                  transition: 'opacity 0.3s ease-in-out',
+                }}
+              />
+              {/* Video - visible on hover (desktop) or after 5s delay (mobile) */}
+              <video
+                ref={videoRef}
+                src={previewVideo}
+                muted
+                loop
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  borderRadius: '4px',
+                  opacity: shouldShowVideo ? 1 : 0,
+                  transition: 'opacity 0.3s ease-in-out',
+                }}
+              />
+            </>
+          ) : previewFrames && previewFrames.length > 1 ? (
+            // Slideshow mode - show all frames stacked with opacity transitions
+            previewFrames.map((frame, index) => (
+              <img
+                key={index}
+                src={frame}
+                alt={`${card.title} preview ${index + 1}`}
+                className="absolute inset-0 w-full h-full object-cover"
+                style={{
+                  borderRadius: '4px',
+                  opacity: index === currentFrameIndex ? 1 : 0,
+                  transition: 'opacity 8s ease-in-out',
+                }}
+              />
+            ))
+          ) : (
+            // Single image mode - fallback to card.image
+            <img
+              src={card.image}
+              alt={card.title}
+              className="w-full h-full object-cover"
+              style={{ borderRadius: '4px', display: 'block' }}
+            />
+          )}
+        </div>
+        {/* Chip badge - bottom left */}
+        {chip && (
           <div
-            className="absolute pointer-events-none flex items-center gap-[6px] rounded-[4px]"
+            className="absolute pointer-events-none flex items-center rounded-[4px]"
             style={{
-              bottom: '8px',
-              left: '8px',
+              bottom: isMobile ? '8px' : '10px',
+              left: isMobile ? '8px' : '10px',
+              gap: isMobile ? '6px' : '7px',
               backgroundColor: 'rgba(255,255,255,0.95)',
-              paddingTop: '4px',
-              paddingBottom: '4px',
-              paddingLeft: '8px',
-              paddingRight: '10px',
+              paddingTop: isMobile ? '4px' : '5px',
+              paddingBottom: isMobile ? '4px' : '5px',
+              paddingLeft: isMobile ? '8px' : '10px',
+              paddingRight: isMobile ? '10px' : '12px',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}
           >
-            {mobileChip.icon === 'slides' ? (
-              <svg width="14" height="14" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {chip.icon === 'slides' ? (
+              <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fillRule="evenodd" clipRule="evenodd" d="M21.6667 4.79171H8.33333V7.70837H21.6667V4.79171ZM23.125 4.79171V7.70837H26.0417V5.52087C26.0417 5.32749 25.9648 5.14202 25.8281 5.00528C25.6914 4.86853 25.5059 4.79171 25.3125 4.79171H23.125ZM4.6875 4.79171H6.875V7.70837H3.95833V5.52087C3.95833 5.32749 4.03516 5.14202 4.1719 5.00528C4.30865 4.86853 4.49411 4.79171 4.6875 4.79171ZM26.0417 9.16671H3.95833V24.4792C3.95833 24.6726 4.03516 24.8581 4.1719 24.9948C4.30865 25.1316 4.49411 25.2084 4.6875 25.2084H25.3125C25.5059 25.2084 25.6914 25.1316 25.8281 24.9948C25.9648 24.8581 26.0417 24.6726 26.0417 24.4792V9.16671ZM4.6875 3.33337C4.10734 3.33337 3.55094 3.56384 3.1407 3.97408C2.73047 4.38431 2.5 4.94071 2.5 5.52087V24.4792C2.5 25.0594 2.73047 25.6158 3.1407 26.026C3.55094 26.4362 4.10734 26.6667 4.6875 26.6667H25.3125C25.8927 26.6667 26.4491 26.4362 26.8593 26.026C27.2695 25.6158 27.5 25.0594 27.5 24.4792V5.52087C27.5 4.94071 27.2695 4.38431 26.8593 3.97408C26.4491 3.56384 25.8927 3.33337 25.3125 3.33337H4.6875ZM17.2765 18.0436L17.5171 17.8934L18.1515 17.4967C18.2039 17.4639 18.2471 17.4184 18.2771 17.3643C18.3071 17.3102 18.3228 17.2494 18.3228 17.1875C18.3228 17.1257 18.3071 17.0649 18.2771 17.0108C18.2471 16.9567 18.2039 16.9111 18.1515 16.8784L17.5171 16.4817L17.2765 16.3315L17.2706 16.3271L14.2708 14.4532L14.246 14.4386L13.8654 14.1994L13.3696 13.8903C13.3144 13.8559 13.2511 13.837 13.1861 13.8354C13.1212 13.8338 13.057 13.8496 13.0002 13.8811C12.9434 13.9126 12.896 13.9587 12.863 14.0147C12.83 14.0707 12.8126 14.1344 12.8125 14.1994V20.1757C12.8124 20.2409 12.8298 20.3049 12.8629 20.3611C12.896 20.4172 12.9435 20.4635 13.0005 20.4951C13.0576 20.5267 13.122 20.5424 13.1872 20.5406C13.2523 20.5388 13.3158 20.5195 13.371 20.4848L13.8654 20.1757L14.2446 19.938L14.2708 19.9219L17.2706 18.048L17.2765 18.0436ZM18.9244 15.6417L14.1425 12.6536C13.8666 12.4813 13.5496 12.386 13.2244 12.3776C12.8992 12.3691 12.5777 12.4478 12.2932 12.6056C12.0087 12.7633 11.7716 12.9943 11.6065 13.2745C11.4414 13.5548 11.3542 13.8741 11.3542 14.1994V20.1757C11.3542 20.501 11.4414 20.8203 11.6065 21.1006C11.7716 21.3808 12.0087 21.6118 12.2932 21.7695C12.5777 21.9272 12.8992 22.006 13.2244 21.9975C13.5496 21.9891 13.8666 21.8938 14.1425 21.7215L18.9244 18.7334C19.1866 18.5695 19.4028 18.3417 19.5526 18.0712C19.7025 17.8008 19.7812 17.4967 19.7812 17.1875C19.7812 16.8784 19.7025 16.5743 19.5526 16.3038C19.4028 16.0334 19.1866 15.8056 18.9244 15.6417Z" fill="#000000"/>
               </svg>
             ) : (
-              <IoIosPlay style={{ width: '14px', height: '14px', color: '#000000' }} />
+              <CiPlay1 style={{ width: isMobile ? '14px' : '16px', height: isMobile ? '14px' : '16px', color: '#000000' }} />
             )}
             <span
-              className="uppercase font-pressura-mono leading-[100%] text-[11px]"
-              style={{ color: '#000000' }}
+              className="uppercase font-pressura-mono leading-[100%]"
+              style={{
+                color: '#000000',
+                fontSize: isMobile ? '11px' : '12px',
+              }}
             >
-              {mobileChip.text}
+              {chip.text}
             </span>
           </div>
         )}
@@ -333,12 +401,15 @@ interface NowPlayingCardProps {
 
 function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }: NowPlayingCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
+  // White variant in dark theme has light bg, needs dark text
+  const isInvertedWhite = variant === 'white' && isDark
 
   // Determine background color based on variant and theme
   const getBackgroundColor = () => {
-    const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
     if (variant === 'white') {
-      return isDark ? 'rgba(18,18,32,1)' : 'rgba(22,22,39,1)'
+      // Squarespace card: darker tint of the light gray card bg
+      return isDark ? 'rgba(210,210,218,1)' : 'rgba(22,22,39,1)'
     }
     if (variant === 'red') {
       return isDark ? 'rgba(160,30,40,1)' : 'rgba(195,35,45,1)'
@@ -359,25 +430,21 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
       className="w-full rounded-[8px] overflow-hidden relative cursor-pointer"
       style={{
         backgroundColor: getBackgroundColor(),
+        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       initial={false}
-      animate={{
-        scale: isHovered ? 1.02 : 1,
-        boxShadow: isHovered
-          ? '0 2px 0 0 rgba(0,0,0,0.2), 0 12px 32px rgba(0,0,0,0.25)'
-          : '0 2px 0 0 rgba(0,0,0,0.2)',
-      }}
-      transition={hoverTransition}
     >
       {/* Inner stroke overlay */}
       <div
         className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
         style={{
-          boxShadow: variant === 'white' || variant === 'cta'
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
-            : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+          boxShadow: (variant === 'white' && (themeMode === 'dark' || themeMode === 'darkInverted'))
+            ? 'inset 0 0 0 1px rgba(0,0,0,0.06)'
+            : (variant === 'white' || variant === 'cta')
+              ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
+              : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
         }}
       />
 
@@ -399,10 +466,16 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
             width: isMobile ? '65px' : '112px',
             height: isMobile ? '65px' : '112px',
           }}
-          initial={false}
+          initial={isMobile ? false : { scale: 0.25, opacity: 0 }}
           animate={{
             scale: isHovered ? 1.03 : 1,
+            opacity: 1,
+            transition: isMobile ? hoverTransition : {
+              scale: { type: 'spring', stiffness: 300, damping: 20 },
+              opacity: { duration: 0.2, ease: 'easeOut' }
+            }
           }}
+          whileHover={{ scale: 1.03 }}
           transition={hoverTransition}
         >
           <img
@@ -410,11 +483,13 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
             alt={`${card.songTitle} album art`}
             className="w-full h-full object-cover"
           />
-          {/* Inner stroke on album art */}
+          {/* Center stroke on album art */}
           <div
-            className="absolute inset-0 rounded-[6px] pointer-events-none"
+            className="absolute pointer-events-none"
             style={{
-              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
+              inset: '-1.5px',
+              border: '3px solid rgba(255,255,255,0.9)',
+              borderRadius: '7.5px',
             }}
           />
         </motion.div>
@@ -427,7 +502,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
             style={{
               fontSize: isMobile ? '10px' : '11px',
               letterSpacing: '0.33px',
-              color: 'rgba(255,255,255,0.6)',
+              color: isInvertedWhite ? 'rgba(26,26,46,0.6)' : 'rgba(255,255,255,0.6)',
               lineHeight: '1.2',
             }}
           >
@@ -438,7 +513,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
             className="font-pressura truncate w-full text-left"
             style={{
               fontSize: isMobile ? '14px' : '19px',
-              color: '#FFFFFF',
+              color: isInvertedWhite ? 'rgba(26,26,46,1)' : '#FFFFFF',
               lineHeight: '1.3',
               marginTop: isMobile ? '2px' : '4px',
             }}
@@ -451,7 +526,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
             style={{
               fontWeight: 350,
               fontSize: isMobile ? '12px' : '15px',
-              color: 'rgba(255,255,255,0.75)',
+              color: isInvertedWhite ? 'rgba(26,26,46,0.7)' : 'rgba(255,255,255,0.75)',
               lineHeight: '1.3',
               marginTop: isMobile ? '1px' : '2px',
             }}
@@ -460,17 +535,19 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
           </span>
         </div>
 
-        {/* Spotify icon */}
+        {/* Apple Music icon */}
         <div
           className="shrink-0 flex items-center justify-center"
           style={{
             width: isMobile ? '22px' : '28px',
             height: isMobile ? '22px' : '28px',
+            marginLeft: '-8px',
           }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.6)">
-            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-          </svg>
+          <SiApplemusic
+            size={isMobile ? 20 : 24}
+            color={isInvertedWhite ? 'rgba(26,26,46,0.6)' : 'rgba(255,255,255,0.6)'}
+          />
         </div>
       </div>
     </motion.button>
@@ -510,52 +587,6 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
         }}
       />
 
-      {/* Top bar with IG icon and title - hidden on mobile */}
-      {!isMobile && (
-        <div
-          className="flex items-center"
-          style={{
-            paddingTop: '10px',
-            paddingBottom: '0px',
-            paddingLeft: '14px',
-            paddingRight: '14px',
-          }}
-        >
-          {/* IG icon - aligned with content left edge */}
-          <div
-            className="flex items-center justify-center shrink-0"
-            style={{
-              width: '30px',
-              height: '30px',
-            }}
-          >
-            <SlSocialInstagram
-              style={{
-                width: '20px',
-                height: '20px',
-                color: styles.textColor,
-              }}
-            />
-          </div>
-
-          {/* Title - center aligned */}
-          <span
-            className="font-pressura-ext flex-1 text-center"
-            style={{
-              fontWeight: 350,
-              fontSize: '18px',
-              lineHeight: '24px',
-              color: styles.textColor,
-            }}
-          >
-            Highlights on IG
-          </span>
-
-          {/* Spacer to balance the icon for true center alignment */}
-          <div className="shrink-0" style={{ width: '30px', height: '30px' }} />
-        </div>
-      )}
-
       {/* Highlights content area - items fan out from stacked position */}
       <div
         className="flex justify-center"
@@ -563,8 +594,8 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
           gap,
           paddingLeft: isMobile ? '10px' : '14px',
           paddingRight: isMobile ? '10px' : '14px',
-          paddingTop: isMobile ? '14px' : '10px',
-          paddingBottom: isMobile ? '12px' : '16px',
+          paddingTop: isMobile ? '14px' : '28px',
+          paddingBottom: isMobile ? '12px' : '28px',
         }}
       >
         {highlights.map((highlight, i) => {
@@ -576,23 +607,39 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
           const baseDelay = 0.2
           const itemDelay = baseDelay + i * 0.04
 
+          // Desktop: fade + scale up animation (center-aligned items)
+          // Mobile: cascade from left animation (left-aligned items)
           return (
             <motion.div
               key={i}
-              initial={{ x: stackedX, opacity: 0 }}
-              animate={{
+              initial={isMobile ? { x: stackedX, opacity: 0 } : { scale: 0.25, opacity: 0 }}
+              animate={isMobile ? {
                 x: 0,
                 opacity: 1,
                 transition: {
                   x: { type: 'spring', stiffness: 300, damping: 24, delay: itemDelay },
                   opacity: { duration: 0.15, ease: 'easeOut', delay: itemDelay }
                 }
+              } : {
+                scale: 1,
+                opacity: 1,
+                transition: {
+                  scale: { type: 'spring', stiffness: 300, damping: 20, delay: itemDelay },
+                  opacity: { duration: 0.2, ease: 'easeOut', delay: itemDelay }
+                }
               }}
-              exit={{
+              exit={isMobile ? {
                 x: stackedX,
                 opacity: 0,
                 transition: {
                   x: { type: 'spring', stiffness: 400, damping: 35 },
+                  opacity: { duration: 0.1, ease: 'easeIn' }
+                }
+              } : {
+                scale: 0.25,
+                opacity: 0,
+                transition: {
+                  scale: { type: 'spring', stiffness: 400, damping: 30 },
                   opacity: { duration: 0.1, ease: 'easeIn' }
                 }
               }}
@@ -616,15 +663,23 @@ interface DescriptionContainerProps {
   description: React.ReactNode[]
   styles: typeof variantStylesLight.blue
   isMobile?: boolean
+  contentScale?: number // Scale factor for shallow viewports (1 = canonical size)
 }
 
-function DescriptionContainer({ description, styles, isMobile = false }: DescriptionContainerProps) {
+function DescriptionContainer({ description, styles, isMobile = false, contentScale = 1 }: DescriptionContainerProps) {
+  // Canonical width at scale 1: 500px card - 48px padding = 452px
+  const canonicalWidth = 452
+  const scaledWidth = Math.round(canonicalWidth * contentScale)
+  // Scale font sizes proportionally
+  const fontSize = isMobile ? 15 : Math.round(18 * contentScale)
+  const lineHeight = isMobile ? 21 : Math.round(24 * contentScale)
+
   return (
     <div
       style={{
         // Mobile: fill available width (container handles padding)
-        // Desktop: 500px card - 48px padding = 452px
-        width: isMobile ? '100%' : '452px',
+        // Desktop: scale width proportionally with card
+        width: isMobile ? '100%' : `${scaledWidth}px`,
       }}
     >
       {description.map((paragraph, i) => (
@@ -633,8 +688,8 @@ function DescriptionContainer({ description, styles, isMobile = false }: Descrip
           className="font-pressura-ext"
           style={{
             fontWeight: 350,
-            fontSize: isMobile ? '15px' : '18px',
-            lineHeight: isMobile ? '21px' : '24px',
+            fontSize: `${fontSize}px`,
+            lineHeight: `${lineHeight}px`,
             color: styles.textColor,
           }}
         >
@@ -665,6 +720,7 @@ export function MorphingCard({
   stackedScale = 1,
   zIndexOverride,
   useBouncyTransition = false,
+  isFocused = true,
 }: MorphingCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
@@ -745,6 +801,9 @@ export function MorphingCard({
 
   // Determine if this card is stacked (has rotation/scale applied)
   const isStacked = stackedRotation !== 0 || stackedScale !== 1
+
+  // Extract content scale from expandedPosition (for shallow viewport scaling)
+  const contentScale = expandedPosition.scale ?? 1
 
   // If expanded with collapsedPosition, this is a portal card that animates from collapsed to expanded
   if (isExpanded && collapsedPosition) {
@@ -862,8 +921,9 @@ export function MorphingCard({
 
         {/* Morphing text content - label and title scale proportionally with card */}
         {/* On mobile, this becomes a scrollable container for all content */}
+        {/* On desktop/tablet, uses flexbox with space-between for auto-spacing between clusters (toggleable via Leva) */}
         <motion.div
-          className={`absolute inset-0 flex flex-col ${(typeof window !== 'undefined' && window.innerWidth < 768) ? 'mobile-card-scroll' : ''}`}
+          className={`absolute inset-0 flex flex-col ${(typeof window !== 'undefined' && window.innerWidth < 768) ? 'mobile-card-scroll' : 'justify-between'}`}
           style={{
             overflowY: (typeof window !== 'undefined' && window.innerWidth < 768) ? 'auto' : 'hidden',
             overflowX: 'hidden',
@@ -907,8 +967,9 @@ export function MorphingCard({
               }
 
               // If swiping DOWN and we're at the top of scroll, apply rubber band effect
+              // Note: We don't call preventDefault() to avoid passive listener warnings
+              // The rubber band visual effect still works, scroll may compete slightly
               if (target.dataset.touchDirection === 'vertical' && deltaY > 0 && scrollTopAtStart <= 0) {
-                e.preventDefault() // Prevent scroll
                 setIsSwipingDown(true)
                 // Rubber band effect: diminishing returns as you drag further
                 const rubberBandOffset = Math.sqrt(deltaY) * 8
@@ -937,177 +998,148 @@ export function MorphingCard({
             }
           }}
         >
-          {/* Header row with morphing label - uses same copy as collapsed card */}
-          <div className="flex items-start justify-between w-full">
-            <motion.div
-              className="font-pressura-mono leading-normal text-left uppercase"
-              style={{ color: styles.textColor, fontSize: '13px', letterSpacing: '0.39px', transformOrigin: 'top left', whiteSpace: 'nowrap' }}
+          {/* TOP CLUSTER: Header + Title + Date Range */}
+          {/* This cluster stays at the top of the card */}
+          <div className="flex-shrink-0">
+            {/* Header row with morphing label - uses same copy as collapsed card */}
+            <div className="flex items-start justify-between w-full">
+              <motion.div
+                className="font-pressura-mono leading-normal text-left uppercase"
+                style={{ color: styles.textColor, fontSize: '13px', letterSpacing: '0.39px', transformOrigin: 'top left', whiteSpace: 'nowrap' }}
+                initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
+                animate={{ scale: 14 / 13, marginTop: '1px', opacity: 1 }}
+                exit={{ scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1 }}
+                transition={compactCta ? { ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } } : contentSpring}
+              >
+                {label}
+              </motion.div>
+
+              {/* Shortcut badge - morphs between ESC (expanded) and shortcut key (collapsed) */}
+              {/* Always render during exit animation to prevent blinking */}
+              <motion.div
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClose()
+                }}
+                className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer"
+                style={{ backgroundColor: styles.badgeBg }}
+                initial={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
+                animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: card.variant === 'cta' ? '8px' : '16px', paddingRight: card.variant === 'cta' ? '8px' : '16px', opacity: hideShortcut ? 0 : 1 }}
+                // Show badge during exit animation so shortcut animates back (but not on mobile where hideShortcut is true)
+                exit={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
+                transition={contentSpring}
+              >
+                {/* Badge text - same size as collapsed card */}
+                <div
+                  className="uppercase font-pressura-mono leading-[100%] relative text-[12px]"
+                  style={{ top: '-1px' }}
+                >
+                  {/* ESC text - absolutely positioned, fades in when expanded */}
+                  <motion.span
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{ color: styles.textColor }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: hideShortcut ? 0 : 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.12, ease: 'easeOut' }}
+                  >
+                    ESC
+                  </motion.span>
+                  {/* Shortcut text - provides layout, fades out when expanded */}
+                  <motion.span
+                    style={{ color: styles.textColor }}
+                    initial={{ opacity: 1 }}
+                    animate={{ opacity: hideShortcut ? 1 : 0 }}
+                    exit={{ opacity: 1 }}
+                    transition={{ duration: 0.12, ease: 'easeOut' }}
+                  >
+                    {card.shortcut}
+                  </motion.span>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Morphing title - scales proportionally from collapsed to expanded */}
+            {/* Uses transform scale instead of fontSize to prevent text reflow during transition */}
+            {/* white-space: nowrap prevents text from re-wrapping during scale animation */}
+            {/* Mobile uses smaller scale (26/18) to fit within narrower container */}
+            {/* For compactCta (mobile CTA), fade out quickly on exit since collapsed state has different layout */}
+            <motion.h2
+              className={`leading-normal text-left w-full uppercase ${card.variant === 'cta' ? 'font-pressura-light' : 'font-pressura'}`}
+              style={{ color: card.variant === 'cta' ? (styles as typeof variantStylesLight.cta).ctaTitleColor : styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px', fontSize: '18px', whiteSpace: 'nowrap' }}
               initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
-              animate={{ scale: 14 / 13, marginTop: '1px', opacity: 1 }}
+              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : 32 / 18, marginTop: '4px', opacity: 1 }}
               exit={{ scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1 }}
               transition={compactCta ? { ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } } : contentSpring}
             >
-              {label}
-            </motion.div>
+              {card.variant === 'cta' ? (
+                <span className="flex items-center gap-3">
+                  <motion.span
+                    style={{ display: 'flex', alignItems: 'center' }}
+                    initial={{ width: 20, height: 20 }}
+                    animate={{ width: 20, height: 20 }}
+                    exit={{ width: 20, height: 20 }}
+                    transition={contentSpring}
+                  >
+                    <SlPlus className="w-full h-full" style={{ position: 'relative', top: '1px' }} />
+                  </motion.span>
+                  {card.title}
+                </span>
+              ) : (
+                card.title
+              )}
+            </motion.h2>
 
-            {/* Shortcut badge - morphs between ESC (expanded) and shortcut key (collapsed) */}
-            {/* Always render during exit animation to prevent blinking */}
-            <motion.div
-              onClick={(e) => {
-                e.stopPropagation()
-                onClose()
-              }}
-              className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer"
-              style={{ backgroundColor: styles.badgeBg }}
-              initial={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
-              animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: card.variant === 'cta' ? '8px' : '16px', paddingRight: card.variant === 'cta' ? '8px' : '16px', opacity: hideShortcut ? 0 : 1 }}
-              // Show badge during exit animation so shortcut animates back (but not on mobile where hideShortcut is true)
-              exit={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
-              transition={contentSpring}
-            >
-              {/* Badge text - same size as collapsed card */}
-              <div
-                className="uppercase font-pressura-mono leading-[100%] relative text-[12px]"
-                style={{ top: '-1px' }}
-              >
-                {/* ESC text - absolutely positioned, fades in when expanded */}
-                <motion.span
-                  className="absolute inset-0 flex items-center justify-center"
-                  style={{ color: styles.textColor }}
+            {/* Date Range - part of top cluster */}
+            {(() => {
+              const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768
+              return expandedContent.dateRange && (
+                <motion.p
+                  className="font-pressura-ext"
+                  style={{
+                    fontWeight: 350,
+                    fontSize: isMobileViewport ? '15px' : '19px',
+                    lineHeight: isMobileViewport ? '21px' : '25px',
+                    color: styles.textColor,
+                    marginTop: isMobileViewport ? '20px' : '28px',
+                  }}
                   initial={{ opacity: 0 }}
-                  animate={{ opacity: hideShortcut ? 0 : 1 }}
+                  animate={{ opacity: 0.9 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.12, ease: 'easeOut' }}
+                  transition={{ duration: 0.05, ease: 'easeOut' }}
                 >
-                  ESC
-                </motion.span>
-                {/* Shortcut text - provides layout, fades out when expanded */}
-                <motion.span
-                  style={{ color: styles.textColor }}
-                  initial={{ opacity: 1 }}
-                  animate={{ opacity: hideShortcut ? 1 : 0 }}
-                  exit={{ opacity: 1 }}
-                  transition={{ duration: 0.12, ease: 'easeOut' }}
-                >
-                  {card.shortcut}
-                </motion.span>
-              </div>
-            </motion.div>
+                  {expandedContent.dateRange.includes('→') ? (
+                    <>
+                      {expandedContent.dateRange.split('→')[0]}
+                      <span style={{ position: 'relative', top: '-1px' }}>→</span>
+                      {expandedContent.dateRange.split('→')[1]}
+                    </>
+                  ) : (
+                    expandedContent.dateRange
+                  )}
+                </motion.p>
+              )
+            })()}
           </div>
 
-          {/* Morphing title - scales proportionally from collapsed to expanded */}
-          {/* Uses transform scale instead of fontSize to prevent text reflow during transition */}
-          {/* white-space: nowrap prevents text from re-wrapping during scale animation */}
-          {/* Mobile uses smaller scale (26/18) to fit within narrower container */}
-          {/* For compactCta (mobile CTA), fade out quickly on exit since collapsed state has different layout */}
-          <motion.h2
-            className={`leading-normal text-left w-full uppercase ${card.variant === 'cta' ? 'font-pressura-light' : 'font-pressura'}`}
-            style={{ color: card.variant === 'cta' ? (styles as typeof variantStylesLight.cta).ctaTitleColor : styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px', fontSize: '18px', whiteSpace: 'nowrap' }}
-            initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
-            animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : 32 / 18, marginTop: '4px', opacity: 1 }}
-            exit={{ scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1 }}
-            transition={compactCta ? { ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } } : contentSpring}
-          >
-            {card.variant === 'cta' ? (
-              <span className="flex items-center gap-3">
-                <motion.span
-                  style={{ display: 'flex', alignItems: 'center' }}
-                  initial={{ width: 20, height: 20 }}
-                  animate={{ width: 20, height: 20 }}
-                  exit={{ width: 20, height: 20 }}
-                  transition={contentSpring}
-                >
-                  <SlPlus className="w-full h-full" style={{ position: 'relative', top: '1px' }} />
-                </motion.span>
-                {card.title}
-              </span>
-            ) : (
-              card.title
-            )}
-          </motion.h2>
-
+          {/* MOBILE ONLY: Description + Bottom content in a separate structure */}
           {/* Date Range + Description + Bottom Content - fades in */}
           {(() => {
-            const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
-            const isMobileViewport = viewportWidth < 768
+            const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768
+
+            // Mobile layout uses different structure
+            if (!isMobileViewport) return null
 
             return (
-              <motion.div
-                initial={{ marginTop: '0px', opacity: 0 }}
-                animate={{ marginTop: isMobileViewport ? '20px' : '24px', opacity: 1 }}
-                exit={{ marginTop: '0px', opacity: 0 }}
-                transition={{
-                  marginTop: contentSpring,
-                  opacity: { duration: 0.08, ease: 'easeOut' },
-                }}
-              >
-                {/* Top content wrapper for mobile - date range + description */}
-                {isMobileViewport ? (
-                  <div>
-                    {/* Date Range - displayed below the title */}
-                    {expandedContent.dateRange && (
-                      <motion.p
-                        className="font-pressura-ext"
-                        style={{
-                          fontWeight: 350,
-                          fontSize: '15px',
-                          lineHeight: '21px',
-                          color: styles.textColor,
-                          marginBottom: '24px',
-                        }}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 0.9 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.05, ease: 'easeOut' }}
-                      >
-                        {expandedContent.dateRange.includes('→') ? (
-                          <>
-                            {expandedContent.dateRange.split('→')[0]}
-                            <span style={{ position: 'relative', top: '-1px' }}>→</span>
-                            {expandedContent.dateRange.split('→')[1]}
-                          </>
-                        ) : (
-                          expandedContent.dateRange
-                        )}
-                      </motion.p>
-                    )}
-
-                    {/* Description Container - mobile */}
-                    <DescriptionContainer
-                      description={expandedContent.description}
-                      styles={styles}
-                      isMobile={true}
-                    />
-                  </div>
-                ) : (
-                  /* Desktop: Date Range only (description rendered separately) */
-                  expandedContent.dateRange && (
-                    <motion.p
-                      className="font-pressura-ext"
-                      style={{
-                        fontWeight: 350,
-                        fontSize: '19px',
-                        lineHeight: '25px',
-                        color: styles.textColor,
-                        marginTop: '4px',
-                      }}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.9 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.05, ease: 'easeOut' }}
-                    >
-                      {expandedContent.dateRange.includes('→') ? (
-                        <>
-                          {expandedContent.dateRange.split('→')[0]}
-                          <span style={{ position: 'relative', top: '-1px' }}>→</span>
-                          {expandedContent.dateRange.split('→')[1]}
-                        </>
-                      ) : (
-                        expandedContent.dateRange
-                      )}
-                    </motion.p>
-                  )
-                )}
+              <>
+                {/* Description Container - mobile */}
+                <div style={{ marginTop: '24px' }}>
+                  <DescriptionContainer
+                    description={expandedContent.description}
+                    styles={styles}
+                    isMobile={true}
+                  />
+                </div>
 
                 {/* Mobile bottom content - absolutely positioned at bottom */}
                 {isMobileViewport && (
@@ -1124,27 +1156,33 @@ export function MorphingCard({
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeOut' } } }}
                   >
-                    {/* Highlights label + Section (IG Stories) */}
+                    {/* Pinned label - shown once when any pinned content exists (matching desktop) */}
+                    {(expandedContent.highlights?.length || expandedContent.nowPlayingCard || expandedContent.reflectionsCard) && (
+                      <motion.p
+                        className="font-pressura-ext flex items-center gap-2"
+                        style={{
+                          fontWeight: 350,
+                          fontSize: '15px',
+                          lineHeight: '21px',
+                          color: styles.textColor,
+                          opacity: 0.9,
+                        }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.9, transition: { opacity: { duration: 0.2, ease: 'easeOut', delay: 0.12 } } }}
+                        exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeIn', delay: 0.1 } } }}
+                      >
+                        <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
+                        <span style={{ marginLeft: '-1px' }}>Pinned</span>
+                      </motion.p>
+                    )}
+
+                    {/* Highlights Section (IG Stories) */}
                     {expandedContent.highlights && expandedContent.highlights.length > 0 && (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.18 } } }}
                         exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.12 } } }}
                       >
-                        <p
-                          className="font-pressura-ext flex items-center gap-2"
-                          style={{
-                            fontWeight: 350,
-                            fontSize: '15px',
-                            lineHeight: '21px',
-                            color: styles.textColor,
-                            opacity: 0.9,
-                            marginBottom: '12px',
-                          }}
-                        >
-                          <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
-                          <span style={{ marginLeft: '-1px' }}>Pinned memories</span>
-                        </p>
                         <HighlightsContainer
                           highlights={expandedContent.highlights}
                           styles={styles}
@@ -1154,30 +1192,13 @@ export function MorphingCard({
                       </motion.div>
                     )}
 
-                    {/* Now Playing Card (Music) - with Highlights label for Rio */}
+                    {/* Now Playing Card (Music) */}
                     {expandedContent.nowPlayingCard && (
                       <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1, transition: { opacity: { duration: 0.25, ease: 'easeOut', delay: 0.26 } } }}
                         exit={{ opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeIn', delay: 0.08 } } }}
                       >
-                        {/* Show Highlights label for Rio (no IG highlights, but has nowPlayingCard) */}
-                        {!expandedContent.highlights && (
-                          <p
-                            className="font-pressura-ext flex items-center gap-2"
-                            style={{
-                              fontWeight: 350,
-                              fontSize: '15px',
-                              lineHeight: '21px',
-                              color: styles.textColor,
-                              opacity: 0.9,
-                              marginBottom: '12px',
-                            }}
-                          >
-                            <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
-                            <span style={{ marginLeft: '-1px' }}>Pinned memories</span>
-                          </p>
-                        )}
                         <NowPlayingCard
                           card={expandedContent.nowPlayingCard}
                           styles={styles}
@@ -1197,11 +1218,10 @@ export function MorphingCard({
                       >
                         <ReflectionsCard
                           card={expandedContent.reflectionsCard}
-                          styles={styles}
                           themeMode={themeMode}
                           variant={card.variant}
                           isMobile={true}
-                          mobileChip={
+                          chip={
                             card.variant === 'blue'
                               ? { icon: 'slides', text: '35 Slides' }
                               : card.variant === 'white'
@@ -1210,6 +1230,9 @@ export function MorphingCard({
                               ? { icon: 'play', text: '3:35' }
                               : undefined
                           }
+                          previewFrames={expandedContent.reflectionsCard.previewFrames}
+                          previewVideo={expandedContent.reflectionsCard.previewVideo}
+                          isActive={isFocused}
                         />
                       </motion.div>
                     )}
@@ -1251,56 +1274,75 @@ export function MorphingCard({
                     )}
                   </motion.div>
                 )}
-              </motion.div>
+              </>
             )
           })()}
 
-        </motion.div>
+          {/* DESKTOP ONLY: Middle cluster (description) + Bottom cluster (pinned content) */}
+          {/* Uses flexbox space-between layout for auto-spacing between top/middle/bottom */}
+          {typeof window !== 'undefined' && window.innerWidth >= 768 && (
+            <>
+              {/* MIDDLE CLUSTER: Description - takes remaining space and centers vertically */}
+              <div className="flex-1 flex items-center">
+                <motion.div
+                  initial={{ opacity: 0, y: -12 }}
+                  animate={{
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      opacity: { duration: 0.2, ease: 'easeOut', delay: 0.08 },
+                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.08 }
+                    }
+                  }}
+                  exit={{ opacity: 0, y: -8, transition: { duration: 0.1, ease: 'easeIn' } }}
+                >
+                  <DescriptionContainer
+                    description={expandedContent.description}
+                    styles={styles}
+                    isMobile={false}
+                    contentScale={contentScale}
+                  />
+                </motion.div>
+              </div>
 
-        {/* Expanded-only content - desktop only */}
-        {/* Description and bottom content cascade down from header with staggered timing */}
-        {typeof window !== 'undefined' && window.innerWidth >= 768 && (
-          <>
-            {/* Description Container - flows down from header area */}
-            <motion.div
-              className="absolute"
-              style={{
-                left: '24px',
-                right: '24px',
-                top: '180px', // Fixed position below header
-              }}
-              initial={{ opacity: 0, y: -12 }}
-              animate={{
-                opacity: 1,
-                y: 0,
-                transition: {
-                  opacity: { duration: 0.2, ease: 'easeOut', delay: 0.08 },
-                  y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.08 }
-                }
-              }}
-              exit={{ opacity: 0, y: -8, transition: { duration: 0.1, ease: 'easeIn' } }}
-            >
-              <DescriptionContainer
-                description={expandedContent.description}
-                styles={styles}
-                isMobile={false}
-              />
-            </motion.div>
+              {/* BOTTOM CLUSTER: Pinned content - anchored to bottom via flexbox */}
+              <motion.div
+                className="flex flex-col flex-shrink-0"
+                style={{
+                  gap: '16px',
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeOut' } } }}
+              >
+              {/* Pinned highlights label - shown when any pinned content exists */}
+              {(expandedContent.highlights?.length || expandedContent.nowPlayingCard || expandedContent.reflectionsCard) && (
+                <motion.p
+                  className="font-pressura-ext flex items-center gap-2"
+                  style={{
+                    fontWeight: 350,
+                    fontSize: '18px',
+                    lineHeight: '24px',
+                    color: styles.textColor,
+                    opacity: 0.9,
+                  }}
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{
+                    opacity: 0.9,
+                    y: 0,
+                    transition: {
+                      opacity: { duration: 0.2, ease: 'easeOut', delay: 0.12 },
+                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.12 }
+                    }
+                  }}
+                  exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: 'easeIn', delay: 0.1 } }}
+                >
+                  <RiPushpinLine style={{ width: '16px', height: '16px', transform: 'scaleX(-1)' }} />
+                  <span style={{ marginLeft: '-1px' }}>Pinned</span>
+                </motion.p>
+              )}
 
-            {/* Bottom content - cascading top-down reveal */}
-            <motion.div
-              className="absolute flex flex-col"
-              style={{
-                left: '24px',
-                right: '24px',
-                bottom: '24px',
-                gap: '24px',
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeOut' } } }}
-            >
-              {/* Highlights Section (IG Stories) - cascade index 0 */}
+              {/* Highlights Section (IG Stories) */}
               {expandedContent.highlights && expandedContent.highlights.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -1308,8 +1350,8 @@ export function MorphingCard({
                     opacity: 1,
                     y: 0,
                     transition: {
-                      opacity: { duration: 0.25, ease: 'easeOut', delay: 0.16 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.16 }
+                      opacity: { duration: 0.25, ease: 'easeOut', delay: 0.18 },
+                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.18 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.08 } }}
@@ -1322,7 +1364,7 @@ export function MorphingCard({
                 </motion.div>
               )}
 
-              {/* Now Playing Card (Music) - cascade index 1 */}
+              {/* Now Playing Card (Music) */}
               {expandedContent.nowPlayingCard && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -1330,8 +1372,8 @@ export function MorphingCard({
                     opacity: 1,
                     y: 0,
                     transition: {
-                      opacity: { duration: 0.25, ease: 'easeOut', delay: 0.22 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.22 }
+                      opacity: { duration: 0.25, ease: 'easeOut', delay: 0.24 },
+                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.24 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.05 } }}
@@ -1346,7 +1388,7 @@ export function MorphingCard({
                 </motion.div>
               )}
 
-              {/* Reflections Card (Video) - cascade index 2 */}
+              {/* Reflections Card (Video) */}
               {expandedContent.reflectionsCard && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -1354,22 +1396,33 @@ export function MorphingCard({
                     opacity: 1,
                     y: 0,
                     transition: {
-                      opacity: { duration: 0.25, ease: 'easeOut', delay: 0.28 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.28 }
+                      opacity: { duration: 0.25, ease: 'easeOut', delay: 0.30 },
+                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.30 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.02 } }}
                 >
                   <ReflectionsCard
                     card={expandedContent.reflectionsCard}
-                    styles={styles}
                     themeMode={themeMode}
                     variant={card.variant}
+                    chip={
+                      card.variant === 'blue'
+                        ? { icon: 'slides', text: '35 Slides' }
+                        : card.variant === 'white'
+                        ? { icon: 'play', text: '29:21' }
+                        : card.variant === 'red'
+                        ? { icon: 'play', text: '3:35' }
+                        : undefined
+                    }
+                    previewFrames={expandedContent.reflectionsCard.previewFrames}
+                    previewVideo={expandedContent.reflectionsCard.previewVideo}
+                    isActive={isFocused}
                   />
                 </motion.div>
               )}
 
-              {/* Action Buttons - cascade index 3 */}
+              {/* Action Buttons */}
               {expandedContent.actions.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
@@ -1377,8 +1430,8 @@ export function MorphingCard({
                     opacity: 1,
                     y: 0,
                     transition: {
-                      opacity: { duration: 0.25, ease: 'easeOut', delay: 0.34 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.34 }
+                      opacity: { duration: 0.25, ease: 'easeOut', delay: 0.36 },
+                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.36 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn' } }}
@@ -1414,6 +1467,8 @@ export function MorphingCard({
             </motion.div>
           </>
         )}
+
+        </motion.div>
 
         {/* Mobile CTA: Collapsed content overlay - fades in during exit animation */}
         {compactCta && (
@@ -1547,8 +1602,7 @@ export function MorphingCard({
               style={{
                 transform: (isHovered && !isExpanded) ? 'translateY(-20px)' : 'translateY(0)',
                 opacity: (isHovered && !isExpanded) ? 0 : 1,
-                // Only apply transition when hovering to prevent badge delay when cards become visible
-                transition: isHovered ? 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)' : 'none',
+                transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
               }}
             >
               <div className="text-[13px] tracking-[0.39px] font-pressura-mono leading-normal text-left uppercase">
