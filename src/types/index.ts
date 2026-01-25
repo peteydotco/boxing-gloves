@@ -103,3 +103,28 @@ export interface VariantStyle {
 }
 
 export type VariantStyles = Record<CardVariant, VariantStyle>
+
+// Stage types for Selected Work section
+
+export interface StageMetadata {
+  platforms: string
+  accolades: string
+  agency: string
+}
+
+export interface StageData {
+  id: string
+  title: string
+  role: string
+  description: string
+  metadata: StageMetadata
+  footer: string
+  logoSrc: string
+  logoBgColor: string
+  accentColor: string
+  // Optional: rich media background (video, 3D scene, or image)
+  backgroundMedia?: {
+    type: 'video' | 'image' | '3d'
+    src: string
+  }
+}

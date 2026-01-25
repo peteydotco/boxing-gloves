@@ -4,7 +4,10 @@ import { PeteLogo } from './components/PeteLogo'
 import { LeftBioSvg } from './components/LeftBioSvg'
 import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
-import { useState, useEffect, useRef } from 'react'
+import { StackedBlades } from './components/StackedBlades'
+import { StagesContainer } from './components/StagesContainer'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // Theme presets for quick toggling (cycles: light → inverted → dark → darkInverted)
 const themes = {
@@ -50,10 +53,16 @@ const themes = {
   },
 }
 
+// View modes: 'hero' is the landing page, 'stages' is the selected work section
+type ViewMode = 'hero' | 'stages'
+
 function App() {
   // Ref for the main container - used as event source for Canvas
   // This allows mouse events to be captured even when over TopCards
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Current view mode
+  const [viewMode, setViewMode] = useState<ViewMode>('hero')
 
   // mousePosition state is only for 2D UI elements (spotlight, marquee)
   // Scene reads from mousePositionRef directly to avoid re-renders
@@ -78,14 +87,24 @@ function App() {
   const theme = themes[themeMode]
 
   // Cycle through themes: light → inverted → dark → darkInverted → light
-  const cycleTheme = () => {
+  const cycleTheme = useCallback(() => {
     setThemeMode(current => {
       if (current === 'light') return 'inverted'
       if (current === 'inverted') return 'dark'
       if (current === 'dark') return 'darkInverted'
       return 'light'
     })
-  }
+  }, [])
+
+  // Navigate to stages view
+  const navigateToStages = useCallback(() => {
+    setViewMode('stages')
+  }, [])
+
+  // Navigate back to hero view
+  const navigateToHero = useCallback(() => {
+    setViewMode('hero')
+  }, [])
 
   useEffect(() => {
     // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
@@ -122,6 +141,34 @@ function App() {
       if (rafId !== null) cancelAnimationFrame(rafId)
     }
   }, [])
+
+  // Wheel navigation to stages from hero
+  const wheelState = useRef({ lastTime: 0, lastNavTime: 0 })
+  useEffect(() => {
+    if (viewMode !== 'hero') return
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only handle scroll down (to stages)
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      if (delta <= 0) return // Only scroll down
+
+      const now = Date.now()
+      const state = wheelState.current
+      const timeSinceLastNav = now - state.lastNavTime
+
+      // Require cooldown after navigation
+      if (timeSinceLastNav < 800) return
+
+      // Ignore small deltas
+      if (Math.abs(delta) < 30) return
+
+      state.lastNavTime = now
+      navigateToStages()
+    }
+
+    window.addEventListener('wheel', handleWheel, { passive: true })
+    return () => window.removeEventListener('wheel', handleWheel)
+  }, [viewMode, navigateToStages])
 
   // Update NYC time every minute
   useEffect(() => {
@@ -210,152 +257,142 @@ function App() {
       className="relative w-full h-full flex flex-col overflow-hidden"
       style={{ backgroundColor: theme.bgColor }}
     >
-      {/* Background Marquee - scrolling text revealed by cursor */}
-      <BackgroundMarquee mousePosition={mousePosition} marqueeFill={theme.marqueeColor} />
+      {/* Hero View */}
+      <AnimatePresence>
+        {viewMode === 'hero' && (
+          <motion.div
+            className="absolute inset-0"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            {/* Background Marquee - scrolling text revealed by cursor */}
+            <BackgroundMarquee mousePosition={mousePosition} marqueeFill={theme.marqueeColor} />
 
-      {/* Radial gradient spotlight overlay - covers marquee, reveals center (desktop only) */}
-      {!isMobile && (
-        <div
-          className="absolute inset-0 z-[5] pointer-events-none"
-          style={{
-            background: theme.spotlightInverted
-              ? `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 15%, ${theme.spotlightOuter} 45%)`
-              : `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
-            transition: 'background 0.1s ease-out',
-          }}
-        />
-      )}
+            {/* Radial gradient spotlight overlay - covers marquee, reveals center (desktop only) */}
+            {!isMobile && (
+              <div
+                className="absolute inset-0 z-[5] pointer-events-none"
+                style={{
+                  background: theme.spotlightInverted
+                    ? `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 15%, ${theme.spotlightOuter} 45%)`
+                    : `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
+                  transition: 'background 0.1s ease-out',
+                }}
+              />
+            )}
 
-      {/* Cards - single container */}
-      <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
-        <TopCards themeMode={themeMode} />
-      </div>
+            {/* Cards - single container */}
+            <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
+              <TopCards themeMode={themeMode} />
+            </div>
 
-      {/* 3D Scene - positioned below cards */}
-      <div
-        className="absolute inset-0"
-        style={{
-          zIndex: 10,
-          pointerEvents: 'auto',
-        }}
-      >
-        <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
-      </div>
+            {/* 3D Scene - positioned below cards */}
+            <div
+              className="absolute inset-0"
+              style={{
+                zIndex: 10,
+                pointerEvents: 'auto',
+              }}
+            >
+              <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+            </div>
 
-      {/* Left biographical text - show on tablet and desktop (md+) */}
-      {/* Desktop (>=1024px): flanks gloves at vertical center */}
-      {/* Tablet (<1024px): positioned at bottom, offset +3px to center-align with taller Right Bio */}
-      <div
-        className="absolute z-20 pointer-events-none select-none hidden md:block"
-        style={{
-          left: '5%',
-          ...(isDesktop
-            ? { top: '50%', transform: 'translateY(-50%)' }
-            : { bottom: '214px' }
-          ),
-        }}
-      >
-        <LeftBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
-      </div>
+            {/* Left biographical text - show on tablet and desktop (md+) */}
+            {/* Desktop (>=1024px): flanks gloves at vertical center */}
+            {/* Tablet (<1024px): positioned at bottom, offset +3px to center-align with taller Right Bio */}
+            <div
+              className="absolute z-20 pointer-events-none select-none hidden md:block"
+              style={{
+                left: '5%',
+                ...(isDesktop
+                  ? { top: '50%', transform: 'translateY(-50%)' }
+                  : { bottom: '214px' }
+                ),
+              }}
+            >
+              <LeftBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
+            </div>
 
-      {/* Right biographical text - show on tablet and desktop (md+) */}
-      {/* Desktop (>=1024px): flanks gloves at vertical center */}
-      {/* Tablet (<1024px): positioned at bottom, center-aligned with left bio */}
-      <div
-        className="absolute z-20 pointer-events-none select-none hidden md:block"
-        style={{
-          right: '5%',
-          maxWidth: '200px',
-          ...(isDesktop
-            ? { top: '50%', transform: 'translateY(-50%)' }
-            : { bottom: '211px' }
-          ),
-        }}
-      >
-        <RightBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
-      </div>
+            {/* Right biographical text - show on tablet and desktop (md+) */}
+            {/* Desktop (>=1024px): flanks gloves at vertical center */}
+            {/* Tablet (<1024px): positioned at bottom, center-aligned with left bio */}
+            <div
+              className="absolute z-20 pointer-events-none select-none hidden md:block"
+              style={{
+                right: '5%',
+                maxWidth: '200px',
+                ...(isDesktop
+                  ? { top: '50%', transform: 'translateY(-50%)' }
+                  : { bottom: '211px' }
+                ),
+              }}
+            >
+              <RightBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
+            </div>
 
-      {/* Desktop (>=1024px): Text lockup positioned below gloves */}
-      {isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '18%' }}>
-          <p style={{
-            color: theme.textColor,
-            textAlign: 'center',
-            fontFamily: 'GT Pressura Mono',
-            fontSize: '12px',
-            fontStyle: 'normal',
-            fontWeight: 400,
-            lineHeight: '15px',
-            letterSpacing: '0.36px',
-            textTransform: 'uppercase',
-          }}>
-            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
-          </p>
-          <p style={{
-            color: theme.textColor,
-            textAlign: 'center',
-            fontFamily: 'GT Pressura Mono',
-            fontSize: '12px',
-            fontStyle: 'normal',
-            fontWeight: 400,
-            lineHeight: '15px',
-            letterSpacing: '0.36px',
-            textTransform: 'uppercase',
-            marginTop: '4px'
-          }}>
-            《 Full site coming soon 》
-          </p>
-        </div>
-      )}
+            {/* Desktop: Stacked Blades at bottom (replaces previous logo + text lockup) */}
+            {isDesktop && (
+              <StackedBlades
+                onNavigateToStages={navigateToStages}
+                onThemeToggle={cycleTheme}
+                logoFill={theme.logoFill}
+                themeMode={themeMode}
+              />
+            )}
 
-      {/* Desktop (>=1024px): Pete Logo at bottom */}
-      {isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: 'calc(8vh - 59px)' }}>
-          <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
-        </div>
-      )}
+            {/* Mobile/Tablet: Text lockup (time/location + coming soon) */}
+            {/* Both mobile and tablet: positioned near bottom */}
+            {!isDesktop && (
+              <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
+                <p style={{
+                  color: theme.textColor,
+                  textAlign: 'center',
+                  fontFamily: 'GT Pressura Mono',
+                  fontSize: '12px',
+                  fontStyle: 'normal',
+                  fontWeight: 400,
+                  lineHeight: '15px',
+                  letterSpacing: '0.36px',
+                  textTransform: 'uppercase',
+                }}>
+                  {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
+                </p>
+                <p style={{
+                  color: theme.textColor,
+                  textAlign: 'center',
+                  fontFamily: 'GT Pressura Mono',
+                  fontSize: '12px',
+                  fontStyle: 'normal',
+                  fontWeight: 400,
+                  lineHeight: '15px',
+                  letterSpacing: '0.36px',
+                  textTransform: 'uppercase',
+                  marginTop: '4px'
+                }}>
+                  《 Full site coming soon 》
+                </p>
+              </div>
+            )}
 
-      {/* Mobile/Tablet: Text lockup (time/location + coming soon) */}
-      {/* Both mobile and tablet: positioned near bottom */}
-      {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
-          <p style={{
-            color: theme.textColor,
-            textAlign: 'center',
-            fontFamily: 'GT Pressura Mono',
-            fontSize: '12px',
-            fontStyle: 'normal',
-            fontWeight: 400,
-            lineHeight: '15px',
-            letterSpacing: '0.36px',
-            textTransform: 'uppercase',
-          }}>
-            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
-          </p>
-          <p style={{
-            color: theme.textColor,
-            textAlign: 'center',
-            fontFamily: 'GT Pressura Mono',
-            fontSize: '12px',
-            fontStyle: 'normal',
-            fontWeight: 400,
-            lineHeight: '15px',
-            letterSpacing: '0.36px',
-            textTransform: 'uppercase',
-            marginTop: '4px'
-          }}>
-            《 Full site coming soon 》
-          </p>
-        </div>
-      )}
+            {/* Mobile/Tablet: Pete Logo - stays at bottom */}
+            {!isDesktop && (
+              <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
+                <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Mobile/Tablet: Pete Logo - stays at bottom */}
-      {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
-          <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
-        </div>
-      )}
-
+      {/* Stages View */}
+      <StagesContainer
+        isVisible={viewMode === 'stages'}
+        onNavigateToHero={navigateToHero}
+        onThemeToggle={cycleTheme}
+        logoFill={theme.logoFill}
+        themeMode={themeMode}
+      />
     </div>
   )
 }
