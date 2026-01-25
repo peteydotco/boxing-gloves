@@ -86,12 +86,12 @@ function DraggableGloveWithRope({
   anchorOffset,
   settings,
   dropDelay = 0,
-  desaturate = false,
+  themeMode = 'light',
 }: {
   anchorOffset: [number, number, number]
   settings: Settings
   dropDelay?: number // Delay in ms before enabling physics (for staggered drop)
-  desaturate?: boolean // Apply grayscale/desaturated effect for dark themes
+  themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' // Theme mode for color adjustments
 }) {
   const gloveRef = useRef<RapierRigidBody>(null)
   const tubeRef = useRef<THREE.Mesh>(null)
@@ -553,44 +553,92 @@ function DraggableGloveWithRope({
                 mesh.castShadow = true
                 mesh.receiveShadow = true
 
-                // Apply desaturation for dark themes
-                if (desaturate && mesh.material) {
+                // Apply color adjustments based on theme
+                const isInvertedTheme = themeMode === 'inverted'
+                const isDarkTheme = themeMode === 'dark'
+                const isDarkestTheme = themeMode === 'darkInverted'
+
+                if ((isInvertedTheme || isDarkTheme || isDarkestTheme) && mesh.material) {
                   const mat = mesh.material as THREE.MeshStandardMaterial
                   // Clone the material to avoid affecting the original
                   const newMat = mat.clone()
 
-                  // Desaturate the base color to full grayscale
-                  if (newMat.color) {
-                    const r = newMat.color.r
-                    const g = newMat.color.g
-                    const b = newMat.color.b
-                    const gray = r * 0.299 + g * 0.587 + b * 0.114
-                    // Full grayscale
-                    newMat.color.setRGB(gray, gray, gray)
+                  if (isDarkestTheme) {
+                    // Full B&W desaturation for darkest theme
+                    if (newMat.color) {
+                      const r = newMat.color.r
+                      const g = newMat.color.g
+                      const b = newMat.color.b
+                      const gray = r * 0.299 + g * 0.587 + b * 0.114
+                      newMat.color.setRGB(gray, gray, gray)
+                    }
+
+                    // Inject grayscale shader for textures
+                    newMat.onBeforeCompile = (shader) => {
+                      shader.fragmentShader = shader.fragmentShader.replace(
+                        '#include <map_fragment>',
+                        `
+                        #include <map_fragment>
+                        // Convert to grayscale using luminance formula
+                        float gray = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+                        // Medium contrast B&W
+                        float contrast = 1.8;
+                        float brightness = 0.12;
+                        gray = (gray - 0.5) * contrast + 0.5 + brightness;
+                        // Moderate curve for balanced look
+                        gray = smoothstep(0.1, 0.9, gray);
+                        gray = clamp(gray, 0.0, 1.0);
+                        // Pure B&W output
+                        diffuseColor.rgb = vec3(gray);
+                        `
+                      )
+                    }
+                  } else if (isInvertedTheme) {
+                    // Moderate darkening for inverted theme
+                    if (newMat.color) {
+                      const darkFactor = 0.90
+                      newMat.color.setRGB(
+                        newMat.color.r * darkFactor,
+                        newMat.color.g * darkFactor,
+                        newMat.color.b * darkFactor
+                      )
+                    }
+
+                    // Inject shader to darken textures while keeping color
+                    newMat.onBeforeCompile = (shader) => {
+                      shader.fragmentShader = shader.fragmentShader.replace(
+                        '#include <map_fragment>',
+                        `
+                        #include <map_fragment>
+                        // Darken while preserving color
+                        diffuseColor.rgb *= 0.90;
+                        `
+                      )
+                    }
+                  } else if (isDarkTheme) {
+                    // Slight darkening for dark theme
+                    if (newMat.color) {
+                      const darkFactor = 0.95
+                      newMat.color.setRGB(
+                        newMat.color.r * darkFactor,
+                        newMat.color.g * darkFactor,
+                        newMat.color.b * darkFactor
+                      )
+                    }
+
+                    // Inject shader to darken textures while keeping color
+                    newMat.onBeforeCompile = (shader) => {
+                      shader.fragmentShader = shader.fragmentShader.replace(
+                        '#include <map_fragment>',
+                        `
+                        #include <map_fragment>
+                        // Darken while preserving color
+                        diffuseColor.rgb *= 0.95;
+                        `
+                      )
+                    }
                   }
 
-                  // If the model has a color/diffuse map, we need to desaturate it
-                  // Since we can't easily modify textures, we use onBeforeCompile to inject grayscale shader
-                  newMat.onBeforeCompile = (shader) => {
-                    // Add grayscale conversion to the fragment shader
-                    shader.fragmentShader = shader.fragmentShader.replace(
-                      '#include <map_fragment>',
-                      `
-                      #include <map_fragment>
-                      // Convert to grayscale using luminance formula
-                      float gray = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
-                      // High contrast B&W - push darks to black, lights to white
-                      float contrast = 2.2;
-                      float brightness = 0.1;
-                      gray = (gray - 0.5) * contrast + 0.5 + brightness;
-                      // Crush blacks and boost whites for dramatic look
-                      gray = smoothstep(0.05, 0.95, gray);
-                      gray = clamp(gray, 0.0, 1.0);
-                      // Pure B&W output
-                      diffuseColor.rgb = vec3(gray);
-                      `
-                    )
-                  }
                   // Force shader recompilation
                   newMat.needsUpdate = true
                   mesh.material = newMat
@@ -598,7 +646,7 @@ function DraggableGloveWithRope({
               }
             })
             return cloned
-          }, [gloveModel, desaturate])}
+          }, [gloveModel, themeMode])}
           scale={[
             (isLeftGlove ? -settings.radius : settings.radius) * 0.75,
             settings.radius * 0.75,
@@ -620,7 +668,7 @@ function DraggableGloveWithRope({
 // Preload the gloves model
 useGLTF.preload(glovesModelUrl)
 
-export function HangingSpheres({ settings, shadowOpacity = 0.08, isDarkTheme = false }: { settings: Settings; shadowOpacity?: number; isDarkTheme?: boolean }) {
+export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light' }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' }) {
   return (
     <group>
       {/* Shadow plane behind gloves */}
@@ -639,7 +687,7 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, isDarkTheme = f
       <DraggableGloveWithRope
         anchorOffset={[-0.25, 0, 0.15]}
         dropDelay={100}
-        desaturate={isDarkTheme}
+        themeMode={themeMode}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.25,
@@ -649,7 +697,7 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, isDarkTheme = f
       {/* Right glove - offset right and slightly back, with extended cord */}
       <DraggableGloveWithRope
         anchorOffset={[0.25, 0, -0.15]}
-        desaturate={isDarkTheme}
+        themeMode={themeMode}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.7,

@@ -93,21 +93,21 @@ export const variantStylesDark: VariantStyles = {
     dividerColor: 'rgba(255,255,255,0.3)',
   },
   white: {
-    bg: 'rgba(22,22,39,1)',
-    textColor: '#FFFFFF',
-    secondaryText: 'rgba(255,255,255,0.85)',
-    border: 'rgba(255,255,255,0.12)',
-    expandedBorder: 'rgba(255,255,255,1)',
-    badgeBg: 'rgba(0,0,0,0.25)',
-    primaryButtonBg: '#FFFFFF',
-    primaryButtonText: '#000000',
-    primaryButtonBorder: 'rgba(0,0,0,0.2)',
-    secondaryButtonBg: 'rgba(255,255,255,0.12)',
-    secondaryButtonText: '#FFFFFF',
-    secondaryButtonBorder: 'rgba(0,0,0,0.2)',
-    highlightBorder: '#FFFFFF',
-    highlightShadow: 'rgba(0,0,0,0.25)',
-    dividerColor: 'rgba(255,255,255,0.3)',
+    bg: 'rgba(230,230,235,1)', // Slightly gray off-white background
+    textColor: 'rgba(26,26,46,1)', // Dark blue/gray text
+    secondaryText: 'rgba(26,26,46,0.7)',
+    border: 'rgba(0,0,0,0.06)',
+    expandedBorder: 'rgba(26,26,46,0.15)',
+    badgeBg: 'rgba(0,0,0,0.06)',
+    primaryButtonBg: 'rgba(26,26,46,1)', // Dark button
+    primaryButtonText: '#FFFFFF',
+    primaryButtonBorder: 'rgba(0,0,0,0.1)',
+    secondaryButtonBg: 'rgba(26,26,46,0.06)',
+    secondaryButtonText: 'rgba(26,26,46,1)',
+    secondaryButtonBorder: 'rgba(26,26,46,0.12)',
+    highlightBorder: 'rgba(26,26,46,0.15)',
+    highlightShadow: 'rgba(0,0,0,0.08)',
+    dividerColor: 'rgba(26,26,46,0.12)',
   },
   red: {
     bg: 'rgba(195,35,45,1)',
@@ -156,7 +156,7 @@ export const backdropColors = {
   },
   dark: {
     blue: 'rgba(0,75,200,0.48)',
-    white: 'rgba(40,30,70,0.48)',
+    white: 'rgba(200,200,210,0.48)', // Lighter backdrop for inverted white card
     red: 'rgba(185,35,45,0.48)',
     cta: 'rgba(35,35,35,0.48)',
   },

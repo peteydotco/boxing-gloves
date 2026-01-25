@@ -30,7 +30,7 @@ const themes = {
   },
   dark: {
     bgColor: '#121212',
-    spotlightOuter: 'rgba(40,40,40,0.75)',
+    spotlightOuter: 'rgba(40,40,40,0.65)',
     spotlightInverted: false,
     marqueeColor: 'rgba(255,255,255,0.08)',
     textColor: 'rgba(255, 255, 255, 0.6)',
@@ -39,10 +39,10 @@ const themes = {
     bioOpacity: 0.6,
   },
   darkInverted: {
-    bgColor: '#121212', // Dark gray bg
-    spotlightOuter: 'rgba(18,18,18,0.9)', // #121212 on periphery
+    bgColor: '#080808', // Near-black bg
+    spotlightOuter: 'rgba(8,8,8,0.65)', // Match bg color on periphery
     spotlightInverted: true, // Darkest at edges, lighter at center
-    marqueeColor: '#000000', // Black marquee logos
+    marqueeColor: '#1A1A1A', // Very dark gray marquee (visible on near-black)
     textColor: 'rgba(255, 255, 255, 0.6)',
     logoFill: '#FFFFFF',
     bioFill: '#FFFFFF',
@@ -316,10 +316,9 @@ function App() {
       )}
 
       {/* Mobile/Tablet: Text lockup (time/location + coming soon) */}
-      {/* Tablet (768-1024px): vertically center-aligned with Bio SVGs */}
-      {/* Mobile (<768px): higher position */}
+      {/* Both mobile and tablet: positioned near bottom */}
       {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: isMobile ? '110px' : '234px' }}>
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
           <p style={{
             color: theme.textColor,
             textAlign: 'center',
@@ -352,7 +351,7 @@ function App() {
 
       {/* Mobile/Tablet: Pete Logo - stays at bottom */}
       {!isDesktop && (
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: isMobile ? '16px' : '114px' }}>
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
           <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
         </div>
       )}

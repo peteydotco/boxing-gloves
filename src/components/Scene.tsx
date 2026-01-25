@@ -101,7 +101,7 @@ function PhysicsWithPauseDetection({ children }: { children: React.ReactNode }) 
   )
 }
 
-function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias, isDarkTheme }: {
+function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias, isDarkTheme, themeMode }: {
   lightPos: [number, number, number]
   shadowMapSize: [number, number]
   cameraBounds: number
@@ -109,7 +109,9 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
   shadowRadius: number
   shadowBias: number
   isDarkTheme: boolean
+  themeMode: ThemeMode
 }) {
+  const isDarkestTheme = themeMode === 'darkInverted' // Pure black bg needs brighter spotlight
   const { gl } = useThree()
   const mainLightRef = useRef<THREE.DirectionalLight>(null)
   const fillLightRef = useRef<THREE.DirectionalLight>(null)
@@ -224,10 +226,10 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
       {isDarkTheme && (
         <spotLight
           position={[0, 4, 8]}
-          angle={0.4}
-          penumbra={0.8}
-          intensity={40}
-          color="#aabbcc"
+          angle={isDarkestTheme ? 0.7 : 0.6}
+          penumbra={isDarkestTheme ? 0.6 : 0.8}
+          intensity={isDarkestTheme ? 80 : 40}
+          color={isDarkestTheme ? '#ffffff' : '#aabbcc'}
           target-position={[0, 0, 0]}
         />
       )}
@@ -305,7 +307,7 @@ export function Scene({ settings, shadowSettings, themeMode = 'light' }: { setti
 
           <MouseFollowGroup>
             <PhysicsWithPauseDetection>
-              <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} isDarkTheme={isDarkTheme} />
+              <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} themeMode={themeMode} />
             </PhysicsWithPauseDetection>
           </MouseFollowGroup>
 
@@ -317,6 +319,7 @@ export function Scene({ settings, shadowSettings, themeMode = 'light' }: { setti
             shadowRadius={shadowRadius}
             shadowBias={shadowBias}
             isDarkTheme={isDarkTheme}
+            themeMode={themeMode}
           />
 
           {/* Environment with custom lightformers for better reflections */}
