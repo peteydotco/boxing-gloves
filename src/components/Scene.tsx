@@ -4,7 +4,7 @@ import { Physics } from '@react-three/rapier'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { HangingSpheres } from './HangingSpheres'
 import * as THREE from 'three'
-import type { Settings, ShadowSettings } from '../types'
+import type { Settings, ShadowSettings, ThemeMode } from '../types'
 
 // Global ref for mouse position - updated by App.tsx, read by Scene internals
 // This avoids React re-renders when mouse moves
@@ -101,13 +101,14 @@ function PhysicsWithPauseDetection({ children }: { children: React.ReactNode }) 
   )
 }
 
-function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias }: {
+function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias, isDarkTheme }: {
   lightPos: [number, number, number]
   shadowMapSize: [number, number]
   cameraBounds: number
   cameraFar: number
   shadowRadius: number
   shadowBias: number
+  isDarkTheme: boolean
 }) {
   const { gl } = useThree()
   const mainLightRef = useRef<THREE.DirectionalLight>(null)
@@ -163,13 +164,25 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
     }
   })
 
+  // Dark theme: cooler nighttime lighting with spotlight feel
+  // Light theme: warm, bright daylight lighting
+  const mainIntensity = isDarkTheme ? 2.4 : 3
+  const fillIntensity = isDarkTheme ? 1.0 : 1.5
+  const fillColor = isDarkTheme ? '#7799dd' : '#a0c4ff' // Cooler blue for night
+  const backIntensity = isDarkTheme ? 1.2 : 2
+  const backColor = isDarkTheme ? '#5577bb' : '#ffe4b5' // Cool moonlight vs warm sunlight
+  const topIntensity = isDarkTheme ? 20 : 30
+  const topColor = isDarkTheme ? '#99aacc' : '#ffffff' // Soft blue-gray vs white
+  const ambientIntensity = isDarkTheme ? 0.4 : 0.6
+
   return (
     <>
       {/* Main light from front - creates shadow behind gloves */}
       <directionalLight
         ref={mainLightRef}
         position={lightPos}
-        intensity={3}
+        intensity={mainIntensity}
+        color={isDarkTheme ? '#aabbdd' : '#ffffff'}
         castShadow
         shadow-mapSize={shadowMapSize}
         shadow-camera-left={-cameraBounds}
@@ -186,26 +199,38 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
       <directionalLight
         ref={fillLightRef}
         position={[-4, 3, 2]}
-        intensity={1.5}
-        color="#a0c4ff"
+        intensity={fillIntensity}
+        color={fillColor}
       />
 
       {/* Back light - creates rim lighting */}
       <directionalLight
         position={[0, 3, -5]}
-        intensity={2}
-        color="#ffe4b5"
+        intensity={backIntensity}
+        color={backColor}
       />
 
       {/* Top light */}
       <pointLight
         position={[0, 6, 0]}
-        intensity={30}
-        color="#ffffff"
+        intensity={topIntensity}
+        color={topColor}
       />
 
       {/* Ambient fill */}
-      <ambientLight intensity={0.6} />
+      <ambientLight intensity={ambientIntensity} color={isDarkTheme ? '#778899' : '#ffffff'} />
+
+      {/* Spotlight for dark theme - focused dramatic lighting on the gloves */}
+      {isDarkTheme && (
+        <spotLight
+          position={[0, 4, 8]}
+          angle={0.4}
+          penumbra={0.8}
+          intensity={40}
+          color="#aabbcc"
+          target-position={[0, 0, 0]}
+        />
+      )}
     </>
   )
 }
@@ -245,7 +270,8 @@ function MouseFollowGroup({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function Scene({ settings, shadowSettings }: { settings: Settings; shadowSettings?: ShadowSettings }) {
+export function Scene({ settings, shadowSettings, themeMode = 'light' }: { settings: Settings; shadowSettings?: ShadowSettings; themeMode?: ThemeMode }) {
+  const isDarkTheme = themeMode === 'dark' || themeMode === 'darkInverted'
   // Use shadow settings if provided, otherwise use defaults
   const lightPos: [number, number, number] = shadowSettings
     ? [shadowSettings.lightX, shadowSettings.lightY, shadowSettings.lightZ]
@@ -279,7 +305,7 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
 
           <MouseFollowGroup>
             <PhysicsWithPauseDetection>
-              <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} />
+              <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} isDarkTheme={isDarkTheme} />
             </PhysicsWithPauseDetection>
           </MouseFollowGroup>
 
@@ -290,6 +316,7 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
             cameraFar={cameraFar}
             shadowRadius={shadowRadius}
             shadowBias={shadowBias}
+            isDarkTheme={isDarkTheme}
           />
 
           {/* Environment with custom lightformers for better reflections */}
@@ -297,22 +324,24 @@ export function Scene({ settings, shadowSettings }: { settings: Settings; shadow
             <group rotation={[-Math.PI / 3, 0, 0]}>
               <Lightformer
                 form="circle"
-                intensity={4}
+                intensity={isDarkTheme ? 2.5 : 4}
+                color={isDarkTheme ? '#99aacc' : '#ffffff'}
                 rotation-x={Math.PI / 2}
                 position={[0, 5, -9]}
                 scale={2}
               />
               <Lightformer
                 form="circle"
-                intensity={2}
+                intensity={isDarkTheme ? 1.2 : 2}
+                color={isDarkTheme ? '#7788bb' : '#ffffff'}
                 rotation-y={Math.PI / 2}
                 position={[-5, 1, -1]}
                 scale={2}
               />
               <Lightformer
                 form="ring"
-                color="#ffd700"
-                intensity={1}
+                color={isDarkTheme ? '#5577aa' : '#ffd700'}
+                intensity={isDarkTheme ? 0.6 : 1}
                 rotation-y={Math.PI / 2}
                 position={[5, 2, 0]}
                 scale={3}

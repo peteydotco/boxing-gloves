@@ -239,7 +239,7 @@ function App() {
           pointerEvents: 'auto',
         }}
       >
-        <Scene settings={settings} shadowSettings={shadowSettings} />
+        <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
       </div>
 
       {/* Left biographical text - show on tablet and desktop (md+) */}

@@ -86,10 +86,12 @@ function DraggableGloveWithRope({
   anchorOffset,
   settings,
   dropDelay = 0,
+  desaturate = false,
 }: {
   anchorOffset: [number, number, number]
   settings: Settings
   dropDelay?: number // Delay in ms before enabling physics (for staggered drop)
+  desaturate?: boolean // Apply grayscale/desaturated effect for dark themes
 }) {
   const gloveRef = useRef<RapierRigidBody>(null)
   const tubeRef = useRef<THREE.Mesh>(null)
@@ -544,15 +546,59 @@ function DraggableGloveWithRope({
         <primitive
           object={useMemo(() => {
             const cloned = gloveModel.clone()
-            // Enable shadows on all meshes in the model
+            // Enable shadows on all meshes in the model and optionally desaturate
             cloned.traverse((child) => {
               if ((child as THREE.Mesh).isMesh) {
-                child.castShadow = true
-                child.receiveShadow = true
+                const mesh = child as THREE.Mesh
+                mesh.castShadow = true
+                mesh.receiveShadow = true
+
+                // Apply desaturation for dark themes
+                if (desaturate && mesh.material) {
+                  const mat = mesh.material as THREE.MeshStandardMaterial
+                  // Clone the material to avoid affecting the original
+                  const newMat = mat.clone()
+
+                  // Desaturate the base color to full grayscale
+                  if (newMat.color) {
+                    const r = newMat.color.r
+                    const g = newMat.color.g
+                    const b = newMat.color.b
+                    const gray = r * 0.299 + g * 0.587 + b * 0.114
+                    // Full grayscale
+                    newMat.color.setRGB(gray, gray, gray)
+                  }
+
+                  // If the model has a color/diffuse map, we need to desaturate it
+                  // Since we can't easily modify textures, we use onBeforeCompile to inject grayscale shader
+                  newMat.onBeforeCompile = (shader) => {
+                    // Add grayscale conversion to the fragment shader
+                    shader.fragmentShader = shader.fragmentShader.replace(
+                      '#include <map_fragment>',
+                      `
+                      #include <map_fragment>
+                      // Convert to grayscale using luminance formula
+                      float gray = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+                      // High contrast B&W - push darks to black, lights to white
+                      float contrast = 2.2;
+                      float brightness = 0.1;
+                      gray = (gray - 0.5) * contrast + 0.5 + brightness;
+                      // Crush blacks and boost whites for dramatic look
+                      gray = smoothstep(0.05, 0.95, gray);
+                      gray = clamp(gray, 0.0, 1.0);
+                      // Pure B&W output
+                      diffuseColor.rgb = vec3(gray);
+                      `
+                    )
+                  }
+                  // Force shader recompilation
+                  newMat.needsUpdate = true
+                  mesh.material = newMat
+                }
               }
             })
             return cloned
-          }, [gloveModel])}
+          }, [gloveModel, desaturate])}
           scale={[
             (isLeftGlove ? -settings.radius : settings.radius) * 0.75,
             settings.radius * 0.75,
@@ -574,7 +620,7 @@ function DraggableGloveWithRope({
 // Preload the gloves model
 useGLTF.preload(glovesModelUrl)
 
-export function HangingSpheres({ settings, shadowOpacity = 0.08 }: { settings: Settings; shadowOpacity?: number }) {
+export function HangingSpheres({ settings, shadowOpacity = 0.08, isDarkTheme = false }: { settings: Settings; shadowOpacity?: number; isDarkTheme?: boolean }) {
   return (
     <group>
       {/* Shadow plane behind gloves */}
@@ -593,6 +639,7 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08 }: { settings: S
       <DraggableGloveWithRope
         anchorOffset={[-0.25, 0, 0.15]}
         dropDelay={100}
+        desaturate={isDarkTheme}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.25,
@@ -602,6 +649,7 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08 }: { settings: S
       {/* Right glove - offset right and slightly back, with extended cord */}
       <DraggableGloveWithRope
         anchorOffset={[0.25, 0, -0.15]}
+        desaturate={isDarkTheme}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.7,
