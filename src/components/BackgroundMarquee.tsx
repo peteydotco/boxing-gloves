@@ -169,7 +169,7 @@ function MarqueeRow({
           className={`inline-flex whitespace-nowrap items-center ${direction === 'left' ? 'animate-marquee-left' : 'animate-marquee-right'}`}
           style={{
             color: fillColor,
-            opacity: 0.44,
+            opacity: 0.38, // Reduced from 0.44 to lower background competition
             lineHeight: 1,
             height: iconHeight,
           }}

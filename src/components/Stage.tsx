@@ -3,6 +3,14 @@ import { motion } from 'framer-motion'
 import type { StageData } from '../types'
 import { bladeStackConfig } from '../data/stages'
 
+// Stage surface colors (blush/salmon palette tokens)
+const stageSurface = {
+  primary: '#E9D7DA',   // blush-200 - description card bg
+  secondary: '#E5C4CA', // blush-300 - metadata panel, borders
+  hover: '#F0D0D5',     // blush-100 - hover state
+  text: '#1B202A',      // ink-750 - text color
+} as const
+
 interface StageProps {
   stage: StageData
   isActive: boolean
@@ -177,7 +185,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
         <motion.div
           ref={descCardRef}
           style={{
-            backgroundColor: '#e9d7da', // Salmon pink background from Figma
+            backgroundColor: stageSurface.primary, // Salmon pink background
             borderRadius: 25,
             overflow: 'hidden',
             position: 'relative',
@@ -297,7 +305,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                         fontFamily: 'GT Pressura Ext',
                         fontSize: '16px',
                         fontWeight: 400,
-                        color: '#1b202a',
+                        color: stageSurface.text,
                         lineHeight: 1.35,
                         letterSpacing: '-0.32px',
                       }}
@@ -317,7 +325,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                       top: 8,
                       bottom: 8,
                       width: 348,
-                      backgroundColor: '#e5c4ca',
+                      backgroundColor: stageSurface.secondary,
                       borderRadius: 16,
                       padding: '12px 16px 16px 16px',
                       display: 'flex',
@@ -394,7 +402,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             height: 216,
             backgroundColor: 'transparent',
             borderRadius: 25,
-            border: '1px solid #e5c4ca',
+            border: `1px solid ${stageSurface.secondary}`,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -404,7 +412,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           }}
           onMouseMove={(e) => handleCardMouseMove(e, ctaCardRef, setCtaCardMouse)}
           onClick={onRequestCaseStudy}
-          whileHover={{ scale: 1.02, y: -4, borderColor: '#f0d0d5' }}
+          whileHover={{ scale: 1.02, y: -4, borderColor: stageSurface.hover }}
           whileTap={{ scale: 0.98 }}
         >
           {/* Spotlight overlay */}
@@ -432,7 +440,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           <div
             className="absolute top-5 right-5 flex items-center gap-0.5"
             style={{
-              backgroundColor: '#e5c4ca',
+              backgroundColor: stageSurface.secondary,
               borderRadius: 3.5,
               padding: '3px 5px',
               minWidth: 19,
@@ -471,7 +479,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                 fontSize: '24px',
                 fontWeight: 700,
                 fontStretch: 'condensed',
-                color: '#e5c4ca',
+                color: stageSurface.secondary,
                 lineHeight: 0.99,
                 textTransform: 'uppercase',
               }}
@@ -484,7 +492,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                 fontSize: '24px',
                 fontWeight: 700,
                 fontStretch: 'condensed',
-                color: '#e5c4ca',
+                color: stageSurface.secondary,
                 lineHeight: 0.99,
                 textTransform: 'uppercase',
               }}
@@ -518,7 +526,7 @@ function MetadataRow({
         alignItems: 'flex-start',
         justifyContent: 'space-between',
         padding: '8px 0',
-        borderBottom: isLast ? 'none' : '1px solid #E9D7DA',
+        borderBottom: isLast ? 'none' : `1px solid ${stageSurface.primary}`,
       }}
     >
       <span
@@ -539,7 +547,7 @@ function MetadataRow({
           fontFamily: 'GT Pressura Ext',
           fontSize: '14px',
           fontWeight: 350,
-          color: '#1B202A',
+          color: stageSurface.text,
           textAlign: 'right',
           letterSpacing: '-0.02em',
           ...(valueMaxWidth ? { maxWidth: valueMaxWidth } : {}),

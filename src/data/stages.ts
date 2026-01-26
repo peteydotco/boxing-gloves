@@ -116,14 +116,14 @@ const bladeDefinitions: Record<string, BladeConfig> = {
   squarespace: {
     id: 'squarespace',
     name: 'Squarespace',
-    bladeColor: '#0165FF',
+    bladeColor: '#0064FF', // Unified with brand-blue
     stageColor: '#000000',
   },
   masterclass: {
     id: 'masterclass',
     name: 'MasterClass',
-    bladeColor: '#000000',
-    stageColor: '#000000',
+    bladeColor: '#0A0A10', // ink-900 (subtle cool bias)
+    stageColor: '#0A0A10',
   },
 }
 

@@ -9,6 +9,38 @@
   --breakpoint-tablet: 810px;
 }
 
+/* =============================================================================
+   COLOR TOKEN SYSTEM
+   Brand colors: Full saturation for hero/graphics
+   UI colors: Desaturated variants for pills/buttons/borders/accents
+   Ink: Cool-biased dark neutrals for consistent dark surfaces
+   ============================================================================= */
+:root {
+  /* Brand colors (full saturation - hero/graphics only) */
+  --blue-brand: #0064FF;
+  --blue-brand-dark: #0050D2;
+  --red-brand: #EB2D37;
+  --red-brand-dark: #C3232D;
+
+  /* UI colors (desaturated - pills/buttons/borders/accents) */
+  --blue-ui: #0058E0;
+  --blue-ui-dark: #004BC2;
+  --red-ui: #D63240;
+  --red-ui-dark: #B52833;
+
+  /* Ink neutrals (cool-biased dark surfaces) */
+  --ink-900: #0A0A10;
+  --ink-850: #0E0E16;
+  --ink-800: #1A1A2E;
+  --ink-750: #1B202A;
+  --ink-700: #1E1E28;
+
+  /* Stage surfaces (blush/salmon palette) */
+  --blush-200: #E9D7DA;
+  --blush-300: #E5C4CA;
+  --blush-100: #F0D0D5;
+}
+
 /* GT Pressura Fonts */
 @font-face {
   font-family: 'GT Pressura Mono';

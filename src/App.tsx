@@ -34,8 +34,8 @@ const themes = {
     bioOpacity: 0.5,
   },
   dark: {
-    bgColor: '#121212',
-    spotlightOuter: 'rgba(40,40,40,0.65)',
+    bgColor: '#0E0E16', // ink-850 (cool-biased)
+    spotlightOuter: 'rgba(14,14,22,0.65)',
     spotlightInverted: false,
     marqueeColor: 'rgba(255,255,255,0.08)',
     textColor: 'rgba(255, 255, 255, 0.6)',
@@ -44,10 +44,10 @@ const themes = {
     bioOpacity: 0.6,
   },
   darkInverted: {
-    bgColor: '#080808', // Near-black bg
-    spotlightOuter: 'rgba(8,8,8,0.65)', // Match bg color on periphery
+    bgColor: '#0A0A10', // ink-900 (cool-biased)
+    spotlightOuter: 'rgba(10,10,16,0.65)', // Match bg color on periphery
     spotlightInverted: true, // Darkest at edges, lighter at center
-    marqueeColor: '#1A1A1A', // Very dark gray marquee (visible on near-black)
+    marqueeColor: '#1A1A2E', // ink-800 (cool-biased, visible on near-black)
     textColor: 'rgba(255, 255, 255, 0.6)',
     logoFill: '#FFFFFF',
     bioFill: '#FFFFFF',
