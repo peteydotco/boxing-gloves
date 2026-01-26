@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Stage } from './Stage'
 import { ProgressDots } from './ProgressDots'
-import { StagesHeader } from './StagesHeader'
 import { stages } from '../data/stages'
 
 interface StagesContainerProps {
@@ -11,23 +10,50 @@ interface StagesContainerProps {
   onThemeToggle: () => void
   logoFill?: string
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
+  isInitialEntry?: boolean
 }
 
 export function StagesContainer({
   isVisible,
   onNavigateToHero,
-  onThemeToggle,
-  logoFill = '#FFFFFF',
+  isInitialEntry = false,
 }: StagesContainerProps) {
   const [activeIndex, setActiveIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Track if we've completed the initial entry animation
+  const [hasAnimatedIn, setHasAnimatedIn] = useState(false)
 
   // Scroll/wheel navigation state
   const wheelState = useRef({
     lastDelta: 0,
     lastTime: 0,
     lastNavTime: 0,
+    enteredAt: 0,
   })
+
+  // Reset wheel state and set entry time when stages become visible
+  useEffect(() => {
+    if (isVisible) {
+      const now = Date.now()
+      wheelState.current = {
+        lastDelta: 0,
+        lastTime: now,
+        lastNavTime: now,
+        enteredAt: now,
+      }
+      // Mark animation as complete after delay
+      if (isInitialEntry && !hasAnimatedIn) {
+        const timer = setTimeout(() => {
+          setHasAnimatedIn(true)
+        }, 700) // After card scale animation completes
+        return () => clearTimeout(timer)
+      }
+    } else {
+      // Reset when leaving stages
+      setHasAnimatedIn(false)
+    }
+  }, [isVisible, isInitialEntry, hasAnimatedIn])
 
   // Handle wheel navigation between stages
   useEffect(() => {
@@ -39,20 +65,27 @@ export function StagesContainer({
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
       const now = Date.now()
       const state = wheelState.current
+
+      // Ignore all wheel events for 600ms after entering stages view
+      // This prevents the scroll that triggered the transition from also navigating
+      if (now - state.enteredAt < 600) {
+        return
+      }
+
       const timeSinceLastNav = now - state.lastNavTime
 
       // Require cooldown after navigation
-      if (timeSinceLastNav < 400) {
+      if (timeSinceLastNav < 500) {
         state.lastDelta = delta
         state.lastTime = now
         return
       }
 
       const timeSinceLast = now - state.lastTime
-      const isNewGesture = timeSinceLast > 120
+      const isNewGesture = timeSinceLast > 150
 
-      // Ignore small deltas
-      if (Math.abs(delta) < 15) return
+      // Ignore small deltas - increase threshold for better debouncing
+      if (Math.abs(delta) < 25) return
 
       state.lastDelta = delta
       state.lastTime = now
@@ -133,24 +166,12 @@ export function StagesContainer({
       {isVisible && (
         <motion.div
           ref={containerRef}
-          className="fixed inset-0 z-50"
-          initial={{ opacity: 0, y: '100%' }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: '100%' }}
-          transition={{
-            type: 'spring',
-            stiffness: 300,
-            damping: 35,
-            mass: 1,
-          }}
+          className="fixed inset-0 z-50 bg-black"
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
         >
-          {/* Header with nav links */}
-          <StagesHeader
-            onNavigateToHero={onNavigateToHero}
-            onThemeToggle={onThemeToggle}
-            logoFill={logoFill}
-          />
-
           {/* Progress dots */}
           <ProgressDots
             stages={stages}
@@ -165,6 +186,7 @@ export function StagesContainer({
               stage={stage}
               isActive={index === activeIndex}
               onRequestCaseStudy={handleRequestCaseStudy}
+              shouldAnimateIn={index === 0 && isInitialEntry && !hasAnimatedIn}
             />
           ))}
         </motion.div>

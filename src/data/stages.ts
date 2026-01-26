@@ -15,8 +15,8 @@ export const stages: StageData[] = [
     },
     footer: 'DESIGNED & BUILT IN SAN FRANCISCO',
     logoSrc: '/images/stages/masterclass-logo.svg',
-    logoBgColor: '#F75E7B', // Coral pink from the reference
-    accentColor: '#F75E7B',
+    logoBgColor: '#EF4562', // MasterClass coral
+    accentColor: '#EF4562',
   },
   {
     id: 'spotify',
@@ -67,22 +67,26 @@ export const stages: StageData[] = [
 
 // Configuration for stacked blade preview at bottom of hero
 export const bladeStackConfig = {
-  // Visible height of each blade when stacked (in px)
-  bladeHeight: 56,
-  // How much each blade peeks above the one in front
+  // Visible height of front blade when stacked (in px)
+  bladeHeight: 88,
+  // How much each blade peeks above the one in front (16px visible per blade)
   stackOffset: 16,
   // Border radius for blades
   borderRadius: 24,
-  // Horizontal padding from viewport edges
+  // Horizontal padding from viewport edges for front blade
   horizontalPadding: 24,
+  // Additional horizontal inset per blade to create depth (each blade narrower than the one in front)
+  // Based on design: front=1558px, 2nd=1476px, 3rd=1386px, back=1306px in 1605px viewport
+  // This means ~40-42px additional padding per blade on each side
+  widthStagger: 41,
   // Bottom padding from viewport edge
   bottomPadding: 0,
   // Colors for the 4 visible blades (front to back)
-  // Front blade is dark/charcoal with nav links
+  // Index 0 = front nav blade, Index 3 = MasterClass (furthest back)
   bladeColors: [
-    'rgba(26, 26, 46, 1)',    // Front blade - dark charcoal (nav blade)
-    'rgba(60, 90, 180, 0.9)', // Blue tint
-    'rgba(90, 60, 120, 0.85)', // Purple tint
-    'rgba(40, 40, 60, 0.8)',  // Dark back blade
+    '#1a1a2e',  // Front blade - dark charcoal (nav blade)
+    '#2d2d41',  // Second blade - slightly lighter
+    '#3c3746',  // Third blade
+    '#000000',  // Back blade - MasterClass black (matches stage background)
   ],
 }

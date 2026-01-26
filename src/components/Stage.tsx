@@ -1,17 +1,18 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import type { StageData } from '../types'
-import { hoverTransition } from '../constants/animation'
 
 interface StageProps {
   stage: StageData
   isActive: boolean
   onRequestCaseStudy?: () => void
+  shouldAnimateIn?: boolean
 }
 
-export function Stage({ stage, isActive, onRequestCaseStudy }: StageProps) {
+export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = false }: StageProps) {
   // Cursor tracking for card spotlight effects
   const [logoCardMouse, setLogoCardMouse] = useState({ x: 50, y: 50 })
+  const [logoCardHovered, setLogoCardHovered] = useState(false)
   const [descCardMouse, setDescCardMouse] = useState({ x: 50, y: 50 })
   const [ctaCardMouse, setCtaCardMouse] = useState({ x: 50, y: 50 })
 
@@ -31,32 +32,44 @@ export function Stage({ stage, isActive, onRequestCaseStudy }: StageProps) {
     setter({ x, y })
   }, [])
 
-  // Spotlight gradient generator
+  // Spotlight gradient generator for fill effect
   const getSpotlightGradient = (mousePos: { x: number; y: number }, isDark = false) => {
-    const lightColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.15)'
-    const midColor = isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
+    const lightColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.12)'
+    const midColor = isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.04)'
     return `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, ${lightColor} 0%, ${midColor} 50%, transparent 100%)`
   }
 
   // Border spotlight gradient
   const getBorderSpotlight = (mousePos: { x: number; y: number }) => {
-    return `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.15) 25%, rgba(255, 255, 255, 0.05) 50%, transparent 100%)`
+    return `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 25%, rgba(255, 255, 255, 0.08) 50%, transparent 100%)`
   }
 
-  // Shared card styles
-  const cardBaseStyle: React.CSSProperties = {
-    borderRadius: 20,
-    backdropFilter: 'blur(24px)',
-    WebkitBackdropFilter: 'blur(24px)',
-    overflow: 'hidden',
-    position: 'relative',
+  // Logo card border spotlight (matching TopCards/MorphingCard style)
+  const logoCardBorderColor = 'rgba(255, 255, 255, 0.8)'
+  const getLogoCardSpotlight = () => {
+    if (!logoCardHovered) return 'none'
+    return `radial-gradient(circle at ${logoCardMouse.x}% ${logoCardMouse.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, ${logoCardBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
   }
 
-  // Card with tinted glass effect
-  const glassCardStyle: React.CSSProperties = {
-    ...cardBaseStyle,
-    backgroundColor: 'rgba(246, 232, 232, 0.85)', // Warm off-white/cream tint from reference
-    boxShadow: 'inset 0 0 0 1px rgba(255, 255, 255, 0.2)',
+  // Card entrance animation variants for initial blade transition
+  const cardVariants = {
+    hidden: {
+      scale: 0.8,
+      opacity: 0,
+      y: 40,
+    },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      y: 0,
+    },
+  }
+
+  const cardTransition = {
+    type: 'spring' as const,
+    stiffness: 300,
+    damping: 30,
+    mass: 1,
   }
 
   return (
@@ -82,81 +95,86 @@ export function Stage({ stage, isActive, onRequestCaseStudy }: StageProps) {
 
       {/* Bottom cards container */}
       <div
-        className="absolute bottom-0 left-0 right-0 flex items-end gap-3 p-6"
-        style={{ zIndex: 10 }}
+        className="absolute bottom-0 left-0 right-0 flex items-end gap-4"
+        style={{
+          zIndex: 10,
+          padding: '0 40px 40px 40px',
+        }}
       >
-        {/* Logo Card */}
+        {/* Logo Card - coral pink with white border, backdrop blur */}
         <motion.div
           ref={logoCardRef}
           className="flex-shrink-0"
           style={{
-            ...glassCardStyle,
-            width: 120,
-            height: 120,
+            width: 196,
+            height: 196,
             backgroundColor: stage.logoBgColor,
+            borderRadius: 25,
+            border: '1px solid rgba(255, 255, 255, 0.8)',
+            backdropFilter: 'blur(10.93px)',
+            WebkitBackdropFilter: 'blur(10.93px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            position: 'relative',
+            overflow: 'hidden',
           }}
+          initial={shouldAnimateIn ? 'hidden' : 'visible'}
+          animate="visible"
+          variants={cardVariants}
+          transition={{ ...cardTransition, delay: shouldAnimateIn ? 0.1 : 0 }}
           onMouseMove={(e) => handleCardMouseMove(e, logoCardRef, setLogoCardMouse)}
-          whileHover={{ scale: 1.02, y: -2 }}
-          transition={hoverTransition}
+          onMouseEnter={() => setLogoCardHovered(true)}
+          onMouseLeave={() => setLogoCardHovered(false)}
+          whileHover={{ scale: 1.02, y: -4 }}
         >
-          {/* Spotlight overlay */}
+          {/* Border spotlight overlay (matching TopCards style) */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: getSpotlightGradient(logoCardMouse, true),
-              borderRadius: 20,
-            }}
-          />
-          {/* Border spotlight */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              borderRadius: 20,
-              background: getBorderSpotlight(logoCardMouse),
-              maskImage: 'linear-gradient(black, black) content-box, linear-gradient(black, black)',
+              borderRadius: 25,
+              background: getLogoCardSpotlight(),
+              mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
               maskComposite: 'exclude',
               WebkitMaskComposite: 'xor',
               padding: '1px',
             }}
           />
-          {/* Logo placeholder - would be an img or svg */}
-          <div
-            className="text-white font-bold text-3xl"
-            style={{ fontFamily: 'GT Pressura' }}
-          >
-            M
-          </div>
+          {/* Logo - MasterClass "M" placeholder */}
+          <MasterClassLogo />
         </motion.div>
 
-        {/* Description Card */}
+        {/* Description Card - main content area with metadata panel */}
         <motion.div
           ref={descCardRef}
           className="flex-1"
           style={{
-            ...glassCardStyle,
-            minHeight: 120,
-            padding: '16px 20px',
+            backgroundColor: '#e9d7da', // Salmon pink background from Figma
+            borderRadius: 25,
+            overflow: 'hidden',
+            position: 'relative',
+            height: 196,
           }}
+          initial={shouldAnimateIn ? 'hidden' : 'visible'}
+          animate="visible"
+          variants={cardVariants}
+          transition={{ ...cardTransition, delay: shouldAnimateIn ? 0.15 : 0 }}
           onMouseMove={(e) => handleCardMouseMove(e, descCardRef, setDescCardMouse)}
           whileHover={{ scale: 1.005, y: -2 }}
-          transition={hoverTransition}
         >
           {/* Spotlight overlay */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
               background: getSpotlightGradient(descCardMouse),
-              borderRadius: 20,
+              borderRadius: 25,
             }}
           />
           {/* Border spotlight */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              borderRadius: 20,
+              borderRadius: 25,
               background: getBorderSpotlight(descCardMouse),
               maskImage: 'linear-gradient(black, black) content-box, linear-gradient(black, black)',
               maskComposite: 'exclude',
@@ -165,69 +183,126 @@ export function Stage({ stage, isActive, onRequestCaseStudy }: StageProps) {
             }}
           />
 
+          {/* Card content layout */}
           <div className="relative z-10 h-full flex">
-            {/* Left: Role & Title */}
-            <div className="flex-1 pr-4">
+            {/* Left side: Role, Title, Description - positioned absolutely per Figma */}
+            <div
+              className="flex-1 relative"
+              style={{
+                paddingLeft: 37,
+              }}
+            >
+              {/* Role label - top: 22px */}
               <p
                 style={{
+                  position: 'absolute',
+                  top: 22,
+                  left: 37,
                   fontFamily: 'GT Pressura Mono',
-                  fontSize: '10px',
+                  fontSize: '13px',
                   fontWeight: 400,
-                  letterSpacing: '0.3px',
+                  letterSpacing: '0.26px',
                   textTransform: 'uppercase',
-                  color: 'rgba(0, 0, 0, 0.5)',
-                  marginBottom: '4px',
+                  color: '#000000',
                 }}
               >
                 {stage.role}
               </p>
+
+              {/* Title - vertically centered around 61.65px */}
               <h3
                 style={{
+                  position: 'absolute',
+                  top: 61.65,
+                  left: 37,
+                  transform: 'translateY(-50%)',
                   fontFamily: 'GT Pressura',
-                  fontSize: '18px',
+                  fontSize: '24px',
                   fontWeight: 500,
-                  color: 'rgba(0, 0, 0, 0.87)',
-                  lineHeight: 1.2,
-                  marginBottom: '8px',
+                  color: '#000000',
+                  lineHeight: 1,
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 {stage.title}
               </h3>
-              <p
+
+              {/* Description - bottom aligned at 168px from top */}
+              <div
                 style={{
-                  fontFamily: 'GT Pressura Light',
-                  fontSize: '13px',
-                  fontWeight: 300,
-                  color: 'rgba(0, 0, 0, 0.65)',
-                  lineHeight: 1.4,
+                  position: 'absolute',
+                  top: 168,
+                  left: 37,
+                  transform: 'translateY(-100%)',
+                  width: 400,
+                  overflow: 'hidden',
                 }}
               >
-                {stage.description}
-              </p>
+                <p
+                  style={{
+                    fontFamily: 'GT Pressura Ext',
+                    fontSize: '16px',
+                    fontWeight: 400,
+                    color: '#1b202a',
+                    lineHeight: 1.35,
+                    letterSpacing: '-0.32px',
+                  }}
+                >
+                  {stage.description}
+                </p>
+              </div>
             </div>
 
-            {/* Right: Metadata */}
+            {/* Right side: Metadata panel - vertically centered, 385px wide */}
             <div
-              className="flex-shrink-0 pl-4 border-l"
               style={{
-                borderColor: 'rgba(0, 0, 0, 0.08)',
-                minWidth: 180,
+                position: 'absolute',
+                right: 0,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 385,
+                height: 196,
+                backgroundColor: '#e5c4ca',
+                border: '1px solid #ffeeee',
+                borderRadius: 16,
+                padding: '11px 16px 16px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                overflow: 'hidden',
               }}
             >
-              <div className="space-y-2">
-                <MetadataRow label="PLATFORMS" value={stage.metadata.platforms} />
-                <MetadataRow label="ACCOLADES" value={stage.metadata.accolades} />
-                <MetadataRow label="AGENCY" value={stage.metadata.agency} />
+              {/* Metadata rows */}
+              <div className="flex flex-col">
+                <MetadataRow
+                  label="PLATFORMS"
+                  value={stage.metadata.platforms}
+                  borderColor="#e9d7da"
+                />
+                <MetadataRow
+                  label="ACCOLADES"
+                  value={stage.metadata.accolades}
+                  borderColor="#e9d7da"
+                />
+                <MetadataRow
+                  label="AGENCY"
+                  value={stage.metadata.agency}
+                  borderColor="#e9d7da"
+                  isLast
+                />
               </div>
+
+              {/* Footer text */}
               <p
                 style={{
                   fontFamily: 'GT Pressura Mono',
-                  fontSize: '9px',
+                  fontSize: '11px',
                   fontWeight: 400,
-                  letterSpacing: '0.27px',
+                  letterSpacing: '0.22px',
                   textTransform: 'uppercase',
-                  color: 'rgba(0, 0, 0, 0.35)',
-                  marginTop: '12px',
+                  color: 'rgba(0, 0, 0, 0.4)',
+                  textAlign: 'center',
                 }}
               >
                 {stage.footer}
@@ -236,39 +311,45 @@ export function Stage({ stage, isActive, onRequestCaseStudy }: StageProps) {
           </div>
         </motion.div>
 
-        {/* CTA Card */}
+        {/* CTA Card - Request Case Study button */}
         <motion.div
           ref={ctaCardRef}
           className="flex-shrink-0 cursor-pointer"
           style={{
-            ...glassCardStyle,
-            width: 140,
-            height: 120,
+            width: 196,
+            height: 196,
+            backgroundColor: 'transparent',
+            borderRadius: 25,
+            border: '1px solid #e5c4ca',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: 4,
+            position: 'relative',
+            overflow: 'hidden',
           }}
+          initial={shouldAnimateIn ? 'hidden' : 'visible'}
+          animate="visible"
+          variants={cardVariants}
+          transition={{ ...cardTransition, delay: shouldAnimateIn ? 0.2 : 0 }}
           onMouseMove={(e) => handleCardMouseMove(e, ctaCardRef, setCtaCardMouse)}
           onClick={onRequestCaseStudy}
-          whileHover={{ scale: 1.02, y: -2 }}
+          whileHover={{ scale: 1.02, y: -4, borderColor: '#f0d0d5' }}
           whileTap={{ scale: 0.98 }}
-          transition={hoverTransition}
         >
           {/* Spotlight overlay */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: getSpotlightGradient(ctaCardMouse),
-              borderRadius: 20,
+              background: getSpotlightGradient(ctaCardMouse, true),
+              borderRadius: 25,
             }}
           />
           {/* Border spotlight */}
           <div
             className="absolute inset-0 pointer-events-none"
             style={{
-              borderRadius: 20,
+              borderRadius: 25,
               background: getBorderSpotlight(ctaCardMouse),
               maskImage: 'linear-gradient(black, black) content-box, linear-gradient(black, black)',
               maskComposite: 'exclude',
@@ -279,39 +360,63 @@ export function Stage({ stage, isActive, onRequestCaseStudy }: StageProps) {
 
           {/* Keyboard shortcut badge */}
           <div
-            className="absolute top-3 right-3"
+            className="absolute top-5 right-5 flex items-center gap-0.5"
             style={{
-              fontFamily: 'GT Pressura Mono',
-              fontSize: '10px',
-              fontWeight: 400,
-              color: 'rgba(0, 0, 0, 0.35)',
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              padding: '2px 6px',
-              borderRadius: 4,
+              backgroundColor: '#e5c4ca',
+              borderRadius: 3.5,
+              padding: '3px 5px',
+              minWidth: 19,
+              height: 19,
             }}
           >
-            ⌘ R
+            <span
+              style={{
+                fontFamily: 'GT Pressura Mono',
+                fontSize: '12px',
+                fontWeight: 400,
+                color: '#000000',
+                lineHeight: 1,
+              }}
+            >
+              ⌘
+            </span>
+            <span
+              style={{
+                fontFamily: 'GT Pressura Mono',
+                fontSize: '12px',
+                fontWeight: 400,
+                color: '#000000',
+                lineHeight: 1,
+              }}
+            >
+              R
+            </span>
           </div>
 
+          {/* Button text */}
           <div className="relative z-10 text-center">
             <p
               style={{
-                fontFamily: 'GT Pressura',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: 'rgba(0, 0, 0, 0.75)',
-                lineHeight: 1.2,
+                fontFamily: 'Helvetica Neue',
+                fontSize: '24px',
+                fontWeight: 700,
+                fontStretch: 'condensed',
+                color: '#e5c4ca',
+                lineHeight: 0.99,
+                textTransform: 'uppercase',
               }}
             >
               REQUEST
             </p>
             <p
               style={{
-                fontFamily: 'GT Pressura',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: 'rgba(0, 0, 0, 0.75)',
-                lineHeight: 1.2,
+                fontFamily: 'Helvetica Neue',
+                fontSize: '24px',
+                fontWeight: 700,
+                fontStretch: 'condensed',
+                color: '#e5c4ca',
+                lineHeight: 0.99,
+                textTransform: 'uppercase',
               }}
             >
               CASE STUDY
@@ -324,17 +429,32 @@ export function Stage({ stage, isActive, onRequestCaseStudy }: StageProps) {
 }
 
 // Metadata row helper component
-function MetadataRow({ label, value }: { label: string; value: string }) {
+function MetadataRow({
+  label,
+  value,
+  borderColor,
+  isLast = false
+}: {
+  label: string
+  value: string
+  borderColor: string
+  isLast?: boolean
+}) {
   return (
-    <div className="flex justify-between items-start gap-3">
+    <div
+      className="flex items-center justify-between py-2 overflow-hidden"
+      style={{
+        borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
+      }}
+    >
       <span
         style={{
           fontFamily: 'GT Pressura Mono',
-          fontSize: '10px',
+          fontSize: '11px',
           fontWeight: 400,
-          letterSpacing: '0.3px',
+          letterSpacing: '0.22px',
           textTransform: 'uppercase',
-          color: 'rgba(0, 0, 0, 0.4)',
+          color: 'rgba(0, 0, 0, 0.48)',
           flexShrink: 0,
         }}
       >
@@ -342,15 +462,32 @@ function MetadataRow({ label, value }: { label: string; value: string }) {
       </span>
       <span
         style={{
-          fontFamily: 'GT Pressura',
-          fontSize: '12px',
+          fontFamily: 'GT Pressura Ext',
+          fontSize: '14px',
           fontWeight: 400,
-          color: 'rgba(0, 0, 0, 0.7)',
+          color: '#1b202a',
           textAlign: 'right',
+          letterSpacing: '-0.28px',
         }}
       >
         {value}
       </span>
     </div>
+  )
+}
+
+// MasterClass Logo component - same as marquee icon
+function MasterClassLogo() {
+  return (
+    <svg
+      width="100"
+      height="100"
+      viewBox="25 0 465 364"
+      fill="black"
+    >
+      <path d="M254.24 186.251L216.246 52.5022H110.845V73.9764H120.846C133.319 73.9764 143.665 81.3833 147.459 95.07L205.526 298.892H258.407L284.33 208.413L283.956 208.077C267.029 208.091 258.723 201.753 254.24 186.251Z" />
+      <path d="M467.427 277.418C454.997 277.418 444.981 268.986 441.188 255.944L383.12 52.5022H302.262L372.386 298.892H477.428V277.432L467.427 277.418Z" />
+      <path d="M36.7822 277.374V298.907H130.214V298.863V277.403V277.374H36.7822Z" />
+    </svg>
   )
 }

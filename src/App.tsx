@@ -6,6 +6,7 @@ import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { StackedBlades } from './components/StackedBlades'
 import { StagesContainer } from './components/StagesContainer'
+import { PersistentNav } from './components/PersistentNav'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -56,6 +57,9 @@ const themes = {
 // View modes: 'hero' is the landing page, 'stages' is the selected work section
 type ViewMode = 'hero' | 'stages'
 
+// Transition phases for blade animation
+type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
+
 function App() {
   // Ref for the main container - used as event source for Canvas
   // This allows mouse events to be captured even when over TopCards
@@ -63,6 +67,9 @@ function App() {
 
   // Current view mode
   const [viewMode, setViewMode] = useState<ViewMode>('hero')
+
+  // Transition animation phase
+  const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle')
 
   // mousePosition state is only for 2D UI elements (spotlight, marquee)
   // Scene reads from mousePositionRef directly to avoid re-renders
@@ -96,14 +103,31 @@ function App() {
     })
   }, [])
 
-  // Navigate to stages view
+  // Navigate to stages view with transition animation
   const navigateToStages = useCallback(() => {
-    setViewMode('stages')
+    // Start the expanding animation
+    setTransitionPhase('expanding')
+    // After animation completes, switch to stages view
+    setTimeout(() => {
+      setViewMode('stages')
+      setTransitionPhase('complete')
+      // Reset phase after stages view is mounted
+      setTimeout(() => {
+        setTransitionPhase('idle')
+      }, 100)
+    }, 600) // Match the blade expansion animation duration
   }, [])
 
-  // Navigate back to hero view
+  // Navigate back to hero view with collapse animation
   const navigateToHero = useCallback(() => {
+    // Start the collapsing animation (blade shrinks back)
+    setTransitionPhase('collapsing')
+    // Switch view immediately so blades are visible
     setViewMode('hero')
+    // After animation completes, reset to idle
+    setTimeout(() => {
+      setTransitionPhase('idle')
+    }, 600) // Match the blade collapse animation duration
   }, [])
 
   useEffect(() => {
@@ -331,16 +355,6 @@ function App() {
               <RightBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
             </div>
 
-            {/* Desktop: Stacked Blades at bottom (replaces previous logo + text lockup) */}
-            {isDesktop && (
-              <StackedBlades
-                onNavigateToStages={navigateToStages}
-                onThemeToggle={cycleTheme}
-                logoFill={theme.logoFill}
-                themeMode={themeMode}
-              />
-            )}
-
             {/* Mobile/Tablet: Text lockup (time/location + coming soon) */}
             {/* Both mobile and tablet: positioned near bottom */}
             {!isDesktop && (
@@ -385,6 +399,16 @@ function App() {
         )}
       </AnimatePresence>
 
+      {/* Desktop: Stacked Blades - rendered outside AnimatePresence so it persists during transition */}
+      {/* Keep visible during 'expanding' AND briefly during 'complete' to avoid flash */}
+      {isDesktop && (viewMode === 'hero' || transitionPhase !== 'idle') && (
+        <StackedBlades
+          onNavigateToStages={navigateToStages}
+          themeMode={themeMode}
+          transitionPhase={transitionPhase}
+        />
+      )}
+
       {/* Stages View */}
       <StagesContainer
         isVisible={viewMode === 'stages'}
@@ -392,7 +416,19 @@ function App() {
         onThemeToggle={cycleTheme}
         logoFill={theme.logoFill}
         themeMode={themeMode}
+        isInitialEntry={transitionPhase === 'complete' || transitionPhase === 'expanding'}
       />
+
+      {/* Desktop: Persistent Nav - single instance that animates between hero and stages */}
+      {isDesktop && (
+        <PersistentNav
+          viewMode={viewMode}
+          transitionPhase={transitionPhase}
+          onNavigateToHero={navigateToHero}
+          onNavigateToStages={navigateToStages}
+          onThemeToggle={cycleTheme}
+        />
+      )}
     </div>
   )
 }
