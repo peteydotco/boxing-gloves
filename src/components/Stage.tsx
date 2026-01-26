@@ -1,24 +1,41 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import type { StageData } from '../types'
+import { bladeStackConfig } from '../data/stages'
 
 interface StageProps {
   stage: StageData
   isActive: boolean
   onRequestCaseStudy?: () => void
-  shouldAnimateIn?: boolean
+  isExpanding?: boolean
+  backgroundColor?: string
 }
 
-export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = false }: StageProps) {
+export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false, backgroundColor = '#000000' }: StageProps) {
   // Cursor tracking for card spotlight effects
   const [logoCardMouse, setLogoCardMouse] = useState({ x: 50, y: 50 })
   const [logoCardHovered, setLogoCardHovered] = useState(false)
   const [descCardMouse, setDescCardMouse] = useState({ x: 50, y: 50 })
   const [ctaCardMouse, setCtaCardMouse] = useState({ x: 50, y: 50 })
 
+  // Track description card width for responsive metadata panel visibility
+  const [descCardWidth, setDescCardWidth] = useState(0)
+
   const logoCardRef = useRef<HTMLDivElement>(null)
   const descCardRef = useRef<HTMLDivElement>(null)
   const ctaCardRef = useRef<HTMLDivElement>(null)
+
+  // Measure description card width on mount and resize
+  useEffect(() => {
+    const measureWidth = () => {
+      if (descCardRef.current) {
+        setDescCardWidth(descCardRef.current.offsetWidth)
+      }
+    }
+    measureWidth()
+    window.addEventListener('resize', measureWidth)
+    return () => window.removeEventListener('resize', measureWidth)
+  }, [])
 
   const handleCardMouseMove = useCallback((
     e: React.MouseEvent,
@@ -51,78 +68,87 @@ export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = f
     return `radial-gradient(circle at ${logoCardMouse.x}% ${logoCardMouse.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, ${logoCardBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
   }
 
-  // Card entrance animation variants for initial blade transition
-  const cardVariants = {
-    hidden: {
-      scale: 0.8,
-      opacity: 0,
-      y: 40,
-    },
-    visible: {
-      scale: 1,
-      opacity: 1,
-      y: 0,
-    },
-  }
+  // Cards are part of the stage - they slide up with the blade
+  const { frontBladePeek, stackOffset } = bladeStackConfig
+  const numBlades = 4
+  // Back blade peek amount (this is what becomes the stage background)
+  const backBladePeekFromBottom = frontBladePeek + ((numBlades - 1) * stackOffset)
 
-  const cardTransition = {
+  // Cards start positioned at the bottom of the collapsed blade peek
+  // The blade animates bottom from: calc(-100vh + 136px) to 0
+  // This means the blade's top moves from (100vh - 136px) down to 0
+  // Cards at "bottom: 40px" of the stage need to move with the blade
+  // Initial Y offset = how far down the blade top starts = 100vh - 136px
+  const initialCardsOffset = typeof window !== 'undefined'
+    ? window.innerHeight - backBladePeekFromBottom
+    : 0
+
+  // Only show the stage if it's active
+  // isExpanding just controls the animation, not visibility
+  const shouldBeVisible = isActive
+
+  // Spring transition for cards - matches blade animation exactly
+  const cardsSpringTransition = {
     type: 'spring' as const,
-    stiffness: 300,
-    damping: 30,
+    stiffness: 320,
+    damping: 40,
     mass: 1,
   }
 
   return (
     <motion.div
       className="absolute inset-0 flex flex-col"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: isActive ? 1 : 0 }}
-      transition={{ duration: 0.4 }}
+      initial={{ opacity: isExpanding && isActive ? 1 : 0 }}
+      animate={{ opacity: shouldBeVisible ? 1 : 0 }}
+      transition={{ duration: isExpanding ? 0 : 0.4 }}
       style={{
-        pointerEvents: isActive ? 'auto' : 'none',
+        pointerEvents: shouldBeVisible ? 'auto' : 'none',
       }}
     >
-      {/* Background - placeholder for rich media */}
-      <div className="absolute inset-0 bg-black">
-        {/* TODO: Replace with actual stage background media */}
-        <div
-          className="w-full h-full"
-          style={{
-            background: `linear-gradient(135deg, ${stage.accentColor}22 0%, #000 50%, ${stage.accentColor}11 100%)`,
-          }}
-        />
-      </div>
-
-      {/* Bottom cards container */}
+      {/* Solid background color - ensures stage has proper bg when scaled in zoomed nav mode */}
+      {/* Hidden during expansion - background comes from StageBackground blade animation */}
       <div
+        className="absolute inset-0"
+        style={{
+          backgroundColor,
+          opacity: isExpanding ? 0 : 1,
+          transition: 'opacity 0.3s ease-out',
+        }}
+      />
+
+
+      {/* Bottom cards container - slides up with the blade during transition */}
+      {/* Uses Y transform to match blade's bottom position animation */}
+      <motion.div
         className="absolute bottom-0 left-0 right-0 flex items-end gap-4"
         style={{
           zIndex: 10,
           padding: '0 40px 40px 40px',
         }}
+        initial={{ y: isExpanding ? initialCardsOffset : 0 }}
+        animate={{ y: 0 }}
+        transition={isExpanding ? cardsSpringTransition : { duration: 0 }}
       >
         {/* Logo Card - coral pink with white border, backdrop blur */}
+        {/* No individual animation - expands naturally with the parent stage */}
         <motion.div
           ref={logoCardRef}
           className="flex-shrink-0"
           style={{
-            width: 196,
-            height: 196,
+            width: 216,
+            height: 216,
             backgroundColor: stage.logoBgColor,
             borderRadius: 25,
             border: '1px solid rgba(255, 255, 255, 0.8)',
-            backdropFilter: 'blur(10.93px)',
-            WebkitBackdropFilter: 'blur(10.93px)',
+            // Disable backdrop blur during expansion to prevent color bleeding
+            backdropFilter: isExpanding ? 'none' : 'blur(10.93px)',
+            WebkitBackdropFilter: isExpanding ? 'none' : 'blur(10.93px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
             overflow: 'hidden',
           }}
-          initial={shouldAnimateIn ? 'hidden' : 'visible'}
-          animate="visible"
-          variants={cardVariants}
-          transition={{ ...cardTransition, delay: shouldAnimateIn ? 0.1 : 0 }}
           onMouseMove={(e) => handleCardMouseMove(e, logoCardRef, setLogoCardMouse)}
           onMouseEnter={() => setLogoCardHovered(true)}
           onMouseLeave={() => setLogoCardHovered(false)}
@@ -145,20 +171,22 @@ export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = f
         </motion.div>
 
         {/* Description Card - main content area with metadata panel */}
+        {/* flex-grow: 1 takes available space, flex-shrink: 0 means it won't shrink */}
+        {/* CTA card shrinks first because it has flex-shrink: 1 */}
+        {/* No individual animation - expands naturally with the parent stage */}
         <motion.div
           ref={descCardRef}
-          className="flex-1"
           style={{
             backgroundColor: '#e9d7da', // Salmon pink background from Figma
             borderRadius: 25,
             overflow: 'hidden',
             position: 'relative',
-            height: 196,
+            height: 216,
+            flexGrow: 1,
+            flexShrink: 0,
+            flexBasis: 'auto',
+            minWidth: 300,
           }}
-          initial={shouldAnimateIn ? 'hidden' : 'visible'}
-          animate="visible"
-          variants={cardVariants}
-          transition={{ ...cardTransition, delay: shouldAnimateIn ? 0.15 : 0 }}
           onMouseMove={(e) => handleCardMouseMove(e, descCardRef, setDescCardMouse)}
           whileHover={{ scale: 1.005, y: -2 }}
         >
@@ -184,111 +212,145 @@ export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = f
           />
 
           {/* Card content layout */}
-          <div className="relative z-10 h-full flex">
-            {/* Left side: Role, Title, Description - positioned absolutely per Figma */}
-            <div
-              className="flex-1 relative"
-              style={{
-                paddingLeft: 37,
-              }}
-            >
-              {/* Role label - top: 22px */}
-              <p
-                style={{
-                  position: 'absolute',
-                  top: 22,
-                  left: 37,
-                  fontFamily: 'GT Pressura Mono',
-                  fontSize: '13px',
-                  fontWeight: 400,
-                  letterSpacing: '0.26px',
-                  textTransform: 'uppercase',
-                  color: '#000000',
-                }}
-              >
-                {stage.role}
-              </p>
+          {(() => {
+            // Metadata panel dimensions
+            const metadataPanelWidth = 348
+            const metadataPanelMargin = 8 // right margin
+            const metadataPanelTotalWidth = metadataPanelWidth + metadataPanelMargin
 
-              {/* Title - vertically centered around 61.65px */}
-              <h3
-                style={{
-                  position: 'absolute',
-                  top: 61.65,
-                  left: 37,
-                  transform: 'translateY(-50%)',
-                  fontFamily: 'GT Pressura',
-                  fontSize: '24px',
-                  fontWeight: 500,
-                  color: '#000000',
-                  lineHeight: 1,
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {stage.title}
-              </h3>
+            // Calculate if metadata panel should be visible
+            // Hide when panel's left edge would cross the halfway point of the card
+            const halfwayPoint = descCardWidth / 2
+            const metadataPanelLeftEdge = descCardWidth - metadataPanelTotalWidth
+            const showMetadataPanel = metadataPanelLeftEdge > halfwayPoint
 
-              {/* Description - bottom aligned at 168px from top */}
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 168,
-                  left: 37,
-                  transform: 'translateY(-100%)',
-                  width: 400,
-                  overflow: 'hidden',
-                }}
-              >
-                <p
+            // Description text width: fills available space
+            // When metadata visible: from left padding (37px) to metadata panel left edge minus gap
+            // When metadata hidden: from left padding to right padding (37px each side)
+            const leftPadding = 37
+            const rightPadding = 37
+            const gapBetweenTextAndMetadata = 24
+
+            const descriptionWidth = showMetadataPanel
+              ? metadataPanelLeftEdge - leftPadding - gapBetweenTextAndMetadata
+              : descCardWidth - leftPadding - rightPadding
+
+            return (
+              <div className="relative z-10 h-full flex">
+                {/* Left side: Role, Title, Description - positioned absolutely per Figma */}
+                <div
+                  className="flex-1 relative"
                   style={{
-                    fontFamily: 'GT Pressura Ext',
-                    fontSize: '16px',
-                    fontWeight: 400,
-                    color: '#1b202a',
-                    lineHeight: 1.35,
-                    letterSpacing: '-0.32px',
+                    paddingLeft: 37,
                   }}
                 >
-                  {stage.description}
-                </p>
-              </div>
-            </div>
+                  {/* Role label - top: 22px */}
+                  <p
+                    style={{
+                      position: 'absolute',
+                      top: 22,
+                      left: 37,
+                      fontFamily: 'GT Pressura Mono',
+                      fontSize: '13px',
+                      fontWeight: 400,
+                      letterSpacing: '0.26px',
+                      textTransform: 'uppercase',
+                      color: '#000000',
+                    }}
+                  >
+                    {stage.role}
+                  </p>
 
-            {/* Right side: Metadata panel - vertically centered, 385px wide */}
-            <div
-              style={{
-                position: 'absolute',
-                right: 0,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 385,
-                height: 196,
-                backgroundColor: '#e5c4ca',
-                border: '1px solid #ffeeee',
-                borderRadius: 16,
-                padding: '11px 16px 16px 16px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                overflow: 'hidden',
-              }}
-            >
-              {/* Metadata rows */}
-              <div className="flex flex-col">
+                  {/* Title - vertically centered around 61.65px */}
+                  <h3
+                    style={{
+                      position: 'absolute',
+                      top: 61.65,
+                      left: 37,
+                      transform: 'translateY(-50%)',
+                      fontFamily: 'GT Pressura',
+                      fontSize: '24px',
+                      fontWeight: 500,
+                      color: '#000000',
+                      lineHeight: 1,
+                      textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {stage.title}
+                  </h3>
+
+                  {/* Description - bottom aligned at 188px from top (updated for 216px height) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 188,
+                      left: 37,
+                      transform: 'translateY(-100%)',
+                      width: descriptionWidth > 0 ? descriptionWidth : 400,
+                      overflow: 'hidden',
+                      transition: 'width 0.3s ease',
+                    }}
+                  >
+                    <p
+                      style={{
+                        fontFamily: 'GT Pressura Ext',
+                        fontSize: '16px',
+                        fontWeight: 400,
+                        color: '#1b202a',
+                        lineHeight: 1.35,
+                        letterSpacing: '-0.32px',
+                      }}
+                    >
+                      {stage.description}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right side: Metadata panel - inset 8px from top, right, and bottom */}
+                {/* Hidden when panel would cross past halfway point of parent container */}
+                {showMetadataPanel && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      right: 8,
+                      top: 8,
+                      bottom: 8,
+                      width: 348,
+                      backgroundColor: '#e5c4ca',
+                      borderRadius: 16,
+                      padding: '12px 16px 16px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 20,
+                      overflow: 'hidden',
+                    }}
+                  >
+              {/* Metadata rows container - Frame 32 */}
+              <div
+                style={{
+                  width: 316,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 0,
+                }}
+              >
                 <MetadataRow
                   label="PLATFORMS"
                   value={stage.metadata.platforms}
-                  borderColor="#e9d7da"
+                  valueMaxWidth={224}
                 />
                 <MetadataRow
                   label="ACCOLADES"
                   value={stage.metadata.accolades}
-                  borderColor="#e9d7da"
+                  valueMaxWidth={224}
                 />
                 <MetadataRow
                   label="AGENCY"
                   value={stage.metadata.agency}
-                  borderColor="#e9d7da"
+                  valueMaxWidth={224}
                   isLast
                 />
               </div>
@@ -296,10 +358,12 @@ export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = f
               {/* Footer text */}
               <p
                 style={{
+                  width: 316,
+                  alignSelf: 'stretch',
                   fontFamily: 'GT Pressura Mono',
                   fontSize: '11px',
                   fontWeight: 400,
-                  letterSpacing: '0.22px',
+                  letterSpacing: '0.02em',
                   textTransform: 'uppercase',
                   color: 'rgba(0, 0, 0, 0.4)',
                   textAlign: 'center',
@@ -308,16 +372,26 @@ export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = f
                 {stage.footer}
               </p>
             </div>
-          </div>
+                )}
+              </div>
+            )
+          })()}
         </motion.div>
 
         {/* CTA Card - Request Case Study button */}
+        {/* Shrinks first (flexShrink: 1) while description card doesn't shrink (flexShrink: 0) */}
+        {/* Resizes between minWidth: 220px and maxWidth: 348px */}
+        {/* No individual animation - expands naturally with the parent stage */}
         <motion.div
           ref={ctaCardRef}
-          className="flex-shrink-0 cursor-pointer"
+          className="cursor-pointer"
           style={{
-            width: 196,
-            height: 196,
+            flexBasis: 348,
+            flexGrow: 0,
+            flexShrink: 1,
+            minWidth: 220,
+            maxWidth: 348,
+            height: 216,
             backgroundColor: 'transparent',
             borderRadius: 25,
             border: '1px solid #e5c4ca',
@@ -328,10 +402,6 @@ export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = f
             position: 'relative',
             overflow: 'hidden',
           }}
-          initial={shouldAnimateIn ? 'hidden' : 'visible'}
-          animate="visible"
-          variants={cardVariants}
-          transition={{ ...cardTransition, delay: shouldAnimateIn ? 0.2 : 0 }}
           onMouseMove={(e) => handleCardMouseMove(e, ctaCardRef, setCtaCardMouse)}
           onClick={onRequestCaseStudy}
           whileHover={{ scale: 1.02, y: -4, borderColor: '#f0d0d5' }}
@@ -423,7 +493,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = f
             </p>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
     </motion.div>
   )
 }
@@ -432,27 +502,31 @@ export function Stage({ stage, isActive, onRequestCaseStudy, shouldAnimateIn = f
 function MetadataRow({
   label,
   value,
-  borderColor,
-  isLast = false
+  isLast = false,
+  valueMaxWidth,
 }: {
   label: string
   value: string
-  borderColor: string
   isLast?: boolean
+  valueMaxWidth?: number
 }) {
   return (
     <div
-      className="flex items-center justify-between py-2 overflow-hidden"
       style={{
-        borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
+        width: 316,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        padding: '8px 0',
+        borderBottom: isLast ? 'none' : '1px solid #E9D7DA',
       }}
     >
       <span
         style={{
           fontFamily: 'GT Pressura Mono',
           fontSize: '11px',
-          fontWeight: 400,
-          letterSpacing: '0.22px',
+          fontWeight: 350,
+          letterSpacing: '0.02em',
           textTransform: 'uppercase',
           color: 'rgba(0, 0, 0, 0.48)',
           flexShrink: 0,
@@ -464,10 +538,11 @@ function MetadataRow({
         style={{
           fontFamily: 'GT Pressura Ext',
           fontSize: '14px',
-          fontWeight: 400,
-          color: '#1b202a',
+          fontWeight: 350,
+          color: '#1B202A',
           textAlign: 'right',
-          letterSpacing: '-0.28px',
+          letterSpacing: '-0.02em',
+          ...(valueMaxWidth ? { maxWidth: valueMaxWidth } : {}),
         }}
       >
         {value}

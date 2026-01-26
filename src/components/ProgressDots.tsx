@@ -6,9 +6,10 @@ interface ProgressDotsProps {
   stages: StageData[]
   activeIndex: number
   onDotClick: (index: number) => void
+  shouldAnimateIn?: boolean
 }
 
-export function ProgressDots({ stages, activeIndex, onDotClick }: ProgressDotsProps) {
+export function ProgressDots({ stages, activeIndex, onDotClick, shouldAnimateIn = false }: ProgressDotsProps) {
   // Dot sizing based on distance from active
   // Active dot is largest, progressively smaller as distance increases
   const getDotSize = (index: number) => {
@@ -25,8 +26,15 @@ export function ProgressDots({ stages, activeIndex, onDotClick }: ProgressDotsPr
   }
 
   return (
-    <div
+    <motion.div
       className="fixed left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-3"
+      initial={shouldAnimateIn ? { opacity: 0, x: -20 } : { opacity: 1, x: 0 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{
+        duration: 0.5,
+        delay: shouldAnimateIn ? 0.5 : 0,
+        ease: [0.25, 0.1, 0.25, 1],
+      }}
     >
       {stages.map((stage, index) => {
         const isActive = index === activeIndex
@@ -113,6 +121,6 @@ export function ProgressDots({ stages, activeIndex, onDotClick }: ProgressDotsPr
       >
         {String(activeIndex + 1).padStart(2, '0')}/{String(stages.length).padStart(2, '0')}
       </motion.div>
-    </div>
+    </motion.div>
   )
 }

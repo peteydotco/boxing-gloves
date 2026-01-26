@@ -5,6 +5,7 @@ import { LeftBioSvg } from './components/LeftBioSvg'
 import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { StackedBlades } from './components/StackedBlades'
+import { StageBackground } from './components/StageBackground'
 import { StagesContainer } from './components/StagesContainer'
 import { PersistentNav } from './components/PersistentNav'
 import { useState, useEffect, useRef, useCallback } from 'react'
@@ -68,8 +69,14 @@ function App() {
   // Current view mode
   const [viewMode, setViewMode] = useState<ViewMode>('hero')
 
+  // Active stage index (which stage to show when in stages view)
+  const [activeStageIndex, setActiveStageIndex] = useState(0)
+
   // Transition animation phase
   const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle')
+
+  // Zoomed nav mode - when true, stage scales down and TopCards become visible
+  const [isZoomedNav, setIsZoomedNav] = useState(false)
 
   // mousePosition state is only for 2D UI elements (spotlight, marquee)
   // Scene reads from mousePositionRef directly to avoid re-renders
@@ -103,23 +110,28 @@ function App() {
     })
   }, [])
 
-  // Navigate to stages view with transition animation
-  const navigateToStages = useCallback(() => {
+  // Navigate to a specific stage with transition animation
+  const navigateToStage = useCallback((stageIndex: number) => {
+    // Set the target stage before animation starts
+    setActiveStageIndex(stageIndex)
     // Start the expanding animation
     setTransitionPhase('expanding')
     // After animation completes, switch to stages view
+    // Spring with stiffness:180, damping:24, mass:0.8 settles in ~450ms
     setTimeout(() => {
       setViewMode('stages')
       setTransitionPhase('complete')
-      // Reset phase after stages view is mounted
+      // Reset phase after a brief moment (StageBackground handles seamless transition)
       setTimeout(() => {
         setTransitionPhase('idle')
-      }, 100)
-    }, 600) // Match the blade expansion animation duration
+      }, 50)
+    }, 450)
   }, [])
 
   // Navigate back to hero view with collapse animation
   const navigateToHero = useCallback(() => {
+    // Exit zoomed nav if active
+    setIsZoomedNav(false)
     // Start the collapsing animation (blade shrinks back)
     setTransitionPhase('collapsing')
     // Switch view immediately so blades are visible
@@ -127,7 +139,21 @@ function App() {
     // After animation completes, reset to idle
     setTimeout(() => {
       setTransitionPhase('idle')
-    }, 600) // Match the blade collapse animation duration
+    }, 450)
+  }, [])
+
+  // Handle logo click - toggles zoomed nav in stages view, cycles theme in hero view
+  const handleLogoClick = useCallback(() => {
+    if (viewMode === 'stages') {
+      setIsZoomedNav(prev => !prev)
+    } else {
+      cycleTheme()
+    }
+  }, [viewMode, cycleTheme])
+
+  // Exit zoomed nav mode (clicking the scaled stage)
+  const exitZoomedNav = useCallback(() => {
+    setIsZoomedNav(false)
   }, [])
 
   useEffect(() => {
@@ -166,7 +192,7 @@ function App() {
     }
   }, [])
 
-  // Wheel navigation to stages from hero
+  // Wheel navigation to stages from hero (scrolls to stage 0 by default)
   const wheelState = useRef({ lastTime: 0, lastNavTime: 0 })
   useEffect(() => {
     if (viewMode !== 'hero') return
@@ -187,12 +213,12 @@ function App() {
       if (Math.abs(delta) < 30) return
 
       state.lastNavTime = now
-      navigateToStages()
+      navigateToStage(0) // Default to first stage when scrolling
     }
 
     window.addEventListener('wheel', handleWheel, { passive: true })
     return () => window.removeEventListener('wheel', handleWheel)
-  }, [viewMode, navigateToStages])
+  }, [viewMode, navigateToStage])
 
   // Update NYC time every minute
   useEffect(() => {
@@ -275,13 +301,59 @@ function App() {
     ropeDamping: 0.92,
   }
 
+  // Determine if TopCards should be visible
+  // Show in hero view, hide in stages view UNLESS zoomed nav is active
+  const isInStagesView = viewMode === 'stages' || transitionPhase === 'expanding'
+  const showTopCards = !isInStagesView || isZoomedNav
+
   return (
     <div
       ref={containerRef}
       className="relative w-full h-full flex flex-col overflow-hidden"
       style={{ backgroundColor: theme.bgColor }}
     >
-      {/* Hero View */}
+      {/* Desktop: 3D Scene - always rendered to prevent gloves from dropping on every transition */}
+      {isDesktop && (
+        <div
+          className="absolute inset-0"
+          style={{
+            zIndex: 10,
+            pointerEvents: viewMode === 'hero' ? 'auto' : 'none',
+            opacity: viewMode === 'hero' ? 1 : 0,
+            transition: 'opacity 0.3s ease',
+          }}
+        >
+          <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+        </div>
+      )}
+
+      {/* Desktop: TopCards - slides up/down during transition, also shows in zoomed nav mode */}
+      {/* z-index: 20 normally, but z-60 when zoomed to appear above scaled stage */}
+      {isDesktop && (
+        <motion.div
+          className="absolute top-0 left-0 right-0"
+          style={{
+            pointerEvents: showTopCards ? 'auto' : 'none',
+            overflow: 'visible',
+            zIndex: isZoomedNav ? 60 : 20,
+          }}
+          initial={{ y: 0, opacity: 1 }}
+          animate={{
+            y: showTopCards ? 0 : -150,
+            opacity: showTopCards ? 1 : 0,
+          }}
+          transition={{
+            type: 'spring',
+            stiffness: 320,
+            damping: 40,
+            mass: 1,
+          }}
+        >
+          <TopCards themeMode={themeMode} />
+        </motion.div>
+      )}
+
+      {/* Hero View - background elements only on desktop, full view on mobile/tablet */}
       <AnimatePresence>
         {viewMode === 'hero' && (
           <motion.div
@@ -306,21 +378,25 @@ function App() {
               />
             )}
 
-            {/* Cards - single container */}
-            <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
-              <TopCards themeMode={themeMode} />
-            </div>
+            {/* Mobile/Tablet only: Cards inside hero (desktop has them outside for animation) */}
+            {!isDesktop && (
+              <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
+                <TopCards themeMode={themeMode} />
+              </div>
+            )}
 
-            {/* 3D Scene - positioned below cards */}
-            <div
-              className="absolute inset-0"
-              style={{
-                zIndex: 10,
-                pointerEvents: 'auto',
-              }}
-            >
-              <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
-            </div>
+            {/* Mobile/Tablet only: 3D Scene (desktop has it outside for persistence) */}
+            {!isDesktop && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  zIndex: 10,
+                  pointerEvents: 'auto',
+                }}
+              >
+                <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+              </div>
+            )}
 
             {/* Left biographical text - show on tablet and desktop (md+) */}
             {/* Desktop (>=1024px): flanks gloves at vertical center */}
@@ -399,24 +475,53 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Desktop: Stacked Blades - rendered outside AnimatePresence so it persists during transition */}
-      {/* Keep visible during 'expanding' AND briefly during 'complete' to avoid flash */}
+      {/* Desktop: Unified background - single element that morphs between blade and fullscreen */}
+      {/* Always rendered on desktop to provide seamless transition */}
+      {isDesktop && (
+        <StageBackground
+          viewMode={viewMode}
+          transitionPhase={transitionPhase}
+          activeStageIndex={activeStageIndex}
+          onNavigateToStage={navigateToStage}
+        />
+      )}
+
+      {/* Desktop: Stacked Blades (front 3 blades, back blade is StageBackground) */}
+      {/* Each blade represents a stage and clicking it navigates to that stage */}
       {isDesktop && (viewMode === 'hero' || transitionPhase !== 'idle') && (
         <StackedBlades
-          onNavigateToStages={navigateToStages}
+          onNavigateToStage={navigateToStage}
           themeMode={themeMode}
           transitionPhase={transitionPhase}
         />
       )}
 
-      {/* Stages View */}
+      {/* Zoomed nav background - shows hero bg behind scaled stage */}
+      {isZoomedNav && (
+        <motion.div
+          className="fixed inset-0"
+          style={{ backgroundColor: theme.bgColor, zIndex: 45 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        />
+      )}
+
+      {/* Stages View - content only, background is provided by StageBackground */}
+      {/* Visible during expanding transition so cards slide up with the blade */}
       <StagesContainer
-        isVisible={viewMode === 'stages'}
+        isVisible={viewMode === 'stages' || transitionPhase === 'expanding'}
         onNavigateToHero={navigateToHero}
         onThemeToggle={cycleTheme}
         logoFill={theme.logoFill}
         themeMode={themeMode}
-        isInitialEntry={transitionPhase === 'complete' || transitionPhase === 'expanding'}
+        isInitialEntry={transitionPhase === 'complete'}
+        initialStageIndex={activeStageIndex}
+        onStageChange={setActiveStageIndex}
+        transitionPhase={transitionPhase}
+        isZoomedNav={isZoomedNav}
+        onExitZoomedNav={exitZoomedNav}
       />
 
       {/* Desktop: Persistent Nav - single instance that animates between hero and stages */}
@@ -425,8 +530,9 @@ function App() {
           viewMode={viewMode}
           transitionPhase={transitionPhase}
           onNavigateToHero={navigateToHero}
-          onNavigateToStages={navigateToStages}
-          onThemeToggle={cycleTheme}
+          onNavigateToStages={() => navigateToStage(0)}
+          onLogoClick={handleLogoClick}
+          isZoomedNav={isZoomedNav}
         />
       )}
     </div>

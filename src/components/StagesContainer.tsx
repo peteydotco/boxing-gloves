@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Stage } from './Stage'
 import { ProgressDots } from './ProgressDots'
-import { stages } from '../data/stages'
+import { stages, getBladeColor } from '../data/stages'
+
+type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
 
 interface StagesContainerProps {
   isVisible: boolean
@@ -11,14 +13,24 @@ interface StagesContainerProps {
   logoFill?: string
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
   isInitialEntry?: boolean
+  initialStageIndex?: number
+  onStageChange?: (index: number) => void
+  transitionPhase?: TransitionPhase
+  isZoomedNav?: boolean
+  onExitZoomedNav?: () => void
 }
 
 export function StagesContainer({
   isVisible,
   onNavigateToHero,
   isInitialEntry = false,
+  initialStageIndex = 0,
+  onStageChange,
+  transitionPhase = 'idle',
+  isZoomedNav = false,
+  onExitZoomedNav,
 }: StagesContainerProps) {
-  const [activeIndex, setActiveIndex] = useState(0)
+  const [activeIndex, setActiveIndex] = useState(initialStageIndex)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Track if we've completed the initial entry animation
@@ -31,6 +43,18 @@ export function StagesContainer({
     lastNavTime: 0,
     enteredAt: 0,
   })
+
+  // Sync with parent's initialStageIndex when becoming visible
+  useEffect(() => {
+    if (isVisible) {
+      setActiveIndex(initialStageIndex)
+    }
+  }, [isVisible, initialStageIndex])
+
+  // Notify parent when active stage changes
+  useEffect(() => {
+    onStageChange?.(activeIndex)
+  }, [activeIndex, onStageChange])
 
   // Reset wheel state and set entry time when stages become visible
   useEffect(() => {
@@ -161,34 +185,100 @@ export function StagesContainer({
     console.log('Case study requested for:', stages[activeIndex].title)
   }, [activeIndex])
 
+  // Calculate zoom transform for secondary nav mode
+  // Stage width must match TopCards container width exactly
+  const getZoomTransform = useCallback(() => {
+    if (typeof window === 'undefined') return { scale: 1, y: 0 }
+
+    const horizontalPadding = 48 // 24px * 2 (TopCards container padding)
+    const topCardsHeight = 76 // Collapsed card height
+    const topPadding = 24 // TopCards top padding
+    const gapBelowTopCards = 24 // Equal spacing between TopCards and stage
+
+    // Scale must match TopCards container width exactly
+    // TopCards width = viewportWidth - 48px
+    // Scaled stage width = viewportWidth * scale
+    // We need: viewportWidth * scale = viewportWidth - 48
+    // So: scale = (viewportWidth - 48) / viewportWidth
+    const scale = (window.innerWidth - horizontalPadding) / window.innerWidth
+
+    // Position the scaled stage so its top edge is at zoomedTop (124px from viewport top)
+    // The stage scales from center, so we need to calculate the Y offset
+    //
+    // Original stage: top=0, center=viewportHeight/2, bottom=viewportHeight
+    // Scaled stage: height = viewportHeight * scale
+    // Scaled stage center relative to original center = 0 (scales from center)
+    // Scaled stage top = center - (scaledHeight / 2) = viewportHeight/2 - (viewportHeight * scale / 2)
+    //                  = viewportHeight/2 * (1 - scale)
+    //
+    // We want scaled stage top to be at zoomedTop
+    // So we need to move the stage down by: zoomedTop - currentScaledTop
+    // yOffset = zoomedTop - viewportHeight/2 * (1 - scale)
+    const zoomedTop = topPadding + topCardsHeight + gapBelowTopCards // 124px from top
+    const scaledTopBeforeOffset = (window.innerHeight / 2) * (1 - scale)
+    const yOffset = zoomedTop - scaledTopBeforeOffset
+
+    return { scale, y: yOffset }
+  }, [])
+
+  const zoomTransform = getZoomTransform()
+
+  // Spring transition for zoom animation
+  const zoomSpringTransition = {
+    type: 'spring' as const,
+    stiffness: 320,
+    damping: 40,
+    mass: 1,
+  }
+
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
           ref={containerRef}
-          className="fixed inset-0 z-50 bg-black"
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50"
+          style={{
+            transformOrigin: 'center center',
+            cursor: isZoomedNav ? 'pointer' : 'default',
+            overflow: 'hidden',
+          }}
+          initial={{ opacity: 1, scale: 1, y: 0, borderRadius: 0 }}
+          animate={{
+            opacity: 1,
+            scale: isZoomedNav ? zoomTransform.scale : 1,
+            y: isZoomedNav ? zoomTransform.y : 0,
+            borderRadius: isZoomedNav ? 24 : 0,
+          }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={zoomSpringTransition}
+          onClick={isZoomedNav ? onExitZoomedNav : undefined}
         >
           {/* Progress dots */}
           <ProgressDots
             stages={stages}
             activeIndex={activeIndex}
             onDotClick={handleDotClick}
+            shouldAnimateIn={isInitialEntry && !hasAnimatedIn}
           />
 
           {/* Stages */}
-          {stages.map((stage, index) => (
-            <Stage
-              key={stage.id}
-              stage={stage}
-              isActive={index === activeIndex}
-              onRequestCaseStudy={handleRequestCaseStudy}
-              shouldAnimateIn={index === 0 && isInitialEntry && !hasAnimatedIn}
-            />
-          ))}
+          {/* Cards are part of the stage and expand naturally with the parent blade */}
+          {/* Stage index maps to blade index in reverse: Stage 0 = Blade 3 (back), Stage 3 = Blade 0 (front) */}
+          {stages.map((stage, stageIndex) => {
+            // Convert stage index to blade index (reverse mapping)
+            // Stage 0 → Blade 3 (masterclass/back), Stage 1 → Blade 2, Stage 2 → Blade 1, Stage 3 → Blade 0 (front)
+            const bladeIndex = (stages.length - 1) - stageIndex
+            return (
+              <Stage
+                key={stage.id}
+                stage={stage}
+                isActive={stageIndex === activeIndex}
+                onRequestCaseStudy={handleRequestCaseStudy}
+                isExpanding={transitionPhase === 'expanding'}
+                backgroundColor={getBladeColor(bladeIndex)}
+              />
+            )
+          })}
         </motion.div>
       )}
     </AnimatePresence>

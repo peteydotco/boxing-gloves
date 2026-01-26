@@ -10,7 +10,7 @@ export const stages: StageData[] = [
     description: 'Designed in 2017, it addressed the startup\'s desire to ship an MVP that was both proof of concepts and a celebration of their concept – both a product and product marketing.',
     metadata: {
       platforms: 'iOS, iPadOS, Android OS',
-      accolades: 'App of the Day, Webby Shortlist, 2 more...',
+      accolades: 'App of the Day, Webby Shortlist, Featured @WWDC \'18',
       agency: 'fantasy.co',
     },
     footer: 'DESIGNED & BUILT IN SAN FRANCISCO',
@@ -66,10 +66,13 @@ export const stages: StageData[] = [
 ]
 
 // Configuration for stacked blade preview at bottom of hero
+// Blades are full-height cards positioned to peek from the bottom
 export const bladeStackConfig = {
-  // Visible height of front blade when stacked (in px)
-  bladeHeight: 88,
-  // How much each blade peeks above the one in front (16px visible per blade)
+  // Full card height (viewport height)
+  cardHeight: '100vh',
+  // How much of the front blade peeks above the bottom edge
+  frontBladePeek: 88,
+  // How much each subsequent blade peeks above the one in front (16px visible per blade)
   stackOffset: 16,
   // Border radius for blades
   borderRadius: 24,
@@ -79,14 +82,79 @@ export const bladeStackConfig = {
   // Based on design: front=1558px, 2nd=1476px, 3rd=1386px, back=1306px in 1605px viewport
   // This means ~40-42px additional padding per blade on each side
   widthStagger: 41,
-  // Bottom padding from viewport edge
+  // Bottom padding from viewport edge (blades touch bottom)
   bottomPadding: 0,
-  // Colors for the 4 visible blades (front to back)
-  // Index 0 = front nav blade, Index 3 = MasterClass (furthest back)
-  bladeColors: [
-    '#1a1a2e',  // Front blade - dark charcoal (nav blade)
-    '#2d2d41',  // Second blade - slightly lighter
-    '#3c3746',  // Third blade
-    '#000000',  // Back blade - MasterClass black (matches stage background)
-  ],
 }
+
+// =============================================================================
+// BLADE CONFIGURATION - Easily re-sortable
+// =============================================================================
+// Each blade definition contains its collapsed (preview) and expanded (stage) colors.
+// To reorder blades, simply rearrange the items in the bladeOrder array.
+
+interface BladeConfig {
+  id: string
+  name: string
+  bladeColor: string      // Color when collapsed (stacked preview)
+  stageColor: string      // Color when expanded (fullscreen stage)
+}
+
+// Define all available blades with their colors
+const bladeDefinitions: Record<string, BladeConfig> = {
+  shiphero: {
+    id: 'shiphero',
+    name: 'ShipHero',
+    bladeColor: '#1B202A',
+    stageColor: '#1B202A',
+  },
+  apple: {
+    id: 'apple',
+    name: 'Apple',
+    bladeColor: '#E6E6E6',
+    stageColor: '#f5f5f7',
+  },
+  squarespace: {
+    id: 'squarespace',
+    name: 'Squarespace',
+    bladeColor: '#0165FF',
+    stageColor: '#000000',
+  },
+  masterclass: {
+    id: 'masterclass',
+    name: 'MasterClass',
+    bladeColor: '#000000',
+    stageColor: '#000000',
+  },
+}
+
+// =============================================================================
+// BLADE ORDER - Change this array to reorder blades
+// =============================================================================
+// Index 0 = front blade (topmost, what users see first)
+// Index 3 = back blade (furthest back)
+const bladeOrder: string[] = [
+  'shiphero',     // Front blade (index 0)
+  'apple',        // Second blade (index 1)
+  'squarespace',  // Third blade (index 2)
+  'masterclass',  // Back blade (index 3)
+]
+
+// Get the blade config for a given blade position (0 = front, 3 = back)
+const getBladeConfig = (bladeIndex: number): BladeConfig => {
+  const bladeId = bladeOrder[bladeIndex]
+  return bladeDefinitions[bladeId] ?? bladeDefinitions.masterclass
+}
+
+// Get blade color for a blade position (collapsed/stacked preview)
+export const getBladeColor = (bladeIndex: number): string => {
+  return getBladeConfig(bladeIndex).bladeColor
+}
+
+// Get stage background color for a blade position (expanded fullscreen view)
+export const getStageBackgroundColor = (bladeIndex: number): string => {
+  return getBladeConfig(bladeIndex).stageColor
+}
+
+// Export blade order for potential use elsewhere
+export const getBladeOrder = (): string[] => [...bladeOrder]
+export const getBladeCount = (): number => bladeOrder.length

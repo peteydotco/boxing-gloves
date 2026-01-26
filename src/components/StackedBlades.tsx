@@ -1,17 +1,17 @@
 import { useState, useRef, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { bladeStackConfig } from '../data/stages'
+import { bladeStackConfig, getBladeColor } from '../data/stages'
 
 type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
 
 interface StackedBladesProps {
-  onNavigateToStages: () => void
+  onNavigateToStage: (stageIndex: number) => void
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
   transitionPhase?: TransitionPhase
 }
 
 export function StackedBlades({
-  onNavigateToStages,
+  onNavigateToStage,
   themeMode = 'light',
   transitionPhase = 'idle',
 }: StackedBladesProps) {
@@ -29,17 +29,31 @@ export function StackedBlades({
     setMousePos({ x, y })
   }, [])
 
-  const { borderRadius, horizontalPadding, bottomPadding, bladeHeight, stackOffset, bladeColors, widthStagger } = bladeStackConfig
+  const { borderRadius, horizontalPadding, frontBladePeek, stackOffset, widthStagger } = bladeStackConfig
 
-  // Calculate total stack height
+  // Calculate total visible stack height (what peeks above bottom edge)
   const numBlades = 4
-  const totalStackHeight = bladeHeight + (numBlades - 1) * stackOffset
+  const totalVisibleHeight = frontBladePeek + (numBlades - 1) * stackOffset
 
   // Calculate horizontal padding for each blade (increases as blades go further back)
   const getBladeHorizontalPadding = (bladeIndex: number) => {
     // bladeIndex 0 = front, 3 = back (MasterClass)
     // Each blade further back has more horizontal padding (narrower)
     return horizontalPadding + (bladeIndex * widthStagger)
+  }
+
+  // Calculate the bottom offset for each blade (how far above the viewport bottom it sits)
+  // Front blade (0) peeks 88px, each subsequent blade peeks stackOffset more
+  const getBladeBottomOffset = (bladeIndex: number) => {
+    // For a full-height card, bottom: X means the bottom edge is X px above viewport bottom
+    // We want the TOP of the visible portion to be at:
+    // - Front blade (0): 88px from bottom
+    // - Blade 1: 88 + 16 = 104px from bottom
+    // - Blade 2: 88 + 32 = 120px from bottom
+    // - Blade 3: 88 + 48 = 136px from bottom (handled by StageBackground)
+    // Since card is 100vh tall, bottom offset = -(100vh - peekAmount)
+    // Using calc: bottom = -(100vh - (frontBladePeek + bladeIndex * stackOffset))
+    return frontBladePeek + (bladeIndex * stackOffset)
   }
 
   // Spotlight gradient for front blade border
@@ -51,55 +65,39 @@ export function StackedBlades({
   const isCollapsing = transitionPhase === 'collapsing'
   const isAnimating = isExpanding || isCollapsing
 
-  // Animation variants for the back blade (MasterClass) expanding to fullscreen
-  // Back blade index is 3 (furthest back, most narrow in idle state)
-  const backBladePadding = getBladeHorizontalPadding(3)
-  const backBladeVariants = {
-    idle: {
-      bottom: (numBlades - 1) * stackOffset,
-      left: backBladePadding,
-      right: backBladePadding,
-      height: bladeHeight,
-      borderTopLeftRadius: borderRadius,
-      borderTopRightRadius: borderRadius,
-      borderBottomLeftRadius: 0,
-      borderBottomRightRadius: 0,
-    },
-    expanded: {
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: '100vh',
-      borderTopLeftRadius: 0,
-      borderTopRightRadius: 0,
-      borderBottomLeftRadius: 0,
-      borderBottomRightRadius: 0,
-    },
-  }
+  // Back blade (index 3) is now handled by StageBackdrop component
+  // This component only handles the front 3 blades (indices 0, 1, 2)
+
+  // Slide distance - full viewport height plus buffer to ensure cards clear the screen
+  const slideDistance = window.innerHeight + 120
 
   // Animation for front blade (index 0) sliding down
+  // Cards are full-height and positioned with negative translateY to show only the peek portion
   const frontBladeVariants = {
     idle: {
-      bottom: 0,
+      y: 0,
       opacity: 1,
+      scale: 1,
     },
     expanded: {
-      bottom: -window.innerHeight, // Slide down off screen (negative because bottom positioning)
+      y: slideDistance,
       opacity: 0,
+      scale: 0.95, // Slight scale down as it exits for depth
     },
   }
 
-  // Create variants for each middle blade with their specific bottom offset
-  const getMiddleBladeVariants = (bladeIndex: number) => {
-    const bladeOffsetFromBottom = bladeIndex * stackOffset
+  // Create variants for each middle blade with their specific positioning
+  const getMiddleBladeVariants = (_bladeIndex: number) => {
     return {
       idle: {
-        bottom: bladeOffsetFromBottom,
+        y: 0,
         opacity: 1,
+        scale: 1,
       },
       expanded: {
-        bottom: bladeOffsetFromBottom - window.innerHeight, // Slide down off screen
+        y: slideDistance,
         opacity: 0,
+        scale: 0.95,
       },
     }
   }
@@ -108,99 +106,57 @@ export function StackedBlades({
   // - 'expanding': animate from idle to expanded
   // - 'collapsing': animate from expanded to idle (need to start at expanded)
   // - 'idle' or 'complete': stay at idle
-  const getBackBladeAnimate = () => {
-    if (isExpanding) return 'expanded'
-    return 'idle'
-  }
-
   const getFrontBladeAnimate = () => {
     if (isExpanding) return 'expanded'
     return 'idle'
   }
 
-  // Spring transitions - iOS-like, elegant with cascading effect
-  // When expanding: front blades slide down slower (lower stiffness) and with delay
-  // When collapsing: front blades return first (no delay), back blade last
-
-  // Front blade (index 0) - slowest to slide down, first to return
-  const getFrontBladeTransition = () => ({
+  // Unified spring transition - Figma's elevated timing
+  // All blades use the same physics for a cohesive, fluid motion
+  const unifiedSpring = {
     type: 'spring' as const,
-    stiffness: isExpanding ? 280 : 400,  // Slower when expanding
-    damping: isExpanding ? 28 : 40,
+    stiffness: 320,
+    damping: 40,
     mass: 1,
-    delay: isExpanding ? 0.12 : 0,  // Delay when expanding for cascade
-  })
-
-  // Middle blade 1 (index 1)
-  const getMiddleBlade1Transition = () => ({
-    type: 'spring' as const,
-    stiffness: isExpanding ? 300 : 380,
-    damping: isExpanding ? 30 : 38,
-    mass: 1,
-    delay: isExpanding ? 0.08 : 0.02,
-  })
-
-  // Middle blade 2 (index 2)
-  const getMiddleBlade2Transition = () => ({
-    type: 'spring' as const,
-    stiffness: isExpanding ? 320 : 360,
-    damping: isExpanding ? 32 : 36,
-    mass: 1,
-    delay: isExpanding ? 0.04 : 0.04,
-  })
-
-  // Back blade (MasterClass, index 3) - fastest to expand, last to return
-  const getBackBladeTransition = () => ({
-    type: 'spring' as const,
-    stiffness: 340,
-    damping: 34,
-    mass: 1,
-    delay: isExpanding ? 0 : 0.06,  // No delay when expanding, delayed when collapsing
-  })
-
-  // Get transition for middle blades by index
-  const getMiddleBladeTransition = (bladeIndex: number) => {
-    return bladeIndex === 1 ? getMiddleBlade1Transition() : getMiddleBlade2Transition()
   }
+
+  // Minimal stagger for depth perception without feeling disjointed
+  const getBladeTransition = (bladeIndex: number) => ({
+    ...unifiedSpring,
+    // Tiny stagger (20ms) just for visual depth, not enough to feel laggy
+    delay: isExpanding ? bladeIndex * 0.02 : (2 - bladeIndex) * 0.02,
+  })
 
   return (
     <div
       ref={containerRef}
-      className="absolute left-0 right-0 z-40"
+      className="fixed inset-0 z-40 pointer-events-none"
       style={{
-        bottom: bottomPadding,
-        height: isAnimating ? '100vh' : `${totalStackHeight}px`,
+        overflow: 'hidden',
       }}
     >
-      {/* Back blade - MasterClass (expands to fullscreen) */}
-      <motion.div
-        className="absolute cursor-pointer"
-        style={{
-          backgroundColor: bladeColors[3], // MasterClass black (matches stage background)
-          zIndex: 1,
-        }}
-        initial={isCollapsing ? 'expanded' : 'idle'}
-        animate={getBackBladeAnimate()}
-        variants={backBladeVariants}
-        transition={getBackBladeTransition()}
-        onClick={!isAnimating ? onNavigateToStages : undefined}
-      />
+      {/* Back blade (index 3) is now handled by StageBackground component */}
 
       {/* Middle blades (slide down on transition) */}
-      {/* Render in order: index 1 (second from front), then index 2 (third from front) */}
+      {/* Each blade represents a stage: blade index = stage index */}
+      {/* Render in order: index 1 (Spotify), then index 2 (Nike) */}
       {[1, 2].map((bladeIndex) => {
         const bladePadding = getBladeHorizontalPadding(bladeIndex)
         const middleBladeVariants = getMiddleBladeVariants(bladeIndex)
+        const peekFromBottom = getBladeBottomOffset(bladeIndex)
 
         return (
           <motion.div
             key={`blade-${bladeIndex}`}
-            className="absolute cursor-pointer"
+            className="absolute cursor-pointer pointer-events-auto"
             style={{
               left: bladePadding,
               right: bladePadding,
-              height: bladeHeight,
-              backgroundColor: bladeColors[bladeIndex],
+              // Full viewport height card
+              height: '100vh',
+              // Position so only peekFromBottom pixels are visible
+              bottom: `calc(-100vh + ${peekFromBottom}px)`,
+              backgroundColor: getBladeColor(bladeIndex),
               borderTopLeftRadius: borderRadius,
               borderTopRightRadius: borderRadius,
               borderBottomLeftRadius: 0,
@@ -212,22 +168,25 @@ export function StackedBlades({
             initial={isCollapsing ? 'expanded' : 'idle'}
             animate={getFrontBladeAnimate()}
             variants={middleBladeVariants}
-            transition={getMiddleBladeTransition(bladeIndex)}
-            whileHover={!isAnimating ? { y: -4, scale: 1.005 } : undefined}
-            onClick={!isAnimating ? onNavigateToStages : undefined}
+            transition={getBladeTransition(bladeIndex)}
+            whileHover={!isAnimating ? { y: -6, scale: 1.001 } : undefined}
+            onClick={!isAnimating ? () => onNavigateToStage(bladeIndex) : undefined}
           />
         )
       })}
 
-      {/* Front blade with navigation (slides down on transition) */}
+      {/* Front blade - Stage 0 (MasterClass) with nav overlay */}
       <motion.div
         ref={frontBladeRef}
-        className="absolute"
+        className="absolute cursor-pointer pointer-events-auto"
         style={{
           left: horizontalPadding,
           right: horizontalPadding,
-          height: bladeHeight,
-          backgroundColor: bladeColors[0],
+          // Full viewport height card
+          height: '100vh',
+          // Position so only frontBladePeek pixels are visible
+          bottom: `calc(-100vh + ${frontBladePeek}px)`,
+          backgroundColor: getBladeColor(0),
           borderTopLeftRadius: borderRadius,
           borderTopRightRadius: borderRadius,
           borderBottomLeftRadius: 0,
@@ -238,9 +197,10 @@ export function StackedBlades({
         initial={isCollapsing ? 'expanded' : 'idle'}
         animate={getFrontBladeAnimate()}
         variants={frontBladeVariants}
-        transition={getFrontBladeTransition()}
+        transition={getBladeTransition(0)}
         onMouseMove={handleMouseMove}
-        whileHover={!isAnimating ? { y: -2 } : undefined}
+        whileHover={!isAnimating ? { y: -8 } : undefined}
+        onClick={!isAnimating ? () => onNavigateToStage(0) : undefined}
       >
         {/* Spotlight border overlay */}
         <div
@@ -263,7 +223,7 @@ export function StackedBlades({
         <div
           className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
           style={{
-            bottom: totalStackHeight + 16,
+            bottom: totalVisibleHeight + 16,
             zIndex: numBlades + 1,
           }}
         >
