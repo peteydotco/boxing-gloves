@@ -133,10 +133,10 @@ const bladeDefinitions: Record<string, BladeConfig> = {
 // Index 0 = front blade (topmost, what users see first)
 // Index 3 = back blade (furthest back)
 const bladeOrder: string[] = [
-  'shiphero',     // Front blade (index 0)
-  'apple',        // Second blade (index 1)
-  'squarespace',  // Third blade (index 2)
-  'masterclass',  // Back blade (index 3)
+  'masterclass',  // Front blade (index 0) - expands to Section 1
+  'squarespace',  // Second blade (index 1)
+  'apple',        // Third blade (index 2)
+  'shiphero',     // Back blade (index 3)
 ]
 
 // Get the blade config for a given blade position (0 = front, 3 = back)

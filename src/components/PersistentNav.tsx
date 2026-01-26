@@ -1,5 +1,5 @@
+import { useRef, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { PeteLogo } from './PeteLogo'
 import { bladeStackConfig } from '../data/stages'
 
 type ViewMode = 'hero' | 'stages'
@@ -14,6 +14,14 @@ interface PersistentNavProps {
   isZoomedNav?: boolean
 }
 
+// Nav item dimensions for the sliding border
+interface NavItemRect {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
 export function PersistentNav({
   viewMode,
   transitionPhase,
@@ -23,6 +31,66 @@ export function PersistentNav({
   isZoomedNav = false,
 }: PersistentNavProps) {
   const { frontBladePeek } = bladeStackConfig
+
+  // Refs to measure nav item dimensions (for width/height only)
+  const selectedWorksRef = useRef<HTMLDivElement>(null)
+  const logoRef = useRef<HTMLDivElement>(null)
+  const aboutRef = useRef<HTMLDivElement>(null)
+
+  // Track hover states manually to prevent stuck hover during transitions
+  const [hoveredItem, setHoveredItem] = useState<'selectedWorks' | 'logo' | 'about' | null>(null)
+
+  // Track nav item dimensions (not positions - positions are calculated)
+  const [itemDimensions, setItemDimensions] = useState<{
+    selectedWorks: { width: number; height: number }
+    logo: { width: number; height: number }
+  }>({
+    selectedWorks: { width: 0, height: 0 },
+    logo: { width: 0, height: 0 },
+  })
+
+  // Determine which nav item is active
+  // IMPORTANT: Border should move simultaneously with nav items during transitions
+  // - Expanding: move to selectedWorks immediately when expansion starts
+  // - Collapsing: move to logo immediately when collapse starts (don't wait for viewMode change)
+  // - Zoomed nav: move to logo (PETEY.CO becomes selected in zoomed view)
+  const isInStages = viewMode === 'stages'
+  const isExpanding = transitionPhase === 'expanding'
+  const isCollapsing = transitionPhase === 'collapsing'
+
+  // When zoomed nav or collapsing, border moves to logo (PETEY.CO)
+  // When expanding or in stages (not zoomed), border is on selectedWorks
+  const activeNavItem = (isZoomedNav || isCollapsing) ? 'logo' : ((isInStages || isExpanding) ? 'selectedWorks' : 'logo')
+
+  // Clear hover state when transitions happen to prevent stuck hover UI
+  useEffect(() => {
+    setHoveredItem(null)
+  }, [isZoomedNav, transitionPhase, viewMode])
+
+  // Measure nav item dimensions on mount and resize
+  useEffect(() => {
+    const measureDimensions = () => {
+      if (selectedWorksRef.current && logoRef.current) {
+        setItemDimensions({
+          selectedWorks: {
+            width: selectedWorksRef.current.offsetWidth,
+            height: selectedWorksRef.current.offsetHeight,
+          },
+          logo: {
+            width: logoRef.current.offsetWidth,
+            height: logoRef.current.offsetHeight,
+          },
+        })
+      }
+    }
+
+    // Initial measurement
+    measureDimensions()
+
+    // Re-measure on resize
+    window.addEventListener('resize', measureDimensions)
+    return () => window.removeEventListener('resize', measureDimensions)
+  }, [])
 
   // Text styling for nav links - uses GT Pressura (same as card titles) at 24px
   const linkTextStyle: React.CSSProperties = {
@@ -36,28 +104,23 @@ export function PersistentNav({
     transition: 'color 0.2s ease',
   }
 
-  // Underline styling for stages view
-  const underlineStyle: React.CSSProperties = {
-    textDecoration: 'underline',
-    textUnderlineOffset: '3px',
-    textDecorationColor: 'rgba(255, 255, 255, 0.3)',
-  }
-
-  const isExpanding = transitionPhase === 'expanding'
-
-  // Unified spring transition - Figma's elevated timing
-  const getNavTransition = () => ({
-    type: 'spring' as const,
-    stiffness: 320,
-    damping: 40,
-    mass: 1,
-  })
-
-  // Determine current state
-  const isInStages = viewMode === 'stages'
-
-  // Apply underline when in stages or transitioning to stages
-  const shouldShowUnderline = isInStages || transitionPhase !== 'idle'
+  // Nav transition matches blade 0 timing for harmonious movement
+  // - Expanding: snappy spring with 40ms delay
+  // - Collapsing: smooth ease-out for precise settling (no bounce)
+  const getNavTransition = () => isExpanding
+    ? {
+        type: 'spring' as const,
+        stiffness: 300,
+        damping: 35,
+        mass: 1,
+        delay: 0.04,
+      }
+    : {
+        type: 'tween' as const,
+        duration: 0.5,
+        ease: [0.32, 0.72, 0, 1] as const, // Custom ease-out curve
+        delay: 0,
+      }
 
   // Handle link clicks based on current view
   const handleLeftClick = () => {
@@ -99,90 +162,127 @@ export function PersistentNav({
     return 'idle'
   }
 
-  // Calculate zoom transform to match StagesContainer scaling (center origin)
-  const getZoomTransform = () => {
-    if (typeof window === 'undefined') return { scale: 0.97, yOffset: 0 }
+  // Calculate zoomed stage dimensions (matches StagesContainer)
+  const getZoomDimensions = () => {
+    if (typeof window === 'undefined') {
+      return { width: window?.innerWidth || 1000, height: window?.innerHeight || 800, top: 124, left: 24 }
+    }
 
     const horizontalPadding = 48 // 24px * 2 (TopCards container padding)
     const topCardsHeight = 76 // Collapsed card height
     const topPadding = 24 // TopCards top padding
     const gapBelowTopCards = 24 // Equal spacing between TopCards and stage
 
-    // Scale must match TopCards container width exactly
-    const scale = (window.innerWidth - horizontalPadding) / window.innerWidth
-
-    // Position the scaled stage so its top edge is at zoomedTop (124px from viewport top)
-    // The stage scales from center, so we need to calculate the Y offset
-    // Scaled stage top before offset = viewportHeight/2 * (1 - scale)
-    // We want it at zoomedTop, so: yOffset = zoomedTop - scaledTopBeforeOffset
-    const zoomedTop = topPadding + topCardsHeight + gapBelowTopCards
-    const scaledTopBeforeOffset = (window.innerHeight / 2) * (1 - scale)
-    const yOffset = zoomedTop - scaledTopBeforeOffset
-
-    return { scale, yOffset }
-  }
-
-  const zoomTransform = getZoomTransform()
-
-  // When zoomed, nav items need to stay proportionally positioned within the scaled stage
-  // The stage scales from center, which means:
-  // - Center X stays at viewport center
-  // - Center Y moves by yOffset
-  // - All points move toward the center and scale proportionally
-  //
-  // For a point at (x, y) in the original stage:
-  // - New X = centerX + (x - centerX) * scale
-  // - New Y = centerY + yOffset + (y - centerY) * scale
-  //
-  // The nav items are at top: 24px (expanded position)
-  // Left link is at left: 13.7% - 140px (expanded x offset)
-  // Right link is at right: 13.7% + 140px (expanded x offset)
-  // Logo is at left: 50% (centered)
-
-  const getZoomedPosition = (originalTop: number, originalLeftPercent: number, xOffset: number = 0) => {
-    if (typeof window === 'undefined') return { top: originalTop, left: originalLeftPercent, xOffset }
-
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
-    const centerX = viewportWidth / 2
-    const centerY = viewportHeight / 2
-    const { scale, yOffset } = zoomTransform
-
-    // Convert percentage left to pixels, then apply x offset
-    const originalLeftPx = (originalLeftPercent / 100) * viewportWidth + xOffset
-
-    // Calculate new position after scaling from center
-    // X: moves toward horizontal center
-    const newLeftPx = centerX + (originalLeftPx - centerX) * scale
-
-    // Y: scales from vertical center, then offset
-    const newTop = centerY + yOffset + (originalTop - centerY) * scale
+    const zoomedTop = topPadding + topCardsHeight + gapBelowTopCards // 124px from top
 
     return {
-      left: (newLeftPx / viewportWidth) * 100,
-      top: newTop,
-      // X offset is now baked into the left percentage
-      xOffset: 0,
+      top: zoomedTop,
+      left: horizontalPadding / 2, // 24px from left
     }
   }
 
+  const zoomDimensions = getZoomDimensions()
+
+  // When zoomed, nav items position relative to the zoomed stage container
+  // The stage container is positioned at (left: 24, top: 124)
+  // Nav items should be at their normal positions within that container
+  // Normal expanded position: top 24px from stage top, left/right positions relative to stage width
+
   // Calculate zoomed positions for each nav item
-  // Left link: starts at 13.7% left, moves -140px (left) when expanded
-  const leftZoomedPos = getZoomedPosition(24, 13.7, -expandedSpreadAmount)
-  // Logo: stays at 50% (center)
-  const logoZoomedPos = getZoomedPosition(24, 50, 0)
-  // Right link: starts at 86.3% left (100 - 13.7), moves +140px (right) when expanded
-  const rightZoomedPos = getZoomedPosition(24, 86.3, expandedSpreadAmount)
+  // In zoomed state, items are positioned relative to viewport but need to align with zoomed stage
+  const getZoomedNavPosition = () => {
+    if (typeof window === 'undefined') return { leftX: 0, rightX: 0, top: 124 }
+
+    // Nav top position: stage top (124px) + nav padding within stage (24px)
+    const navTop = zoomDimensions.top + 24
+
+    // Stage left edge is at 24px, so nav items need to be offset from that
+    // Left nav: 24px (stage left) + some internal padding
+    // Right nav: viewport - 24px (stage right) - some internal padding
+    // For now, just use fixed padding from stage edges
+
+    return { top: navTop }
+  }
+
+  const zoomedNavPos = getZoomedNavPosition()
+
+  // Calculate border position based on active nav item
+  // This mirrors the nav item positioning logic so border animates with them
+  const getBorderPosition = () => {
+    const isExpanded = getNavAnimate() === 'expanded'
+    const dims = activeNavItem === 'selectedWorks' ? itemDimensions.selectedWorks : itemDimensions.logo
+
+    if (activeNavItem === 'selectedWorks') {
+      // SELECTED WORKS position: left 13.7% with x transform
+      // In expanded state: top 24, x = -expandedSpreadAmount
+      // The element's left edge is at 13.7% of viewport, then shifted by x transform
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1000
+      const baseLeft = viewportWidth * 0.137
+
+      if (isZoomedNav) {
+        // Zoomed state: positioned at stage left + 40
+        return {
+          left: zoomDimensions.left + 40,
+          top: zoomedNavPos.top,
+          width: dims.width,
+          height: dims.height,
+        }
+      }
+
+      return {
+        left: baseLeft + (isExpanded ? -expandedSpreadAmount : 0),
+        top: isExpanded ? 24 : (typeof window !== 'undefined' ? window.innerHeight - frontBladePeek / 2 - dims.height / 2 : 0),
+        width: dims.width,
+        height: dims.height,
+      }
+    } else {
+      // PETEY.CO logo position: centered at 50%
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1000
+
+      if (isZoomedNav) {
+        return {
+          left: viewportWidth / 2 - dims.width / 2,
+          top: zoomedNavPos.top,
+          width: dims.width,
+          height: dims.height,
+        }
+      }
+
+      return {
+        left: viewportWidth / 2 - dims.width / 2,
+        top: isExpanded ? 24 : (typeof window !== 'undefined' ? window.innerHeight - frontBladePeek / 2 - dims.height / 2 : 0),
+        width: dims.width,
+        height: dims.height,
+      }
+    }
+  }
+
+  const borderPosition = getBorderPosition()
 
   return (
     <>
+      {/* Sliding active border - moves between nav items */}
+      <motion.div
+        className="fixed z-[59] pointer-events-none"
+        style={{
+          border: '3px solid rgba(255, 255, 255, 0.8)',
+          borderRadius: 14,
+        }}
+        animate={{
+          left: borderPosition.left,
+          top: borderPosition.top,
+          width: borderPosition.width,
+          height: borderPosition.height,
+        }}
+        transition={getNavTransition()}
+      />
+
       {/* Left link - SELECTED WORKS */}
-      <motion.span
+      <motion.div
         className="fixed z-[60]"
         style={{
-          ...linkTextStyle,
-          ...(shouldShowUnderline ? underlineStyle : {}),
           transformOrigin: 'left center',
+          cursor: !isZoomedNav ? 'pointer' : 'default',
         }}
         initial={{
           top: navIdleTop,
@@ -192,24 +292,50 @@ export function PersistentNav({
           scale: 1,
         }}
         animate={{
-          top: isZoomedNav ? leftZoomedPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
-          left: isZoomedNav ? `${leftZoomedPos.left}%` : '13.7%',
-          x: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? -expandedSpreadAmount : 0),
+          top: isZoomedNav ? zoomedNavPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
+          // Keep left at 13.7% always for smooth interpolation, use x for all horizontal movement
+          left: '13.7%',
+          // In zoomed: calculate x offset to position at stage left + 40px
+          // 13.7% of viewport - expandedSpread = expanded position
+          // We need x offset to land at zoomDimensions.left + 40
+          x: isZoomedNav
+            ? (zoomDimensions.left + 40) - (typeof window !== 'undefined' ? window.innerWidth * 0.137 : 0)
+            : (getNavAnimate() === 'expanded' ? -expandedSpreadAmount : 0),
           y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
-          scale: isZoomedNav ? zoomTransform.scale : 1,
+          scale: 1,
         }}
         transition={getNavTransition()}
-        whileHover={!isZoomedNav ? { color: 'rgba(255, 255, 255, 1)' } : undefined}
         onClick={!isZoomedNav ? handleLeftClick : undefined}
       >
-        SELECTED WORKS
-      </motion.span>
+        {/* Container with invisible border for spacing (real border is the sliding one) */}
+        <motion.div
+          ref={selectedWorksRef}
+          style={{
+            borderRadius: 14,
+            padding: '5px 7px 6px 7px',
+          }}
+          animate={{
+            borderColor: (!isZoomedNav && !isInStages && hoveredItem === 'selectedWorks')
+              ? 'rgba(255, 255, 255, 0.5)'
+              : 'rgba(255, 255, 255, 0)',
+          }}
+          initial={{ borderColor: 'rgba(255, 255, 255, 0)' }}
+          transition={{ duration: 0.2 }}
+          onMouseEnter={() => setHoveredItem('selectedWorks')}
+          onMouseLeave={() => setHoveredItem(null)}
+        >
+          <span style={{ ...linkTextStyle, display: 'block', lineHeight: 1, border: '3px solid transparent' }}>
+            SELECTED WORKS
+          </span>
+        </motion.div>
+      </motion.div>
 
-      {/* Center logo - stays centered, only moves vertically */}
+      {/* Center logo - text version with border, stays centered, only moves vertically */}
       <motion.div
         className="fixed z-[60]"
         style={{
           transformOrigin: 'center center',
+          cursor: !isZoomedNav ? 'pointer' : 'default',
         }}
         initial={{
           top: navIdleTop,
@@ -219,25 +345,53 @@ export function PersistentNav({
           scale: 1,
         }}
         animate={{
-          top: isZoomedNav ? logoZoomedPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
+          top: isZoomedNav ? zoomedNavPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
           left: '50%',
           x: '-50%',
           y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
-          scale: isZoomedNav ? zoomTransform.scale : 1,
+          scale: 1, // No scaling needed - stage resizes, content reflows
         }}
         transition={getNavTransition()}
+        onClick={!isZoomedNav ? onLogoClick : undefined}
       >
-        {/* Always white since nav is always over dark background (MasterClass blade/stage is black) */}
-        <PeteLogo onClick={!isZoomedNav ? onLogoClick : undefined} fill="#FFFFFF" />
+        {/* Container with invisible border for spacing (real border is the sliding one) */}
+        <motion.div
+          ref={logoRef}
+          style={{
+            borderRadius: 14,
+            padding: '5px 7px 6px 7px',
+          }}
+          animate={{
+            borderColor: (!isZoomedNav && isInStages && !isExpanding && hoveredItem === 'logo')
+              ? 'rgba(255, 255, 255, 0.5)'
+              : 'rgba(255, 255, 255, 0)',
+          }}
+          initial={{ borderColor: 'rgba(255, 255, 255, 0)' }}
+          transition={{ duration: 0.2 }}
+          onMouseEnter={() => setHoveredItem('logo')}
+          onMouseLeave={() => setHoveredItem(null)}
+        >
+          <span
+            style={{
+              ...linkTextStyle,
+              fontWeight: 500, // Pressura Medium
+              letterSpacing: '-0.02em',
+              display: 'block',
+              lineHeight: 1,
+              border: '3px solid transparent',
+            }}
+          >
+            PETEY.CO
+          </span>
+        </motion.div>
       </motion.div>
 
       {/* Right link - MORE ABOUT ME */}
-      <motion.span
+      <motion.div
         className="fixed z-[60]"
         style={{
-          ...linkTextStyle,
-          ...(shouldShowUnderline ? underlineStyle : {}),
           transformOrigin: 'right center',
+          cursor: !isZoomedNav ? 'pointer' : 'default',
         }}
         initial={{
           top: navIdleTop,
@@ -247,18 +401,44 @@ export function PersistentNav({
           scale: 1,
         }}
         animate={{
-          top: isZoomedNav ? rightZoomedPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
-          right: isZoomedNav ? `${100 - rightZoomedPos.left}%` : '13.7%',
-          x: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? expandedSpreadAmount : 0),
+          top: isZoomedNav ? zoomedNavPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
+          // Keep right at 13.7% always for smooth interpolation, use x for all horizontal movement
+          right: '13.7%',
+          // In zoomed: calculate x offset to position at viewport right - stage right - 40px
+          // right: 13.7% means element's right edge is at 13.7% from viewport right
+          // We need x offset to land at zoomDimensions.left + 40 from viewport right
+          // Since right positioning works opposite to left, positive x moves LEFT
+          x: isZoomedNav
+            ? (typeof window !== 'undefined' ? window.innerWidth * 0.137 : 0) - (zoomDimensions.left + 40)
+            : (getNavAnimate() === 'expanded' ? expandedSpreadAmount : 0),
           y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
-          scale: isZoomedNav ? zoomTransform.scale : 1,
+          scale: 1,
         }}
         transition={getNavTransition()}
-        whileHover={!isZoomedNav ? { color: 'rgba(255, 255, 255, 1)' } : undefined}
         onClick={!isZoomedNav ? handleRightClick : undefined}
       >
-        MORE ABOUT ME
-      </motion.span>
+        {/* Container with invisible border for spacing (sliding border will target this when About is active) */}
+        <motion.div
+          ref={aboutRef}
+          style={{
+            borderRadius: 14,
+            padding: '5px 7px 6px 7px',
+          }}
+          animate={{
+            borderColor: (!isZoomedNav && hoveredItem === 'about')
+              ? 'rgba(255, 255, 255, 0.5)'
+              : 'rgba(255, 255, 255, 0)',
+          }}
+          initial={{ borderColor: 'rgba(255, 255, 255, 0)' }}
+          transition={{ duration: 0.2 }}
+          onMouseEnter={() => setHoveredItem('about')}
+          onMouseLeave={() => setHoveredItem(null)}
+        >
+          <span style={{ ...linkTextStyle, display: 'block', lineHeight: 1, border: '3px solid transparent' }}>
+            MORE ABOUT ME
+          </span>
+        </motion.div>
+      </motion.div>
     </>
   )
 }

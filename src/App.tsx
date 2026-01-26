@@ -117,15 +117,15 @@ function App() {
     // Start the expanding animation
     setTransitionPhase('expanding')
     // After animation completes, switch to stages view
-    // Spring with stiffness:180, damping:24, mass:0.8 settles in ~450ms
+    // Spring with stiffness:200, damping:30, mass:1 settles in ~700ms
     setTimeout(() => {
       setViewMode('stages')
       setTransitionPhase('complete')
-      // Reset phase after a brief moment (StageBackground handles seamless transition)
+      // Keep complete phase until blade 0 fully covers viewport
       setTimeout(() => {
         setTransitionPhase('idle')
-      }, 50)
-    }, 450)
+      }, 300)
+    }, 700)
   }, [])
 
   // Navigate back to hero view with collapse animation
@@ -313,13 +313,14 @@ function App() {
       style={{ backgroundColor: theme.bgColor }}
     >
       {/* Desktop: 3D Scene - always rendered to prevent gloves from dropping on every transition */}
+      {/* Gloves stay visible during transition - blades cover them as they slide up */}
       {isDesktop && (
         <div
           className="absolute inset-0"
           style={{
             zIndex: 10,
             pointerEvents: viewMode === 'hero' ? 'auto' : 'none',
-            opacity: viewMode === 'hero' ? 1 : 0,
+            opacity: viewMode === 'hero' || transitionPhase === 'expanding' ? 1 : 0,
             transition: 'opacity 0.3s ease',
           }}
         >
@@ -486,13 +487,15 @@ function App() {
         />
       )}
 
-      {/* Desktop: Stacked Blades (front 3 blades, back blade is StageBackground) */}
-      {/* Each blade represents a stage and clicking it navigates to that stage */}
-      {isDesktop && (viewMode === 'hero' || transitionPhase !== 'idle') && (
+      {/* Desktop: Stacked Blades (back blades 1,2,3 - blade 0 is StageBackground) */}
+      {/* Always mounted - they sit behind blade 0 (z-45) so invisible when in stages view */}
+      {/* This prevents them from disappearing mid-animation */}
+      {isDesktop && (
         <StackedBlades
           onNavigateToStage={navigateToStage}
           themeMode={themeMode}
           transitionPhase={transitionPhase}
+          viewMode={viewMode}
         />
       )}
 

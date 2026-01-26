@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { bladeStackConfig, getBladeColor, getStageBackgroundColor } from '../data/stages'
+import { bladeStackConfig, getBladeColor } from '../data/stages'
 
 type ViewMode = 'hero' | 'stages'
 type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
@@ -13,27 +13,23 @@ interface StageBackgroundProps {
 
 /**
  * Unified background that morphs between:
- * - Collapsed: A full-height card positioned to peek from the bottom (back blade position)
+ * - Collapsed: A full-height card positioned to peek from the bottom (front blade position)
  * - Expanded: Fullscreen background for the active stage
  *
- * Each blade represents a stage:
- * - Blade 0 (front) → Stage 0 (MasterClass)
- * - Blade 1 → Stage 1 (Spotify)
- * - Blade 2 → Stage 2 (Nike)
- * - Blade 3 (back) → Stage 3 (Airbnb)
+ * The front blade (index 0) is now MasterClass which expands to Section 1.
+ * This blade is closest to the viewer and widest in the collapsed stack.
  *
  * This eliminates the "flash" problem by being a single element
  * that transitions between states, rather than two separate elements
  * trying to coordinate their visibility.
  */
 export function StageBackground({ viewMode, transitionPhase, activeStageIndex, onNavigateToStage }: StageBackgroundProps) {
-  const { borderRadius, horizontalPadding, frontBladePeek, stackOffset, widthStagger } = bladeStackConfig
+  const { borderRadius, horizontalPadding, frontBladePeek } = bladeStackConfig
 
-  // Back blade is index 3 (furthest back, most narrow)
-  const numBlades = 4
-  const backBladePadding = horizontalPadding + (3 * widthStagger)
-  // Back blade peeks: frontBladePeek + 3 * stackOffset
-  const backBladePeekFromBottom = frontBladePeek + ((numBlades - 1) * stackOffset)
+  // Front blade is index 0 (closest to viewer, widest)
+  const frontBladePadding = horizontalPadding
+  // Front blade peeks at frontBladePeek from the bottom
+  const frontBladePeekFromBottom = frontBladePeek
 
   const isExpanding = transitionPhase === 'expanding'
   const isCollapsing = transitionPhase === 'collapsing'
@@ -43,32 +39,37 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex, o
   // The blade animates UP to fullscreen while front blades slide down
   const isExpanded = viewMode === 'stages' || isExpanding
 
-  // Get colors based on active stage
-  // Back blade (index 3) is what expands, so use its color for both collapsed and expanded states
-  // This ensures seamless color transition during blade expansion
-  const bladeColor = getBladeColor(3) // Back blade always uses index 3 color when collapsed
-  const stageColor = getBladeColor(3) // Use same color as blade for seamless transition
+  // Get color for front blade (index 0 / MasterClass)
+  // Uses same color for both collapsed and expanded states for seamless transition
+  const bladeColor = getBladeColor(0)
 
-  // Keep blade color during expansion animation, only switch to stage color when fully expanded
-  // This allows the blade to visually expand over the hero content
-  const shouldShowStageColor = viewMode === 'stages' && transitionPhase !== 'collapsing'
+  // Blade 0 transition timing depends on direction:
+  // - Expanding: snappy spring with 40ms delay for parallax cascade
+  // - Collapsing: smooth ease-out for precise, bounce-free settling
+  const backdropTransition = isExpanding
+    ? {
+        type: 'spring' as const,
+        stiffness: 300,
+        damping: 35,
+        mass: 1,
+        delay: 0.04,
+      }
+    : {
+        type: 'tween' as const,
+        duration: 0.5,
+        ease: [0.32, 0.72, 0, 1] as const, // Custom ease-out curve
+        delay: 0,
+      }
 
-  // Unified spring transition - Figma's elevated timing
-  const backdropTransition = {
-    type: 'spring' as const,
-    stiffness: 320,
-    damping: 40,
-    mass: 1,
-  }
-
-  // Animation variants - now using full-height card approach
-  // Border radii are kept at borderRadius throughout expansion, only snapping to 0 at the very end
+  // Animation variants - using consistent 100vh height to avoid layout jumps
+  // The blade is always 100vh tall, only its position changes
+  // Border radii animate smoothly from 24px to 0 during expansion
   const backdropVariants = {
     collapsed: {
       // Full-height card positioned to show only the peek portion
-      bottom: `calc(-100vh + ${backBladePeekFromBottom}px)`,
-      left: backBladePadding,
-      right: backBladePadding,
+      bottom: `calc(-100vh + ${frontBladePeekFromBottom}px)`,
+      left: frontBladePadding,
+      right: frontBladePadding,
       top: 'auto' as const,
       height: '100vh',
       borderTopLeftRadius: borderRadius,
@@ -77,20 +78,17 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex, o
       borderBottomRightRadius: 0,
     },
     expanded: {
+      // Fullscreen - covers entire viewport
       bottom: 0,
       left: 0,
       right: 0,
-      top: 0,
-      height: 'auto' as const,
-      // Keep border radius during animation, snap to 0 at transitionEnd
-      borderTopLeftRadius: borderRadius,
-      borderTopRightRadius: borderRadius,
+      top: 'auto' as const,
+      height: '100vh',
+      // Animate border radius smoothly to 0 (no snap)
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
-      transitionEnd: {
-        borderTopLeftRadius: 0,
-        borderTopRightRadius: 0,
-      },
     },
   }
 
@@ -100,10 +98,11 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex, o
 
   return (
     <motion.div
-      className={`fixed z-40 ${isInteractive ? 'cursor-pointer' : ''}`}
+      className={`fixed ${isInteractive ? 'cursor-pointer' : ''}`}
       style={{
-        // Use blade color during expansion animation, stage color when fully expanded
-        backgroundColor: shouldShowStageColor ? stageColor : bladeColor,
+        // Front blade needs higher z-index than back blades (z-40 container)
+        zIndex: 45,
+        backgroundColor: bladeColor,
         // Only allow pointer events when collapsed (interactive blade)
         pointerEvents: isCollapsed ? 'auto' : 'none',
       }}
@@ -111,7 +110,7 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex, o
       animate={isExpanded ? 'expanded' : 'collapsed'}
       variants={backdropVariants}
       transition={backdropTransition}
-      onClick={() => isInteractive && onNavigateToStage?.(3)}
+      onClick={() => isInteractive && onNavigateToStage?.(0)}
       whileHover={isInteractive ? { y: -6, scale: 1.001 } : undefined}
     />
   )

@@ -2,125 +2,78 @@ import { motion } from 'framer-motion'
 import type { StageData } from '../types'
 import { hoverTransition } from '../constants/animation'
 
+// Stage card color (blush-200) for active dot
+const ACTIVE_DOT_COLOR = '#E9D7DA'
+// Inactive dots: white at 20% opacity
+const INACTIVE_DOT_COLOR = 'rgba(255, 255, 255, 0.2)'
+
+// Base dot size
+const BASE_DOT_SIZE = 10
+
 interface ProgressDotsProps {
   stages: StageData[]
   activeIndex: number
   onDotClick: (index: number) => void
   shouldAnimateIn?: boolean
+  isHidden?: boolean
 }
 
-export function ProgressDots({ stages, activeIndex, onDotClick, shouldAnimateIn = false }: ProgressDotsProps) {
-  // Dot sizing based on distance from active
-  // Active dot is largest, progressively smaller as distance increases
-  const getDotSize = (index: number) => {
+export function ProgressDots({ stages, activeIndex, onDotClick, shouldAnimateIn = false, isHidden = false }: ProgressDotsProps) {
+  // Dot scale based on distance from active
+  // Active = 100%, distance 1 = 75%, distance 2 = 50%, distance 3+ = 25%
+  const getDotScale = (index: number) => {
     const distance = Math.abs(index - activeIndex)
-    // Base size 12px, decreases by 2px per step away, min 6px
-    return Math.max(6, 12 - distance * 2)
-  }
-
-  // Dot opacity based on distance
-  const getDotOpacity = (index: number) => {
-    const distance = Math.abs(index - activeIndex)
-    // Active is 1, decreases by 0.2 per step, min 0.3
-    return Math.max(0.3, 1 - distance * 0.2)
+    if (distance === 0) return 1
+    if (distance === 1) return 0.75
+    if (distance === 2) return 0.5
+    return 0.25
   }
 
   return (
     <motion.div
-      className="fixed left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-3"
+      className="fixed left-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-1"
       initial={shouldAnimateIn ? { opacity: 0, x: -20 } : { opacity: 1, x: 0 }}
-      animate={{ opacity: 1, x: 0 }}
+      animate={{ opacity: isHidden ? 0 : 1, x: isHidden ? -20 : 0 }}
       transition={{
-        duration: 0.5,
+        duration: 0.3,
         delay: shouldAnimateIn ? 0.5 : 0,
         ease: [0.25, 0.1, 0.25, 1],
       }}
+      style={{ pointerEvents: isHidden ? 'none' : 'auto' }}
     >
       {stages.map((stage, index) => {
         const isActive = index === activeIndex
-        const size = getDotSize(index)
-        const opacity = getDotOpacity(index)
+        const scale = getDotScale(index)
+        const size = BASE_DOT_SIZE * scale
 
         return (
           <motion.button
             key={stage.id}
             className="relative flex items-center justify-center cursor-pointer"
             style={{
-              width: 20,
-              height: 20,
+              width: 16,
+              height: 16,
             }}
             onClick={() => onDotClick(index)}
             whileHover={{ scale: 1.2 }}
             whileTap={{ scale: 0.9 }}
             transition={hoverTransition}
           >
-            {/* Outer ring (visible on active) */}
-            <motion.div
-              className="absolute"
-              style={{
-                width: size + 6,
-                height: size + 6,
-                borderRadius: '50%',
-                border: '1px solid',
-                borderColor: isActive ? stage.accentColor : 'transparent',
-              }}
-              animate={{
-                opacity: isActive ? 0.6 : 0,
-                scale: isActive ? 1 : 0.8,
-              }}
-              transition={{ duration: 0.3 }}
-            />
-
-            {/* Main dot */}
+            {/* Dot */}
             <motion.div
               style={{
                 borderRadius: '50%',
-                backgroundColor: stage.accentColor,
+                backgroundColor: isActive ? ACTIVE_DOT_COLOR : INACTIVE_DOT_COLOR,
               }}
               animate={{
                 width: size,
                 height: size,
-                opacity: opacity,
-                boxShadow: isActive
-                  ? `0 0 12px ${stage.accentColor}80, 0 0 4px ${stage.accentColor}`
-                  : `0 0 0px transparent`,
               }}
-              transition={{ duration: 0.3 }}
-            />
-
-            {/* Inner highlight (creates depth) */}
-            <motion.div
-              className="absolute"
-              style={{
-                width: size * 0.4,
-                height: size * 0.4,
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.4)',
-                top: '30%',
-                left: '30%',
-              }}
-              animate={{
-                opacity: isActive ? 1 : 0.5,
-              }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
             />
           </motion.button>
         )
       })}
-
-      {/* Stage number indicator */}
-      <motion.div
-        className="mt-2"
-        style={{
-          fontFamily: 'GT Pressura Mono',
-          fontSize: '10px',
-          fontWeight: 400,
-          letterSpacing: '0.3px',
-          color: 'rgba(255, 255, 255, 0.5)',
-        }}
-      >
-        {String(activeIndex + 1).padStart(2, '0')}/{String(stages.length).padStart(2, '0')}
-      </motion.div>
     </motion.div>
   )
 }

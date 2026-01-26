@@ -81,7 +81,8 @@ export function StagesContainer({
 
   // Handle wheel navigation between stages
   useEffect(() => {
-    if (!isVisible) return
+    // Disable wheel navigation when not visible or when in zoomed nav mode
+    if (!isVisible || isZoomedNav) return
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
@@ -138,7 +139,7 @@ export function StagesContainer({
 
     window.addEventListener('wheel', handleWheel, { passive: false })
     return () => window.removeEventListener('wheel', handleWheel)
-  }, [isVisible, onNavigateToHero])
+  }, [isVisible, isZoomedNav, onNavigateToHero])
 
   // Keyboard navigation
   useEffect(() => {
@@ -186,42 +187,33 @@ export function StagesContainer({
   }, [activeIndex])
 
   // Calculate zoom transform for secondary nav mode
-  // Stage width must match TopCards container width exactly
-  const getZoomTransform = useCallback(() => {
-    if (typeof window === 'undefined') return { scale: 1, y: 0 }
+  // Instead of scale transforms (which stretch content), use actual width/height
+  // This allows content to reflow naturally like a browser resize
+  const getZoomDimensions = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return { width: '100vw', height: '100vh', top: 0, left: 0 }
+    }
 
     const horizontalPadding = 48 // 24px * 2 (TopCards container padding)
     const topCardsHeight = 76 // Collapsed card height
     const topPadding = 24 // TopCards top padding
     const gapBelowTopCards = 24 // Equal spacing between TopCards and stage
+    const bottomPadding = 24 // Bottom padding below stage
 
-    // Scale must match TopCards container width exactly
-    // TopCards width = viewportWidth - 48px
-    // Scaled stage width = viewportWidth * scale
-    // We need: viewportWidth * scale = viewportWidth - 48
-    // So: scale = (viewportWidth - 48) / viewportWidth
-    const scale = (window.innerWidth - horizontalPadding) / window.innerWidth
-
-    // Position the scaled stage so its top edge is at zoomedTop (124px from viewport top)
-    // The stage scales from center, so we need to calculate the Y offset
-    //
-    // Original stage: top=0, center=viewportHeight/2, bottom=viewportHeight
-    // Scaled stage: height = viewportHeight * scale
-    // Scaled stage center relative to original center = 0 (scales from center)
-    // Scaled stage top = center - (scaledHeight / 2) = viewportHeight/2 - (viewportHeight * scale / 2)
-    //                  = viewportHeight/2 * (1 - scale)
-    //
-    // We want scaled stage top to be at zoomedTop
-    // So we need to move the stage down by: zoomedTop - currentScaledTop
-    // yOffset = zoomedTop - viewportHeight/2 * (1 - scale)
+    // Target dimensions for the zoomed stage
+    const targetWidth = window.innerWidth - horizontalPadding
     const zoomedTop = topPadding + topCardsHeight + gapBelowTopCards // 124px from top
-    const scaledTopBeforeOffset = (window.innerHeight / 2) * (1 - scale)
-    const yOffset = zoomedTop - scaledTopBeforeOffset
+    const targetHeight = window.innerHeight - zoomedTop - bottomPadding
 
-    return { scale, y: yOffset }
+    return {
+      width: targetWidth,
+      height: targetHeight,
+      top: zoomedTop,
+      left: horizontalPadding / 2, // 24px from left
+    }
   }, [])
 
-  const zoomTransform = getZoomTransform()
+  const zoomDimensions = getZoomDimensions()
 
   // Spring transition for zoom animation
   const zoomSpringTransition = {
@@ -231,43 +223,61 @@ export function StagesContainer({
     mass: 1,
   }
 
+  // Disable body scroll when in zoomed nav mode
+  useEffect(() => {
+    if (isZoomedNav) {
+      document.body.style.overflow = 'hidden'
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [isZoomedNav])
+
   return (
     <AnimatePresence>
       {isVisible && (
         <motion.div
           ref={containerRef}
-          className="fixed inset-0 z-50"
+          className="fixed z-50"
           style={{
-            transformOrigin: 'center center',
             cursor: isZoomedNav ? 'pointer' : 'default',
             overflow: 'hidden',
           }}
-          initial={{ opacity: 1, scale: 1, y: 0, borderRadius: 0 }}
+          initial={{
+            opacity: 1,
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            borderRadius: 0,
+          }}
           animate={{
             opacity: 1,
-            scale: isZoomedNav ? zoomTransform.scale : 1,
-            y: isZoomedNav ? zoomTransform.y : 0,
+            top: isZoomedNav ? zoomDimensions.top : 0,
+            left: isZoomedNav ? zoomDimensions.left : 0,
+            width: isZoomedNav ? zoomDimensions.width : '100vw',
+            height: isZoomedNav ? zoomDimensions.height : '100vh',
             borderRadius: isZoomedNav ? 24 : 0,
           }}
           exit={{ opacity: 0 }}
           transition={zoomSpringTransition}
           onClick={isZoomedNav ? onExitZoomedNav : undefined}
         >
-          {/* Progress dots */}
+          {/* Progress dots - hidden in zoomed nav mode */}
           <ProgressDots
             stages={stages}
             activeIndex={activeIndex}
             onDotClick={handleDotClick}
             shouldAnimateIn={isInitialEntry && !hasAnimatedIn}
+            isHidden={isZoomedNav}
           />
 
           {/* Stages */}
           {/* Cards are part of the stage and expand naturally with the parent blade */}
-          {/* Stage index maps to blade index in reverse: Stage 0 = Blade 3 (back), Stage 3 = Blade 0 (front) */}
+          {/* Stage index maps directly to blade index: Stage 0 = Blade 0 (front/MasterClass), etc. */}
           {stages.map((stage, stageIndex) => {
-            // Convert stage index to blade index (reverse mapping)
-            // Stage 0 → Blade 3 (masterclass/back), Stage 1 → Blade 2, Stage 2 → Blade 1, Stage 3 → Blade 0 (front)
-            const bladeIndex = (stages.length - 1) - stageIndex
+            // Direct mapping: Stage 0 → Blade 0 (masterclass/front), Stage 1 → Blade 1, etc.
+            const bladeIndex = stageIndex
             return (
               <Stage
                 key={stage.id}

@@ -24,25 +24,39 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
   const [logoCardMouse, setLogoCardMouse] = useState({ x: 50, y: 50 })
   const [logoCardHovered, setLogoCardHovered] = useState(false)
   const [descCardMouse, setDescCardMouse] = useState({ x: 50, y: 50 })
-  const [ctaCardMouse, setCtaCardMouse] = useState({ x: 50, y: 50 })
+  const [descCardHovered, setDescCardHovered] = useState(false)
+  const [ctaCardHovered, setCtaCardHovered] = useState(false)
 
   // Track description card width for responsive metadata panel visibility
   const [descCardWidth, setDescCardWidth] = useState(0)
+  // Store the "full size" reference width for proportional scaling
+  const [descCardFullWidth, setDescCardFullWidth] = useState(0)
 
   const logoCardRef = useRef<HTMLDivElement>(null)
   const descCardRef = useRef<HTMLDivElement>(null)
-  const ctaCardRef = useRef<HTMLDivElement>(null)
 
   // Measure description card width on mount and resize
+  // Uses ResizeObserver to detect element size changes (including Framer Motion animations)
   useEffect(() => {
-    const measureWidth = () => {
-      if (descCardRef.current) {
-        setDescCardWidth(descCardRef.current.offsetWidth)
+    if (!descCardRef.current) return
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width
+        setDescCardWidth(width)
+        // Capture the full width on first measurement (when stage is fullscreen)
+        // or when width increases (returning to fullscreen)
+        setDescCardFullWidth(prev => width > prev ? width : prev)
       }
-    }
-    measureWidth()
-    window.addEventListener('resize', measureWidth)
-    return () => window.removeEventListener('resize', measureWidth)
+    })
+
+    resizeObserver.observe(descCardRef.current)
+    // Initial measurement
+    const initialWidth = descCardRef.current.offsetWidth
+    setDescCardWidth(initialWidth)
+    setDescCardFullWidth(initialWidth)
+
+    return () => resizeObserver.disconnect()
   }, [])
 
   const handleCardMouseMove = useCallback((
@@ -70,10 +84,16 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
   }
 
   // Logo card border spotlight (matching TopCards/MorphingCard style)
-  const logoCardBorderColor = 'rgba(255, 255, 255, 0.8)'
+  const logoCardBorderColor = 'rgba(255, 255, 255, 0.12)'
   const getLogoCardSpotlight = () => {
     if (!logoCardHovered) return 'none'
-    return `radial-gradient(circle at ${logoCardMouse.x}% ${logoCardMouse.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, ${logoCardBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
+    return `radial-gradient(circle at ${logoCardMouse.x}% ${logoCardMouse.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, rgba(255, 255, 255, 0.8) 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
+  }
+
+  // Description card border spotlight
+  const getDescCardSpotlight = () => {
+    if (!descCardHovered) return 'none'
+    return `radial-gradient(circle at ${descCardMouse.x}% ${descCardMouse.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 25%, rgba(255, 255, 255, 0.1) 50%, transparent 100%)`
   }
 
   // Cards are part of the stage - they slide up with the blade
@@ -139,7 +159,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
       >
         {/* Logo Card - coral pink with white border, backdrop blur */}
         {/* No individual animation - expands naturally with the parent stage */}
-        <motion.div
+        <div
           ref={logoCardRef}
           className="flex-shrink-0"
           style={{
@@ -147,7 +167,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             height: 216,
             backgroundColor: stage.logoBgColor,
             borderRadius: 25,
-            border: '1px solid rgba(255, 255, 255, 0.8)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
             // Disable backdrop blur during expansion to prevent color bleeding
             backdropFilter: isExpanding ? 'none' : 'blur(10.93px)',
             WebkitBackdropFilter: isExpanding ? 'none' : 'blur(10.93px)',
@@ -160,13 +180,14 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           onMouseMove={(e) => handleCardMouseMove(e, logoCardRef, setLogoCardMouse)}
           onMouseEnter={() => setLogoCardHovered(true)}
           onMouseLeave={() => setLogoCardHovered(false)}
-          whileHover={{ scale: 1.02, y: -4 }}
         >
           {/* Border spotlight overlay (matching TopCards style) */}
+          {/* Uses inset: -1px to align with the 1px border */}
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute pointer-events-none"
             style={{
-              borderRadius: 25,
+              inset: -1,
+              borderRadius: 26,
               background: getLogoCardSpotlight(),
               mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
               maskComposite: 'exclude',
@@ -176,13 +197,13 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           />
           {/* Logo - MasterClass "M" placeholder */}
           <MasterClassLogo />
-        </motion.div>
+        </div>
 
         {/* Description Card - main content area with metadata panel */}
         {/* flex-grow: 1 takes available space, flex-shrink: 0 means it won't shrink */}
         {/* CTA card shrinks first because it has flex-shrink: 1 */}
         {/* No individual animation - expands naturally with the parent stage */}
-        <motion.div
+        <div
           ref={descCardRef}
           style={{
             backgroundColor: stageSurface.primary, // Salmon pink background
@@ -194,25 +215,20 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             flexShrink: 0,
             flexBasis: 'auto',
             minWidth: 300,
+            border: '1px solid rgba(255, 255, 255, 0.12)',
           }}
           onMouseMove={(e) => handleCardMouseMove(e, descCardRef, setDescCardMouse)}
-          whileHover={{ scale: 1.005, y: -2 }}
+          onMouseEnter={() => setDescCardHovered(true)}
+          onMouseLeave={() => setDescCardHovered(false)}
         >
-          {/* Spotlight overlay */}
+          {/* Border spotlight overlay */}
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute pointer-events-none"
             style={{
-              background: getSpotlightGradient(descCardMouse),
-              borderRadius: 25,
-            }}
-          />
-          {/* Border spotlight */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              borderRadius: 25,
-              background: getBorderSpotlight(descCardMouse),
-              maskImage: 'linear-gradient(black, black) content-box, linear-gradient(black, black)',
+              inset: -1,
+              borderRadius: 26,
+              background: getDescCardSpotlight(),
+              mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
               maskComposite: 'exclude',
               WebkitMaskComposite: 'xor',
               padding: '1px',
@@ -232,16 +248,20 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             const metadataPanelLeftEdge = descCardWidth - metadataPanelTotalWidth
             const showMetadataPanel = metadataPanelLeftEdge > halfwayPoint
 
-            // Description text width: fills available space
-            // When metadata visible: from left padding (37px) to metadata panel left edge minus gap
-            // When metadata hidden: from left padding to right padding (37px each side)
+            // Description text uses proportional scaling to preserve line breaks
+            // Calculate the reference width at full size (when metadata is visible)
             const leftPadding = 37
-            const rightPadding = 37
             const gapBetweenTextAndMetadata = 24
 
-            const descriptionWidth = showMetadataPanel
-              ? metadataPanelLeftEdge - leftPadding - gapBetweenTextAndMetadata
-              : descCardWidth - leftPadding - rightPadding
+            // Reference width: what the description text width would be at full card size with metadata visible
+            const fullSizeMetadataLeftEdge = descCardFullWidth - metadataPanelTotalWidth
+            const descriptionFullWidth = fullSizeMetadataLeftEdge - leftPadding - gapBetweenTextAndMetadata
+
+            // Calculate scale factor based on current card width vs full width
+            // Scale proportionally when the card shrinks
+            const scaleFactor = descCardFullWidth > 0
+              ? Math.min(1, descCardWidth / descCardFullWidth)
+              : 1
 
             return (
               <div className="relative z-10 h-full flex">
@@ -289,15 +309,16 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                   </h3>
 
                   {/* Description - bottom aligned at 188px from top (updated for 216px height) */}
+                  {/* Uses proportional scaling to preserve line breaks when card shrinks */}
                   <div
                     style={{
                       position: 'absolute',
                       top: 188,
                       left: 37,
-                      transform: 'translateY(-100%)',
-                      width: descriptionWidth > 0 ? descriptionWidth : 400,
+                      transform: `translateY(-100%) scale(${scaleFactor})`,
+                      transformOrigin: 'bottom left',
+                      width: descriptionFullWidth > 0 ? descriptionFullWidth : 400,
                       overflow: 'hidden',
-                      transition: 'width 0.3s ease',
                     }}
                   >
                     <p
@@ -316,7 +337,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                 </div>
 
                 {/* Right side: Metadata panel - inset 8px from top, right, and bottom */}
-                {/* Hidden when panel would cross past halfway point of parent container */}
+                {/* Scales horizontally with the card while maintaining full height */}
                 {showMetadataPanel && (
                   <div
                     style={{
@@ -334,6 +355,8 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                       justifyContent: 'space-between',
                       gap: 20,
                       overflow: 'hidden',
+                      transform: `scaleX(${scaleFactor})`,
+                      transformOrigin: 'right center',
                     }}
                   >
               {/* Metadata rows container - Frame 32 */}
@@ -384,14 +407,13 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
               </div>
             )
           })()}
-        </motion.div>
+        </div>
 
         {/* CTA Card - Request Case Study button */}
         {/* Shrinks first (flexShrink: 1) while description card doesn't shrink (flexShrink: 0) */}
         {/* Resizes between minWidth: 220px and maxWidth: 348px */}
         {/* No individual animation - expands naturally with the parent stage */}
-        <motion.div
-          ref={ctaCardRef}
+        <div
           className="cursor-pointer"
           style={{
             flexBasis: 348,
@@ -400,7 +422,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             minWidth: 220,
             maxWidth: 348,
             height: 216,
-            backgroundColor: 'transparent',
+            backgroundColor: ctaCardHovered ? stageSurface.secondary : 'transparent',
             borderRadius: 25,
             border: `1px solid ${stageSurface.secondary}`,
             display: 'flex',
@@ -409,98 +431,54 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             justifyContent: 'center',
             position: 'relative',
             overflow: 'hidden',
+            transition: 'background-color 0.2s ease',
           }}
-          onMouseMove={(e) => handleCardMouseMove(e, ctaCardRef, setCtaCardMouse)}
           onClick={onRequestCaseStudy}
-          whileHover={{ scale: 1.02, y: -4, borderColor: stageSurface.hover }}
-          whileTap={{ scale: 0.98 }}
+          onMouseEnter={() => setCtaCardHovered(true)}
+          onMouseLeave={() => setCtaCardHovered(false)}
         >
-          {/* Spotlight overlay */}
+          {/* Keyboard shortcut badge - inverts colors on hover */}
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute top-5 right-5 flex items-center justify-center"
             style={{
-              background: getSpotlightGradient(ctaCardMouse, true),
-              borderRadius: 25,
-            }}
-          />
-          {/* Border spotlight */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              borderRadius: 25,
-              background: getBorderSpotlight(ctaCardMouse),
-              maskImage: 'linear-gradient(black, black) content-box, linear-gradient(black, black)',
-              maskComposite: 'exclude',
-              WebkitMaskComposite: 'xor',
-              padding: '1px',
-            }}
-          />
-
-          {/* Keyboard shortcut badge */}
-          <div
-            className="absolute top-5 right-5 flex items-center gap-0.5"
-            style={{
-              backgroundColor: stageSurface.secondary,
-              borderRadius: 3.5,
-              padding: '3px 5px',
-              minWidth: 19,
-              height: 19,
+              backgroundColor: ctaCardHovered ? backgroundColor : stageSurface.secondary,
+              borderRadius: 4,
+              padding: '4px 8px',
+              transition: 'background-color 0.2s ease',
             }}
           >
             <span
+              className="uppercase font-pressura-mono"
               style={{
-                fontFamily: 'GT Pressura Mono',
                 fontSize: '12px',
-                fontWeight: 400,
-                color: '#000000',
                 lineHeight: 1,
+                position: 'relative',
+                top: '-1px',
+                color: ctaCardHovered ? stageSurface.secondary : '#000000',
+                transition: 'color 0.2s ease',
               }}
             >
-              ⌘
-            </span>
-            <span
-              style={{
-                fontFamily: 'GT Pressura Mono',
-                fontSize: '12px',
-                fontWeight: 400,
-                color: '#000000',
-                lineHeight: 1,
-              }}
-            >
-              R
+              ⌘ R
             </span>
           </div>
 
-          {/* Button text */}
-          <div className="relative z-10 text-center">
-            <p
-              style={{
-                fontFamily: 'Helvetica Neue',
-                fontSize: '24px',
-                fontWeight: 700,
-                fontStretch: 'condensed',
-                color: stageSurface.secondary,
-                lineHeight: 0.99,
-                textTransform: 'uppercase',
-              }}
-            >
-              REQUEST
-            </p>
-            <p
-              style={{
-                fontFamily: 'Helvetica Neue',
-                fontSize: '24px',
-                fontWeight: 700,
-                fontStretch: 'condensed',
-                color: stageSurface.secondary,
-                lineHeight: 0.99,
-                textTransform: 'uppercase',
-              }}
-            >
-              CASE STUDY
-            </p>
-          </div>
-        </motion.div>
+          {/* Button text - knockout effect on hover (transparent text reveals dark bg) */}
+          <span
+            className="font-pressura uppercase text-center"
+            style={{
+              fontSize: '20px',
+              letterSpacing: '-0.8px',
+              lineHeight: 1.2,
+              color: ctaCardHovered ? 'transparent' : stageSurface.secondary,
+              backgroundColor: ctaCardHovered ? backgroundColor : 'transparent',
+              WebkitBackgroundClip: ctaCardHovered ? 'text' : 'unset',
+              backgroundClip: ctaCardHovered ? 'text' : 'unset',
+              transition: 'color 0.2s ease',
+            }}
+          >
+            REQUEST<br />CASE STUDY
+          </span>
+        </div>
       </motion.div>
     </motion.div>
   )
