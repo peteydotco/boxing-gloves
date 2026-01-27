@@ -883,11 +883,11 @@ export function MorphingCard({
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Border - uses expandedBorder color when expanded */}
+        {/* Border - same subtle stroke as collapsed state */}
         <motion.div
           className="absolute inset-0 pointer-events-none"
           style={{
-            border: `1px solid ${styles.expandedBorder}`,
+            border: `1px solid ${styles.border}`,
           }}
           initial={{ borderRadius: 14 }}
           animate={{ borderRadius: 16 }}
