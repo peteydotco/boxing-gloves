@@ -8,6 +8,7 @@ import { SiApplemusic } from 'react-icons/si'
 import React from 'react'
 import type { CardData, VariantStyle, ThemeMode } from '../types'
 import { variantStylesLight, getVariantStyles } from '../constants/themes'
+import { AddNewRoleContent } from './AddNewRoleContent'
 import {
   positionSpring,
   stackedRotationSpring,
@@ -882,11 +883,11 @@ export function MorphingCard({
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Border - same subtle stroke as collapsed state */}
+        {/* Border - uses expandedBorder color when expanded */}
         <motion.div
           className="absolute inset-0 pointer-events-none"
           style={{
-            border: `1px solid ${styles.border}`,
+            border: `1px solid ${styles.expandedBorder}`,
           }}
           initial={{ borderRadius: 14 }}
           animate={{ borderRadius: 16 }}
@@ -998,6 +999,16 @@ export function MorphingCard({
             }
           }}
         >
+          {/* CTA card uses custom AddNewRoleContent layout */}
+          {card.variant === 'cta' ? (
+            <AddNewRoleContent
+              onClose={onClose}
+              isMobile={typeof window !== 'undefined' && window.innerWidth < 768}
+              hideShortcut={hideShortcut}
+              shortcut={card.shortcut}
+            />
+          ) : (
+          <>
           {/* TOP CLUSTER: Header + Title + Date Range */}
           {/* This cluster stays at the top of the card */}
           <div className="flex-shrink-0">
@@ -1024,7 +1035,7 @@ export function MorphingCard({
                 className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer"
                 style={{ backgroundColor: styles.badgeBg }}
                 initial={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
-                animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: card.variant === 'cta' ? '8px' : '16px', paddingRight: card.variant === 'cta' ? '8px' : '16px', opacity: hideShortcut ? 0 : 1 }}
+                animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', opacity: hideShortcut ? 0 : 1 }}
                 // Show badge during exit animation so shortcut animates back (but not on mobile where hideShortcut is true)
                 exit={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
                 transition={contentSpring}
@@ -1065,29 +1076,14 @@ export function MorphingCard({
             {/* Mobile uses smaller scale (26/18) to fit within narrower container */}
             {/* For compactCta (mobile CTA), fade out quickly on exit since collapsed state has different layout */}
             <motion.h2
-              className={`leading-normal text-left w-full uppercase ${card.variant === 'cta' ? 'font-pressura-light' : 'font-pressura'}`}
-              style={{ color: card.variant === 'cta' ? (styles as typeof variantStylesLight.cta).ctaTitleColor : styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px', fontSize: '18px', whiteSpace: 'nowrap' }}
+              className="leading-normal text-left w-full uppercase font-pressura"
+              style={{ color: styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px', fontSize: '18px', whiteSpace: 'nowrap' }}
               initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
               animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : 32 / 18, marginTop: '4px', opacity: 1 }}
               exit={{ scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1 }}
               transition={compactCta ? { ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } } : contentSpring}
             >
-              {card.variant === 'cta' ? (
-                <span className="flex items-center gap-3">
-                  <motion.span
-                    style={{ display: 'flex', alignItems: 'center' }}
-                    initial={{ width: 20, height: 20 }}
-                    animate={{ width: 20, height: 20 }}
-                    exit={{ width: 20, height: 20 }}
-                    transition={contentSpring}
-                  >
-                    <SlPlus className="w-full h-full" style={{ position: 'relative', top: '1px' }} />
-                  </motion.span>
-                  {card.title}
-                </span>
-              ) : (
-                card.title
-              )}
+              {card.title}
             </motion.h2>
 
             {/* Date Range - part of top cluster */}
@@ -1466,6 +1462,9 @@ export function MorphingCard({
               )}
             </motion.div>
           </>
+        )}
+
+        </>
         )}
 
         </motion.div>

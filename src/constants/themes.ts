@@ -85,7 +85,7 @@ export const variantStylesLight: VariantStyles = {
     secondaryText: 'rgba(0,0,0,0.7)',
     ctaTitleColor: 'rgba(0,0,0,0.75)',
     border: 'rgba(0,0,0,0.08)',
-    expandedBorder: 'rgba(0,0,0,0.12)',
+    expandedBorder: '#fdecec',
     badgeBg: 'rgba(0,0,0,0.12)',
     primaryButtonBg: 'rgba(0,0,0,0.87)',
     primaryButtonText: '#FFFFFF',
