@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { bladeStackConfig, getBladeColor } from '../data/stages'
 
@@ -9,6 +10,8 @@ interface StageBackgroundProps {
   transitionPhase: TransitionPhase
   activeStageIndex: number
   onNavigateToStage?: (stageIndex: number) => void
+  onHoverChange?: (isHovered: boolean) => void
+  isNavHovered?: boolean
 }
 
 /**
@@ -23,7 +26,7 @@ interface StageBackgroundProps {
  * that transitions between states, rather than two separate elements
  * trying to coordinate their visibility.
  */
-export function StageBackground({ viewMode, transitionPhase, activeStageIndex, onNavigateToStage }: StageBackgroundProps) {
+export function StageBackground({ viewMode, transitionPhase, activeStageIndex, onNavigateToStage, onHoverChange, isNavHovered = false }: StageBackgroundProps) {
   const { borderRadius, horizontalPadding, frontBladePeek } = bladeStackConfig
 
   // Front blade is index 0 (closest to viewer, widest)
@@ -61,6 +64,9 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex, o
         delay: 0,
       }
 
+  // Hover offset for blade
+  const hoverOffset = 3
+
   // Animation variants - using consistent 100vh height to avoid layout jumps
   // The blade is always 100vh tall, only its position changes
   // Border radii animate smoothly from 24px to 0 during expansion
@@ -76,6 +82,22 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex, o
       borderTopRightRadius: borderRadius,
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
+      y: 0,
+      scale: 1,
+    },
+    collapsedHovered: {
+      // Same as collapsed but with hover offset
+      bottom: `calc(-100vh + ${frontBladePeekFromBottom}px)`,
+      left: frontBladePadding,
+      right: frontBladePadding,
+      top: 'auto' as const,
+      height: '100vh',
+      borderTopLeftRadius: borderRadius,
+      borderTopRightRadius: borderRadius,
+      borderBottomLeftRadius: 0,
+      borderBottomRightRadius: 0,
+      y: -hoverOffset,
+      scale: 1.001,
     },
     expanded: {
       // Fullscreen - covers entire viewport
@@ -89,12 +111,28 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex, o
       borderTopRightRadius: 0,
       borderBottomLeftRadius: 0,
       borderBottomRightRadius: 0,
+      y: 0,
+      scale: 1,
     },
   }
 
   // Determine if the blade should be interactive (only when collapsed in hero view)
   const isCollapsed = !isExpanded
   const isInteractive = isCollapsed && !isExpanding && !isCollapsing
+
+  // Track if blade itself is being directly hovered (not via nav items)
+  // This is separate from isNavHovered which tracks when nav items are hovered
+  const [isBladeDirectlyHovered, setIsBladeDirectlyHovered] = useState(false)
+
+  // Determine which variant to animate to
+  // Use collapsedHovered when:
+  // - Nav items are hovered (isNavHovered from parent)
+  // - Blade itself is directly hovered (isBladeDirectlyHovered local state)
+  const getAnimateVariant = () => {
+    if (isExpanded) return 'expanded'
+    if (isNavHovered || isBladeDirectlyHovered) return 'collapsedHovered'
+    return 'collapsed'
+  }
 
   return (
     <motion.div
@@ -107,11 +145,20 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex, o
         pointerEvents: isCollapsed ? 'auto' : 'none',
       }}
       initial={isCollapsing ? 'expanded' : 'collapsed'}
-      animate={isExpanded ? 'expanded' : 'collapsed'}
+      animate={getAnimateVariant()}
       variants={backdropVariants}
       transition={backdropTransition}
       onClick={() => isInteractive && onNavigateToStage?.(0)}
-      whileHover={isInteractive ? { y: -6, scale: 1.001 } : undefined}
+      onHoverStart={() => {
+        if (isInteractive) {
+          setIsBladeDirectlyHovered(true)
+          onHoverChange?.(true)
+        }
+      }}
+      onHoverEnd={() => {
+        setIsBladeDirectlyHovered(false)
+        onHoverChange?.(false)
+      }}
     />
   )
 }

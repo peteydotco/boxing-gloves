@@ -16,10 +16,11 @@ interface StageProps {
   isActive: boolean
   onRequestCaseStudy?: () => void
   isExpanding?: boolean
+  isZoomedNav?: boolean
   backgroundColor?: string
 }
 
-export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false, backgroundColor = '#000000' }: StageProps) {
+export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false, isZoomedNav = false, backgroundColor = '#000000' }: StageProps) {
   // Cursor tracking for card spotlight effects
   const [logoCardMouse, setLogoCardMouse] = useState({ x: 50, y: 50 })
   const [logoCardHovered, setLogoCardHovered] = useState(false)
@@ -200,8 +201,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
         </div>
 
         {/* Description Card - main content area with metadata panel */}
-        {/* flex-grow: 1 takes available space, flex-shrink: 0 means it won't shrink */}
-        {/* CTA card shrinks first because it has flex-shrink: 1 */}
+        {/* flex: 1 0 auto - grows to fill, won't shrink (CTA shrinks first) */}
         {/* No individual animation - expands naturally with the parent stage */}
         <div
           ref={descCardRef}
@@ -211,10 +211,8 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             overflow: 'hidden',
             position: 'relative',
             height: 216,
-            flexGrow: 1,
-            flexShrink: 0,
-            flexBasis: 'auto',
-            minWidth: 300,
+            flex: '1 0 auto',
+            minWidth: 200,
             border: '1px solid rgba(255, 255, 255, 0.12)',
           }}
           onMouseMove={(e) => handleCardMouseMove(e, descCardRef, setDescCardMouse)}
@@ -238,28 +236,39 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           {/* Card content layout */}
           {(() => {
             // Metadata panel dimensions
-            const metadataPanelWidth = 348
+            const metadataPanelWidth = 320
             const metadataPanelMargin = 8 // right margin
             const metadataPanelTotalWidth = metadataPanelWidth + metadataPanelMargin
 
             // Calculate if metadata panel should be visible
-            // Hide when panel's left edge would cross the halfway point of the card
-            const halfwayPoint = descCardWidth / 2
-            const metadataPanelLeftEdge = descCardWidth - metadataPanelTotalWidth
-            const showMetadataPanel = metadataPanelLeftEdge > halfwayPoint
+            // Hide metadata panel when viewport hits 1230px
+            // This threshold is based on the overall layout needs, not just the card width
+            const METADATA_MIN_CARD_WIDTH = 620
+            const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920
+            const showMetadataPanel = viewportWidth >= 1230 && descCardWidth >= METADATA_MIN_CARD_WIDTH
 
-            // Description text uses proportional scaling to preserve line breaks
-            // Calculate the reference width at full size (when metadata is visible)
+            // Description text layout
             const leftPadding = 37
-            const gapBetweenTextAndMetadata = 24
+            const gapBetweenTextAndMetadata = 36
+            const rightPaddingWithoutMetadata = 37 // Match left padding when metadata hidden
 
-            // Reference width: what the description text width would be at full card size with metadata visible
-            const fullSizeMetadataLeftEdge = descCardFullWidth - metadataPanelTotalWidth
-            const descriptionFullWidth = fullSizeMetadataLeftEdge - leftPadding - gapBetweenTextAndMetadata
+            // Dynamic description text width based on metadata visibility
+            // When metadata visible: text area ends 24px before metadata panel
+            // When metadata hidden: text area has symmetric padding (37px each side)
+            const descriptionTextWidth = showMetadataPanel
+              ? descCardWidth - metadataPanelTotalWidth - leftPadding - gapBetweenTextAndMetadata
+              : descCardWidth - leftPadding - rightPaddingWithoutMetadata
 
-            // Calculate scale factor based on current card width vs full width
-            // Scale proportionally when the card shrinks
-            const scaleFactor = descCardFullWidth > 0
+            // Reference width for zoomed nav scaling
+            // Use the text width as it appears at full size (with or without metadata based on full size)
+            const fullSizeHasMetadata = descCardFullWidth >= METADATA_MIN_CARD_WIDTH
+            const descriptionFullWidth = fullSizeHasMetadata
+              ? descCardFullWidth - metadataPanelTotalWidth - leftPadding - gapBetweenTextAndMetadata
+              : descCardFullWidth - leftPadding - rightPaddingWithoutMetadata
+
+            // Only use proportional scaling in zoomed nav mode to preserve line breaks
+            // In normal fullscreen mode, let the text box respond naturally
+            const scaleFactor = isZoomedNav && descCardFullWidth > 0
               ? Math.min(1, descCardWidth / descCardFullWidth)
               : 1
 
@@ -289,13 +298,12 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                     {stage.role}
                   </p>
 
-                  {/* Title - vertically centered around 61.65px */}
+                  {/* Title - positioned below role label */}
                   <h3
                     style={{
                       position: 'absolute',
-                      top: 61.65,
+                      top: 48,
                       left: 37,
-                      transform: 'translateY(-50%)',
                       fontFamily: 'GT Pressura',
                       fontSize: '24px',
                       fontWeight: 500,
@@ -309,7 +317,8 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                   </h3>
 
                   {/* Description - bottom aligned at 188px from top (updated for 216px height) */}
-                  {/* Uses proportional scaling to preserve line breaks when card shrinks */}
+                  {/* Uses proportional scaling to preserve line breaks when card shrinks in zoomed nav */}
+                  {/* In normal mode, width responds dynamically based on metadata visibility */}
                   <div
                     style={{
                       position: 'absolute',
@@ -317,15 +326,18 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                       left: 37,
                       transform: `translateY(-100%) scale(${scaleFactor})`,
                       transformOrigin: 'bottom left',
-                      width: descriptionFullWidth > 0 ? descriptionFullWidth : 400,
+                      width: isZoomedNav
+                        ? (descriptionFullWidth > 0 ? descriptionFullWidth : 400)
+                        : Math.max(descriptionTextWidth, 100),
                       overflow: 'hidden',
+                      transition: isZoomedNav ? 'none' : 'width 0.3s ease-out',
                     }}
                   >
                     <p
                       style={{
                         fontFamily: 'GT Pressura Ext',
                         fontSize: '16px',
-                        fontWeight: 400,
+                        fontWeight: 350, // Text weight - lighter than Regular (400)
                         color: stageSurface.text,
                         lineHeight: 1.35,
                         letterSpacing: '-0.32px',
@@ -337,7 +349,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                 </div>
 
                 {/* Right side: Metadata panel - inset 8px from top, right, and bottom */}
-                {/* Scales horizontally with the card while maintaining full height */}
+                {/* Fixed width panel - hidden when card is too narrow */}
                 {showMetadataPanel && (
                   <div
                     style={{
@@ -345,7 +357,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                       right: 8,
                       top: 8,
                       bottom: 8,
-                      width: 348,
+                      width: 320,
                       backgroundColor: stageSurface.secondary,
                       borderRadius: 16,
                       padding: '12px 16px 16px 16px',
@@ -355,14 +367,12 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                       justifyContent: 'space-between',
                       gap: 20,
                       overflow: 'hidden',
-                      transform: `scaleX(${scaleFactor})`,
-                      transformOrigin: 'right center',
                     }}
                   >
-              {/* Metadata rows container - Frame 32 */}
+              {/* Metadata rows container */}
               <div
                 style={{
-                  width: 316,
+                  width: '100%',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 0,
@@ -389,8 +399,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
               {/* Footer text */}
               <p
                 style={{
-                  width: 316,
-                  alignSelf: 'stretch',
+                  width: '100%',
                   fontFamily: 'GT Pressura Mono',
                   fontSize: '11px',
                   fontWeight: 400,
@@ -410,21 +419,17 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
         </div>
 
         {/* CTA Card - Request Case Study button */}
-        {/* Shrinks first (flexShrink: 1) while description card doesn't shrink (flexShrink: 0) */}
-        {/* Resizes between minWidth: 220px and maxWidth: 348px */}
-        {/* No individual animation - expands naturally with the parent stage */}
+        {/* Uses clamp() for responsive width: 216px min, 348px max */}
+        {/* Shrinks from 348px to 216px as viewport narrows (1440-1330) */}
         <div
           className="cursor-pointer"
           style={{
-            flexBasis: 348,
-            flexGrow: 0,
-            flexShrink: 1,
-            minWidth: 220,
-            maxWidth: 348,
+            width: 'clamp(216px, calc(348px - (1440px - 100vw) * 1.2), 348px)',
+            flexShrink: 0,
             height: 216,
             backgroundColor: ctaCardHovered ? stageSurface.secondary : 'transparent',
             borderRadius: 25,
-            border: `1px solid ${stageSurface.secondary}`,
+            border: `3px solid ${stageSurface.secondary}`,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -462,13 +467,16 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             </span>
           </div>
 
-          {/* Button text - knockout effect on hover (transparent text reveals dark bg) */}
+          {/* Button text - GT Pressura Regular (lighter than title) */}
+          {/* Knockout effect on hover (transparent text reveals dark bg) */}
           <span
-            className="font-pressura uppercase text-center"
             style={{
-              fontSize: '20px',
-              letterSpacing: '-0.8px',
-              lineHeight: 1.2,
+              fontFamily: 'GT Pressura',
+              fontSize: '24px',
+              fontWeight: 400,
+              lineHeight: 1.3,
+              textTransform: 'uppercase',
+              textAlign: 'center',
               color: ctaCardHovered ? 'transparent' : stageSurface.secondary,
               backgroundColor: ctaCardHovered ? backgroundColor : 'transparent',
               WebkitBackgroundClip: ctaCardHovered ? 'text' : 'unset',
@@ -499,7 +507,7 @@ function MetadataRow({
   return (
     <div
       style={{
-        width: 316,
+        width: '100%',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',

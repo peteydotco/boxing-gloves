@@ -197,7 +197,7 @@ export function StackedBlades({
             animate={getBladeAnimate()}
             variants={bladeVariants}
             transition={getBladeTransition(bladeIndex)}
-            whileHover={!isAnimating ? { y: -6, scale: 1.001 } : undefined}
+            whileHover={!isAnimating ? { y: -3, scale: 1.001 } : undefined}
             onClick={!isAnimating ? () => onNavigateToStage(bladeIndex) : undefined}
           />
         )

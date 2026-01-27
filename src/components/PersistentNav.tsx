@@ -12,6 +12,18 @@ interface PersistentNavProps {
   onNavigateToStages: () => void
   onLogoClick: () => void
   isZoomedNav?: boolean
+  heroBgColor?: string
+  activeStageIndex?: number
+  isBlade0Hovered?: boolean
+  onNavHoverChange?: (isHovered: boolean) => void
+}
+
+// Stage description card colors - matches Stage.tsx stageSurface
+const stageDescriptionCardColors: Record<number, string> = {
+  0: '#E9D7DA', // MasterClass - blush/salmon
+  1: '#E9D7DA', // Placeholder - same as MasterClass for now
+  2: '#E9D7DA', // Placeholder
+  3: '#E9D7DA', // Placeholder
 }
 
 // Nav item dimensions for the sliding border
@@ -29,6 +41,10 @@ export function PersistentNav({
   onNavigateToStages,
   onLogoClick,
   isZoomedNav = false,
+  heroBgColor = '#FFFFFF',
+  activeStageIndex = 0,
+  isBlade0Hovered = false,
+  onNavHoverChange,
 }: PersistentNavProps) {
   const { frontBladePeek } = bladeStackConfig
 
@@ -39,14 +55,47 @@ export function PersistentNav({
 
   // Track hover states manually to prevent stuck hover during transitions
   const [hoveredItem, setHoveredItem] = useState<'selectedWorks' | 'logo' | 'about' | null>(null)
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Track nav item dimensions (not positions - positions are calculated)
-  const [itemDimensions, setItemDimensions] = useState<{
+  // Handle nav item hover with delayed reset
+  // This prevents blade 0 from losing its hover state when mouse moves from nav item back to blade surface
+  const handleNavItemHover = (item: 'selectedWorks' | 'logo' | 'about' | null) => {
+    // Clear any pending timeout when entering a new item
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+
+    if (item !== null) {
+      // Entering a nav item - set immediately
+      setHoveredItem(item)
+    } else {
+      // Leaving a nav item - delay the reset to allow blade's onHoverStart to fire
+      hoverTimeoutRef.current = setTimeout(() => {
+        setHoveredItem(null)
+        hoverTimeoutRef.current = null
+      }, 100) // 100ms delay gives time for blade hover to register
+    }
+  }
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Track nav item dimensions and window size together for consistent positioning
+  const [measurements, setMeasurements] = useState<{
     selectedWorks: { width: number; height: number }
     logo: { width: number; height: number }
+    viewport: { width: number; height: number }
   }>({
     selectedWorks: { width: 0, height: 0 },
     logo: { width: 0, height: 0 },
+    viewport: { width: 0, height: 0 },
   })
 
   // Determine which nav item is active
@@ -67,11 +116,17 @@ export function PersistentNav({
     setHoveredItem(null)
   }, [isZoomedNav, transitionPhase, viewMode])
 
-  // Measure nav item dimensions on mount and resize
+  // Notify parent when nav items are hovered (only in hero mode)
   useEffect(() => {
-    const measureDimensions = () => {
+    const isNavHoveredInHero = hoveredItem !== null && !isInStages
+    onNavHoverChange?.(isNavHoveredInHero)
+  }, [hoveredItem, isInStages, onNavHoverChange])
+
+  // Measure nav item dimensions and viewport
+  useEffect(() => {
+    const measure = () => {
       if (selectedWorksRef.current && logoRef.current) {
-        setItemDimensions({
+        setMeasurements({
           selectedWorks: {
             width: selectedWorksRef.current.offsetWidth,
             height: selectedWorksRef.current.offsetHeight,
@@ -80,17 +135,38 @@ export function PersistentNav({
             width: logoRef.current.offsetWidth,
             height: logoRef.current.offsetHeight,
           },
+          viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight,
+          },
         })
       }
     }
 
-    // Initial measurement
-    measureDimensions()
+    // Wait for fonts to load before measuring
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(measure)
+    } else {
+      // Fallback: measure after a brief delay
+      requestAnimationFrame(measure)
+    }
 
     // Re-measure on resize
-    window.addEventListener('resize', measureDimensions)
-    return () => window.removeEventListener('resize', measureDimensions)
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
   }, [])
+
+  // Determine nav text/border color based on view mode
+  // - Hero view: sample hero bg color
+  // - Stages view: sample description card bg color for current stage
+  const getNavColor = () => {
+    if (isInStages || isExpanding) {
+      return stageDescriptionCardColors[activeStageIndex] || '#E9D7DA'
+    }
+    return heroBgColor
+  }
+
+  const navColor = getNavColor()
 
   // Text styling for nav links - uses GT Pressura (same as card titles) at 24px
   const linkTextStyle: React.CSSProperties = {
@@ -99,9 +175,9 @@ export function PersistentNav({
     fontWeight: 400,
     letterSpacing: '-0.3px',
     textTransform: 'uppercase',
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: navColor,
     cursor: 'pointer',
-    transition: 'color 0.2s ease',
+    transition: 'color 0.3s ease',
   }
 
   // Nav transition matches blade 0 timing for harmonious movement
@@ -141,6 +217,12 @@ export function PersistentNav({
   // Center of visible peek from bottom = 44px
   // Center of peek from top = 100vh - 44px = calc(100vh - 44px)
   const navIdleTop = `calc(100vh - ${frontBladePeek / 2}px)` // calc(100vh - 44px)
+
+  // Hover offset - nav items slide up when blade 0 is hovered (matches blade hover offset)
+  // Also apply offset when hovering nav items themselves (they're on blade 0)
+  const bladeHoverOffset = 3 // Matches StageBackground whileHover y offset
+  const isNavHovered = hoveredItem !== null && !isInStages // Only in hero mode
+  const shouldApplyHoverOffset = isBlade0Hovered || isNavHovered
 
   // Horizontal positioning:
   // - Idle (on blade): Links stay at proportional position within blade (~13.7% from edge)
@@ -210,14 +292,14 @@ export function PersistentNav({
   // This mirrors the nav item positioning logic so border animates with them
   const getBorderPosition = () => {
     const isExpanded = getNavAnimate() === 'expanded'
-    const dims = activeNavItem === 'selectedWorks' ? itemDimensions.selectedWorks : itemDimensions.logo
+    const dims = activeNavItem === 'selectedWorks' ? measurements.selectedWorks : measurements.logo
+    const { viewport } = measurements
 
     if (activeNavItem === 'selectedWorks') {
       // SELECTED WORKS position: left 13.7% with x transform
       // In expanded state: top 24, x = -expandedSpreadAmount
       // The element's left edge is at 13.7% of viewport, then shifted by x transform
-      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1000
-      const baseLeft = viewportWidth * 0.137
+      const baseLeft = viewport.width * 0.137
 
       if (isZoomedNav) {
         // Zoomed state: positioned at stage left + 40
@@ -229,28 +311,30 @@ export function PersistentNav({
         }
       }
 
+      // Apply hover offset when blade 0 is hovered (idle state only)
+      const hoverOffset = !isExpanded && shouldApplyHoverOffset ? bladeHoverOffset : 0
       return {
         left: baseLeft + (isExpanded ? -expandedSpreadAmount : 0),
-        top: isExpanded ? 24 : (typeof window !== 'undefined' ? window.innerHeight - frontBladePeek / 2 - dims.height / 2 : 0),
+        top: isExpanded ? 24 : (viewport.height - frontBladePeek / 2 - dims.height / 2 - hoverOffset),
         width: dims.width,
         height: dims.height,
       }
     } else {
       // PETEY.CO logo position: centered at 50%
-      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1000
-
       if (isZoomedNav) {
         return {
-          left: viewportWidth / 2 - dims.width / 2,
+          left: viewport.width / 2 - dims.width / 2,
           top: zoomedNavPos.top,
           width: dims.width,
           height: dims.height,
         }
       }
 
+      // Apply hover offset when blade 0 is hovered (idle state only)
+      const hoverOffset = !isExpanded && shouldApplyHoverOffset ? bladeHoverOffset : 0
       return {
-        left: viewportWidth / 2 - dims.width / 2,
-        top: isExpanded ? 24 : (typeof window !== 'undefined' ? window.innerHeight - frontBladePeek / 2 - dims.height / 2 : 0),
+        left: viewport.width / 2 - dims.width / 2,
+        top: isExpanded ? 24 : (viewport.height - frontBladePeek / 2 - dims.height / 2 - hoverOffset),
         width: dims.width,
         height: dims.height,
       }
@@ -259,23 +343,46 @@ export function PersistentNav({
 
   const borderPosition = getBorderPosition()
 
+  // Only show border once all measurements are ready to prevent positioning issues
+  const hasMeasuredDimensions = measurements.logo.width > 0 && measurements.selectedWorks.width > 0 && measurements.viewport.width > 0
+
+  // Border width constant - used to offset position since border draws outside content
+  const borderWidth = 3
+
+  // Border hover expansion - grows when active nav item is hovered
+  const borderHoverExpansion = 2 // px to expand on each side
+  const isActiveBorderHovered = (activeNavItem === 'selectedWorks' && hoveredItem === 'selectedWorks') ||
+                                 (activeNavItem === 'logo' && hoveredItem === 'logo') ||
+                                 (activeNavItem === 'about' && hoveredItem === 'about')
+
   return (
     <>
       {/* Sliding active border - moves between nav items */}
-      <motion.div
-        className="fixed z-[59] pointer-events-none"
-        style={{
-          border: '3px solid rgba(255, 255, 255, 0.8)',
-          borderRadius: 14,
-        }}
-        animate={{
-          left: borderPosition.left,
-          top: borderPosition.top,
-          width: borderPosition.width,
-          height: borderPosition.height,
-        }}
-        transition={getNavTransition()}
-      />
+      {/* Only render after measurements are ready to prevent animation from 0,0 */}
+      {hasMeasuredDimensions && (
+        <motion.div
+          className="fixed z-[59] pointer-events-none"
+          style={{
+            border: `${borderWidth}px solid ${navColor}`,
+            borderRadius: 14,
+            transition: 'border-color 0.3s ease',
+          }}
+          initial={{
+            left: borderPosition.left,
+            top: borderPosition.top,
+            width: borderPosition.width,
+            height: borderPosition.height,
+          }}
+          animate={{
+            // When hovered, expand border outward (grow size and offset position)
+            left: borderPosition.left - (isActiveBorderHovered ? borderHoverExpansion : 0),
+            top: borderPosition.top - (isActiveBorderHovered ? borderHoverExpansion : 0),
+            width: borderPosition.width + (isActiveBorderHovered ? borderHoverExpansion * 2 : 0),
+            height: borderPosition.height + (isActiveBorderHovered ? borderHoverExpansion * 2 : 0),
+          }}
+          transition={isActiveBorderHovered ? { type: 'spring', stiffness: 400, damping: 25 } : getNavTransition()}
+        />
+      )}
 
       {/* Left link - SELECTED WORKS */}
       <motion.div
@@ -301,10 +408,11 @@ export function PersistentNav({
           x: isZoomedNav
             ? (zoomDimensions.left + 40) - (typeof window !== 'undefined' ? window.innerWidth * 0.137 : 0)
             : (getNavAnimate() === 'expanded' ? -expandedSpreadAmount : 0),
-          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
+          // In idle state: center vertically (-50%) plus hover offset when blade 0 is hovered
+          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : `calc(-50% - ${shouldApplyHoverOffset ? bladeHoverOffset : 0}px)`),
           scale: 1,
         }}
-        transition={getNavTransition()}
+        transition={shouldApplyHoverOffset && getNavAnimate() !== 'expanded' ? { type: 'spring', stiffness: 400, damping: 30 } : getNavTransition()}
         onClick={!isZoomedNav ? handleLeftClick : undefined}
       >
         {/* Container with invisible border for spacing (real border is the sliding one) */}
@@ -312,21 +420,28 @@ export function PersistentNav({
           ref={selectedWorksRef}
           style={{
             borderRadius: 14,
-            padding: '5px 7px 6px 7px',
+            padding: '5px 8px 8px 8px',
           }}
           animate={{
-            borderColor: (!isZoomedNav && !isInStages && hoveredItem === 'selectedWorks')
-              ? 'rgba(255, 255, 255, 0.5)'
-              : 'rgba(255, 255, 255, 0)',
+            backgroundColor: (!isZoomedNav && !isInStages && hoveredItem === 'selectedWorks')
+              ? `${navColor}33` // 20% opacity
+              : `${navColor}00`, // transparent
+            scale: (!isZoomedNav && !isInStages && hoveredItem === 'selectedWorks') ? 1.04 : 1,
           }}
-          initial={{ borderColor: 'rgba(255, 255, 255, 0)' }}
-          transition={{ duration: 0.2 }}
-          onMouseEnter={() => setHoveredItem('selectedWorks')}
-          onMouseLeave={() => setHoveredItem(null)}
+          initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          onMouseEnter={() => handleNavItemHover('selectedWorks')}
+          onMouseLeave={() => handleNavItemHover(null)}
         >
-          <span style={{ ...linkTextStyle, display: 'block', lineHeight: 1, border: '3px solid transparent' }}>
+          <motion.span
+            style={{ ...linkTextStyle, display: 'block', lineHeight: 1 }}
+            animate={{
+              scale: (!isZoomedNav && !isInStages && hoveredItem === 'selectedWorks') ? 1 / 1.04 : 1,
+            }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          >
             SELECTED WORKS
-          </span>
+          </motion.span>
         </motion.div>
       </motion.div>
 
@@ -348,41 +463,49 @@ export function PersistentNav({
           top: isZoomedNav ? zoomedNavPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
           left: '50%',
           x: '-50%',
-          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
+          // In idle state: center vertically (-50%) plus hover offset when blade 0 is hovered
+          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : `calc(-50% - ${shouldApplyHoverOffset ? bladeHoverOffset : 0}px)`),
           scale: 1, // No scaling needed - stage resizes, content reflows
         }}
-        transition={getNavTransition()}
+        transition={shouldApplyHoverOffset && getNavAnimate() !== 'expanded' ? { type: 'spring', stiffness: 400, damping: 30 } : getNavTransition()}
         onClick={!isZoomedNav ? onLogoClick : undefined}
       >
-        {/* Container with invisible border for spacing (real border is the sliding one) */}
+        {/* Container measured for sliding border dimensions */}
         <motion.div
           ref={logoRef}
           style={{
             borderRadius: 14,
-            padding: '5px 7px 6px 7px',
+            padding: '5px 8px 8px 8px',
           }}
           animate={{
-            borderColor: (!isZoomedNav && isInStages && !isExpanding && hoveredItem === 'logo')
-              ? 'rgba(255, 255, 255, 0.5)'
-              : 'rgba(255, 255, 255, 0)',
+            backgroundColor: (!isZoomedNav && isInStages && !isExpanding && hoveredItem === 'logo')
+              ? `${navColor}33` // 20% opacity
+              : `${navColor}00`, // transparent
+            scale: (!isZoomedNav && isInStages && !isExpanding && hoveredItem === 'logo') ? 1.04 : 1,
           }}
-          initial={{ borderColor: 'rgba(255, 255, 255, 0)' }}
-          transition={{ duration: 0.2 }}
-          onMouseEnter={() => setHoveredItem('logo')}
-          onMouseLeave={() => setHoveredItem(null)}
+          initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          onMouseEnter={() => handleNavItemHover('logo')}
+          onMouseLeave={() => handleNavItemHover(null)}
         >
-          <span
+          <motion.span
             style={{
               ...linkTextStyle,
+              fontSize: '26px',
               fontWeight: 500, // Pressura Medium
               letterSpacing: '-0.02em',
-              display: 'block',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               lineHeight: 1,
-              border: '3px solid transparent',
             }}
+            animate={{
+              scale: (!isZoomedNav && isInStages && !isExpanding && hoveredItem === 'logo') ? 1 / 1.04 : 1,
+            }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
             PETEY.CO
-          </span>
+          </motion.span>
         </motion.div>
       </motion.div>
 
@@ -411,10 +534,11 @@ export function PersistentNav({
           x: isZoomedNav
             ? (typeof window !== 'undefined' ? window.innerWidth * 0.137 : 0) - (zoomDimensions.left + 40)
             : (getNavAnimate() === 'expanded' ? expandedSpreadAmount : 0),
-          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
+          // In idle state: center vertically (-50%) plus hover offset when blade 0 is hovered
+          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : `calc(-50% - ${shouldApplyHoverOffset ? bladeHoverOffset : 0}px)`),
           scale: 1,
         }}
-        transition={getNavTransition()}
+        transition={shouldApplyHoverOffset && getNavAnimate() !== 'expanded' ? { type: 'spring', stiffness: 400, damping: 30 } : getNavTransition()}
         onClick={!isZoomedNav ? handleRightClick : undefined}
       >
         {/* Container with invisible border for spacing (sliding border will target this when About is active) */}
@@ -422,21 +546,28 @@ export function PersistentNav({
           ref={aboutRef}
           style={{
             borderRadius: 14,
-            padding: '5px 7px 6px 7px',
+            padding: '5px 8px 8px 8px',
           }}
           animate={{
-            borderColor: (!isZoomedNav && hoveredItem === 'about')
-              ? 'rgba(255, 255, 255, 0.5)'
-              : 'rgba(255, 255, 255, 0)',
+            backgroundColor: (!isZoomedNav && hoveredItem === 'about')
+              ? `${navColor}33` // 20% opacity
+              : `${navColor}00`, // transparent
+            scale: (!isZoomedNav && hoveredItem === 'about') ? 1.04 : 1,
           }}
-          initial={{ borderColor: 'rgba(255, 255, 255, 0)' }}
-          transition={{ duration: 0.2 }}
-          onMouseEnter={() => setHoveredItem('about')}
-          onMouseLeave={() => setHoveredItem(null)}
+          initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          onMouseEnter={() => handleNavItemHover('about')}
+          onMouseLeave={() => handleNavItemHover(null)}
         >
-          <span style={{ ...linkTextStyle, display: 'block', lineHeight: 1, border: '3px solid transparent' }}>
+          <motion.span
+            style={{ ...linkTextStyle, display: 'block', lineHeight: 1 }}
+            animate={{
+              scale: (!isZoomedNav && hoveredItem === 'about') ? 1 / 1.04 : 1,
+            }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          >
             MORE ABOUT ME
-          </span>
+          </motion.span>
         </motion.div>
       </motion.div>
     </>

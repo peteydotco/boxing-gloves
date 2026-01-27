@@ -285,6 +285,7 @@ export function StagesContainer({
                 isActive={stageIndex === activeIndex}
                 onRequestCaseStudy={handleRequestCaseStudy}
                 isExpanding={transitionPhase === 'expanding'}
+                isZoomedNav={isZoomedNav}
                 backgroundColor={getBladeColor(bladeIndex)}
               />
             )

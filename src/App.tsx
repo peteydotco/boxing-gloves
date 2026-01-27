@@ -78,6 +78,11 @@ function App() {
   // Zoomed nav mode - when true, stage scales down and TopCards become visible
   const [isZoomedNav, setIsZoomedNav] = useState(false)
 
+  // Track blade 0 hover state for nav item animation
+  const [isBlade0Hovered, setIsBlade0Hovered] = useState(false)
+  // Track nav item hover state (nav items are on blade 0, so hovering them should keep blade offset)
+  const [isNavHovered, setIsNavHovered] = useState(false)
+
   // mousePosition state is only for 2D UI elements (spotlight, marquee)
   // Scene reads from mousePositionRef directly to avoid re-renders
   const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 })
@@ -484,6 +489,8 @@ function App() {
           transitionPhase={transitionPhase}
           activeStageIndex={activeStageIndex}
           onNavigateToStage={navigateToStage}
+          onHoverChange={setIsBlade0Hovered}
+          isNavHovered={isNavHovered}
         />
       )}
 
@@ -536,6 +543,10 @@ function App() {
           onNavigateToStages={() => navigateToStage(0)}
           onLogoClick={handleLogoClick}
           isZoomedNav={isZoomedNav}
+          heroBgColor={theme.bgColor}
+          activeStageIndex={activeStageIndex}
+          isBlade0Hovered={isBlade0Hovered}
+          onNavHoverChange={setIsNavHovered}
         />
       )}
     </div>
