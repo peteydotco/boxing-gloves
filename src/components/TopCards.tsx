@@ -617,15 +617,21 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     }
   }, [expandedIndex, cardsToShow.length, dragContainer, isMobile, handleCloseExpanded])
 
-  // Lock body scroll when expanded
+  // Lock all site scrolling when expanded
+  // This prevents body scroll, wheel events, and touch scrolling
   React.useEffect(() => {
     if (expandedIndex !== null) {
+      // Lock body scroll
       document.body.style.overflow = 'hidden'
+      // Add data attribute so other components know TopCards are expanded
+      document.documentElement.setAttribute('data-topcards-expanded', 'true')
     } else {
       document.body.style.overflow = ''
+      document.documentElement.removeAttribute('data-topcards-expanded')
     }
     return () => {
       document.body.style.overflow = ''
+      document.documentElement.removeAttribute('data-topcards-expanded')
     }
   }, [expandedIndex])
 

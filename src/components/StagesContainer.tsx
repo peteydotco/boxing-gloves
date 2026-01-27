@@ -85,7 +85,13 @@ export function StagesContainer({
     if (!isVisible || isZoomedNav) return
 
     const handleWheel = (e: WheelEvent) => {
+      // Always prevent default to stop page scroll
       e.preventDefault()
+
+      // Skip navigation if TopCards are expanded (they handle their own scroll)
+      if (document.documentElement.hasAttribute('data-topcards-expanded')) {
+        return
+      }
 
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
       const now = Date.now()
@@ -146,6 +152,11 @@ export function StagesContainer({
     if (!isVisible) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if TopCards are expanded (they handle their own keyboard navigation)
+      if (document.documentElement.hasAttribute('data-topcards-expanded')) {
+        return
+      }
+
       if (e.key === 'Escape') {
         onNavigateToHero()
         return

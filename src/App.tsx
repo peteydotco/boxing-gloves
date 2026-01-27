@@ -203,6 +203,11 @@ function App() {
     if (viewMode !== 'hero') return
 
     const handleWheel = (e: WheelEvent) => {
+      // Skip if TopCards are expanded (they handle their own scroll)
+      if (document.documentElement.hasAttribute('data-topcards-expanded')) {
+        return
+      }
+
       // Only handle scroll down (to stages)
       const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
       if (delta <= 0) return // Only scroll down

@@ -195,8 +195,8 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
     return () => clearTimeout(timer)
   }, [isMobile, previewVideo, isActive])
 
-  // Control video playback - hover on desktop (only if focused), timer on mobile
-  const shouldShowVideo = isMobile ? mobileVideoActive : (isHovered && isActive)
+  // Control video playback - autoplay on desktop when focused, timer on mobile
+  const shouldShowVideo = isMobile ? mobileVideoActive : isActive
 
   useEffect(() => {
     if (!videoRef.current || !previewVideo) return
