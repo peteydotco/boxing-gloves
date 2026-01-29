@@ -596,7 +596,9 @@ export function AddNewRoleContent({
               fontSize: '20px',
               color: '#000',
               letterSpacing: '-0.8px',
-              fontWeight: 500,
+              fontWeight: 400,
+              position: 'relative',
+              top: '-1px',
             }}
           >
             More on Linkedin
@@ -621,7 +623,9 @@ export function AddNewRoleContent({
               fontSize: '20px',
               color: '#000',
               letterSpacing: '-0.8px',
-              fontWeight: 500,
+              fontWeight: 400,
+              position: 'relative',
+              top: '-1px',
             }}
           >
             Copy Email
