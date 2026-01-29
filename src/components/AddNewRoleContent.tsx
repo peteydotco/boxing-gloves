@@ -3,9 +3,99 @@ import { useState, useRef, useEffect } from 'react'
 import { SlPlus } from 'react-icons/sl'
 import { contentSpring } from '../constants/animation'
 
-// Timeline line style constant
-const TIMELINE_COLOR = '#CFCFCF'
-const TIMELINE_WIDTH = 2
+// Timeline connector color
+const STROKE_COLOR = '#CFCFCF'
+const STROKE_WIDTH = 2.5
+
+// Inline SVG connectors — paths derived from Figma, re-oriented for vertical flow
+// First branch: from parent logo bottom → curves right to first sub-role
+// Draws: vertical down, then curves right with 11px radius
+const BranchFirst = () => (
+  <svg
+    width="27"
+    height="70"
+    viewBox="0 0 27 70"
+    fill="none"
+    style={{ display: 'block', overflow: 'visible' }}
+  >
+    <path
+      d="M1.25 1.25V58.25C1.25 64.325 6.175 69.25 12.25 69.25H25.75"
+      stroke={STROKE_COLOR}
+      strokeWidth={STROKE_WIDTH}
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+// Subsequent branch: taller vertical run, same curve right
+const BranchSub = () => (
+  <svg
+    width="27"
+    height="97"
+    viewBox="0 0 27 97"
+    fill="none"
+    style={{ display: 'block', overflow: 'visible' }}
+  >
+    <path
+      d="M1.25 1.25V85.25C1.25 91.325 6.175 96.25 12.25 96.25H25.75"
+      stroke={STROKE_COLOR}
+      strokeWidth={STROKE_WIDTH}
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+// Curly loop: vertical line → figure-8 thread → vertical line
+// Used between Squarespace X and Fantasy
+const CurlyLoop = () => (
+  <svg
+    width="21"
+    height="79"
+    viewBox="0 0 21.5 79.5"
+    fill="none"
+    style={{ display: 'block', overflow: 'visible' }}
+  >
+    <path
+      d="M1.25 1.25L1.25 38.75"
+      stroke={STROKE_COLOR}
+      strokeWidth={STROKE_WIDTH}
+      strokeLinecap="round"
+    />
+    <path
+      d="M1.25 58.25C1.25 39.25 20.25 39.25 20.25 48.9234C20.25 58.5967 1.25 59.541 1.25 39.25"
+      stroke={STROKE_COLOR}
+      strokeWidth={STROKE_WIDTH}
+      strokeLinecap="round"
+    />
+    <path
+      d="M1.25 58.25L1.25 78.25"
+      stroke={STROKE_COLOR}
+      strokeWidth={STROKE_WIDTH}
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+// Straight vertical connector between Fantasy and Critical Mass
+const VerticalLine = () => (
+  <svg
+    width="3"
+    height="43"
+    viewBox="0 0 2.5 43"
+    fill="none"
+    style={{ display: 'block', overflow: 'visible' }}
+  >
+    <line
+      x1="1.25"
+      y1="1.25"
+      x2="1.25"
+      y2="41.75"
+      stroke={STROKE_COLOR}
+      strokeWidth={STROKE_WIDTH}
+      strokeLinecap="round"
+    />
+  </svg>
+)
 
 // Work experience data
 interface SubRole {
@@ -13,6 +103,15 @@ interface SubRole {
   description: string
   dateRange: string
   logo: string
+  shape?: 'square' | 'circle'
+}
+
+interface LogoFit {
+  width: string
+  height: string
+  left?: string
+  top?: string
+  objectFit?: 'contain' | 'cover'
 }
 
 interface WorkExperience {
@@ -22,6 +121,7 @@ interface WorkExperience {
   dateRange: string
   logo: string
   logoBg?: string
+  logoFit?: LogoFit
   subRoles?: SubRole[]
 }
 
@@ -43,19 +143,21 @@ const workExperience: WorkExperience[] = [
         title: 'Squarespace app',
         description: 'Reimagined for first-time sellers',
         dateRange: '2022 → 2024',
-        logo: '/images/logos/squarespace.png',
+        logo: '/images/logos/squarespace-app.png',
       },
       {
         title: 'Squarespace 7.1',
         description: 'Design manager for content, styling',
         dateRange: '2020 → 2021',
         logo: '/images/logos/squarespace.png',
+        shape: 'circle',
       },
       {
         title: 'Squarespace X',
         description: 'Design lead for next-gen platform',
         dateRange: '2019 → 2020',
         logo: '/images/logos/squarespace.png',
+        shape: 'circle',
       },
     ],
   },
@@ -66,6 +168,7 @@ const workExperience: WorkExperience[] = [
     dateRange: '2017 → 2018',
     logo: '/images/logos/fantasy.png',
     logoBg: '#FFFFFF',
+    logoFit: { width: '88%', height: '88%', left: '6.8%', top: '6.6%', objectFit: 'contain' },
   },
   {
     company: 'Critical Mass',
@@ -74,6 +177,7 @@ const workExperience: WorkExperience[] = [
     dateRange: '2015 → 2017',
     logo: '/images/logos/critical-mass.png',
     logoBg: '#000000',
+    logoFit: { width: '102%', height: '75%', left: '-1%', top: '12.7%', objectFit: 'cover' },
   },
 ]
 
@@ -110,8 +214,8 @@ export function AddNewRoleContent({
 
   return (
     <>
-      {/* TOP CLUSTER - matches other cards structure with morphing animations */}
-      <div className="flex-shrink-0">
+      {/* TOP CLUSTER - matches collapsed card's flex-col gap-[0px] structure */}
+      <div className="flex-shrink-0 flex flex-col gap-[0px]">
         {/* Header row */}
         <div className="flex items-start justify-between w-full">
           <motion.div
@@ -131,100 +235,136 @@ export function AddNewRoleContent({
             - EMPTY SLOT -
           </motion.div>
 
-          {/* Badge - shows ESC when expanded, morphs to shortcut on exit */}
+          {/* Badge - cross-fades between ESC (expanded) and shortcut (collapsed) */}
           {!hideShortcut && (
             <motion.div
               onClick={(e) => {
                 e.stopPropagation()
                 onClose()
               }}
-              className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer"
-              style={{ backgroundColor: 'rgba(0,0,0,0.08)', padding: '4px 8px' }}
+              className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer overflow-hidden"
+              style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}
+              initial={false}
+              animate={{ padding: '4px 8px' }}
+              exit={{ padding: '4px 12px' }}
+              transition={contentSpring}
             >
-              {/* Badge text - same size as collapsed card */}
+              {/* Badge text container - dual spans for cross-fade */}
               <div
-                className="uppercase font-pressura-mono leading-[100%] relative text-[12px]"
-                style={{ top: '-1px', color: '#3e3e3e' }}
+                className="uppercase font-pressura-mono leading-[100%] relative text-[12px] whitespace-nowrap"
+                style={{ top: '-1px' }}
               >
-                ESC
+                {/* ESC text - absolutely positioned, visible when expanded */}
+                <motion.span
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{ color: '#3e3e3e' }}
+                  initial={false}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.12, ease: 'easeOut' }}
+                >
+                  ESC
+                </motion.span>
+                {/* Shortcut text - provides layout, hidden when expanded */}
+                <motion.span
+                  style={{ color: '#3e3e3e' }}
+                  initial={false}
+                  animate={{ opacity: 0 }}
+                  exit={{ opacity: 1 }}
+                  transition={{ duration: 0.12, ease: 'easeOut' }}
+                >
+                  {shortcut}
+                </motion.span>
               </div>
             </motion.div>
           )}
         </div>
 
         {/* Title input row - morphs from collapsed to expanded */}
+        {/* Matches collapsed structure: block div > span.flex.items-center.gap-3 */}
+        {/* Uses textColor (0.55) in expanded for ghosted look, ctaTitleColor (0.75) on exit to match collapsed */}
         <motion.div
-          className="flex items-center"
-          style={{ gap: '12px', transformOrigin: 'top left' }}
-          initial={{ scale: 1, marginTop: '0px' }}
-          animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px' }}
-          exit={{ scale: 1, marginTop: '0px' }}
+          className="text-[18px] leading-normal text-left w-full uppercase font-pressura-light"
+          style={{
+            transformOrigin: 'top left',
+            letterSpacing: '-0.3px',
+          }}
+          initial={{ scale: 1, marginTop: '0px', color: 'rgba(0,0,0,0.75)' }}
+          animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px', color: 'rgba(0,0,0,0.4)' }}
+          exit={{ scale: 1, marginTop: '0px', color: 'rgba(0,0,0,0.75)' }}
           transition={contentSpring}
         >
-          {/* Plus circle icon - scales with the row */}
-          <SlPlus className="shrink-0" style={{ color: '#202020', width: '20px', height: '20px' }} />
-
-          {/* Input field - wrapped in motion.div for exit animation */}
-          <motion.div
-            className="relative flex-1"
-            initial={{ opacity: 0.3 }}
-            animate={{ opacity: inputValue ? 1 : 0.3 }}
-            exit={{ opacity: 1 }}
-            transition={contentSpring}
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Add new role..."
-              className="w-full bg-transparent outline-none font-pressura-light uppercase"
-              style={{
-                color: '#202020',
-                fontSize: '18px',
-                letterSpacing: '-0.3px',
-                caretColor: '#202020',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </motion.div>
+          <span className="flex items-center gap-3">
+            <motion.span
+              className="shrink-0 inline-flex"
+              initial={{ marginLeft: '0px' }}
+              animate={{ marginLeft: '2.5px' }}
+              exit={{ marginLeft: '0px' }}
+              transition={contentSpring}
+            >
+              <SlPlus className="w-5 h-5" style={{ color: 'rgba(0,0,0,0.75)', position: 'relative', top: '1px' }} />
+            </motion.span>
+            {/* Input field with custom placeholder overlay */}
+            <span className="relative flex-1">
+              {!inputValue && (
+                <span
+                  className="absolute inset-0 font-pressura-light uppercase pointer-events-none"
+                  style={{
+                    color: 'inherit',
+                    fontSize: 'inherit',
+                    letterSpacing: 'inherit',
+                    lineHeight: 'inherit',
+                  }}
+                >
+                  Add new role
+                </span>
+              )}
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="w-full bg-transparent outline-none font-pressura-light uppercase relative"
+                style={{
+                  color: 'inherit',
+                  fontSize: 'inherit',
+                  letterSpacing: 'inherit',
+                  lineHeight: 'inherit',
+                  padding: 0,
+                  margin: 0,
+                  border: 'none',
+                  height: 'auto',
+                  caretColor: 'rgba(0,0,0,0.55)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </span>
+          </span>
         </motion.div>
       </div>
 
       {/* MIDDLE CLUSTER - Scrollable work experience list */}
       <motion.div
         className="flex-1 overflow-y-auto overflow-x-hidden relative"
-        style={{ marginTop: '44px' }}
+        style={{ marginTop: '48px', padding: '3px' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.15 }}
       >
-        {/* Main continuous vertical timeline line */}
-        <div
-          className="absolute"
-          style={{
-            left: '18px', // Center of 38px parent logo
-            top: '38px', // Start from bottom of Squarespace logo
-            bottom: '100px', // Stop above Critical Mass logo
-            width: `${TIMELINE_WIDTH}px`,
-            backgroundColor: TIMELINE_COLOR,
-          }}
-        />
-
         {workExperience.map((exp) => {
           const hasSubRoles = exp.subRoles && exp.subRoles.length > 0
 
           return (
-            <div key={exp.company} className="relative" style={{ marginBottom: hasSubRoles ? '4px' : '16px' }}>
+            <div key={exp.company} className="relative" style={{ marginBottom: hasSubRoles ? '16px' : '16px' }}>
               {/* Parent role */}
               <div className="flex items-start" style={{ gap: '20px' }}>
                 {/* Logo */}
                 <div
-                  className="shrink-0 overflow-hidden flex items-center justify-center relative z-10"
+                  className="shrink-0 relative z-10 overflow-hidden"
                   style={{
                     width: '38px',
                     height: '38px',
-                    border: '2.5px solid #cfcfcf',
+                    boxShadow: '0 0 0 2.5px #cfcfcf',
                     borderRadius: '18px',
                     backgroundColor: exp.logoBg || '#f6f6f6',
                   }}
@@ -232,11 +372,14 @@ export function AddNewRoleContent({
                   <img
                     src={exp.logo}
                     alt={exp.company}
-                    className="object-cover"
                     style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: '16px',
+                      position: exp.logoFit ? 'absolute' : 'static',
+                      width: exp.logoFit ? exp.logoFit.width : '100%',
+                      height: exp.logoFit ? exp.logoFit.height : '100%',
+                      left: exp.logoFit?.left,
+                      top: exp.logoFit?.top,
+                      objectFit: exp.logoFit?.objectFit || 'cover',
+                      borderRadius: exp.logoFit ? '0' : '18px',
                     }}
                   />
                 </div>
@@ -278,76 +421,115 @@ export function AddNewRoleContent({
                 </div>
               </div>
 
-              {/* Sub-roles */}
+              {/* Sub-roles with SVG branch connectors */}
               {hasSubRoles && (
                 <div
                   style={{
-                    marginLeft: '57px', // 19px (center) + 38px (branch width)
-                    marginTop: '8px',
+                    marginLeft: '57px',
+                    marginTop: '16px',
                   }}
                 >
-                  {exp.subRoles!.map((subRole) => (
-                    <div key={subRole.title} className="relative" style={{ marginBottom: '10px' }}>
-                      {/* Horizontal branch from timeline to sub-role */}
-                      <div
-                        className="absolute"
-                        style={{
-                          left: '-39px', // Back to the timeline
-                          top: '13px', // Middle of 28px sub-role logo
-                          width: '27px',
-                          height: `${TIMELINE_WIDTH}px`,
-                          backgroundColor: TIMELINE_COLOR,
-                        }}
-                      />
-
-                      <div className="flex items-start" style={{ gap: '12px' }}>
-                        {/* Sub-role logo */}
+                  {exp.subRoles!.map((subRole, subIndex) => {
+                    const isLast = subIndex === exp.subRoles!.length - 1
+                    return (
+                      <div key={subRole.title} className="relative" style={{ marginBottom: '10px' }}>
+                        {/* SVG curved branch connector — arm ends under the sub-role logo */}
                         <div
-                          className="shrink-0 overflow-hidden flex items-center justify-center relative z-10"
+                          className="absolute"
                           style={{
-                            width: '28px',
-                            height: '28px',
-                            border: '2.5px solid #cfcfcf',
-                            borderRadius: '8px',
-                            backgroundColor: '#f6f6f6',
+                            left: '-40px',
+                            bottom: 'calc(100% - 14px)',
+                            width: '27px',
+                            height: subIndex === 0 ? '64px' : '97px',
+                            pointerEvents: 'none',
+                            zIndex: 0,
                           }}
                         >
-                          <img
-                            src={subRole.logo}
-                            alt={subRole.title}
-                            className="object-cover"
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              borderRadius: '6px',
-                            }}
-                          />
+                          {subIndex === 0 ? <BranchFirst /> : <BranchSub />}
                         </div>
 
-                        {/* Sub-role info */}
-                        <div className="flex flex-col" style={{ gap: '0px' }}>
-                          <span
-                            className="font-pressura-ext"
-                            style={{ fontSize: '18px', color: '#202020' }}
+                        {/* Curly loop — attached to last sub-role, bridges to Fantasy */}
+                        {isLast && exp.company === 'Squarespace' && (
+                          <div
+                            className="absolute"
+                            style={{
+                              left: '-40px',
+                              top: '4px',
+                              width: '21px',
+                              height: '79px',
+                              pointerEvents: 'none',
+                              zIndex: 0,
+                            }}
                           >
-                            {subRole.title}
-                          </span>
-                          <span
-                            className="font-pressura-ext"
-                            style={{ fontSize: '16px', color: '#6f6f6f', fontWeight: 350 }}
+                            <CurlyLoop />
+                          </div>
+                        )}
+
+                        <div className="flex items-start" style={{ gap: '12px' }}>
+                          {/* Sub-role logo */}
+                          <div
+                            className="shrink-0 flex items-center justify-center relative z-10"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              boxShadow: '0 0 0 2.5px #cfcfcf',
+                              borderRadius: subRole.shape === 'circle' ? '44px' : '8px',
+                              backgroundColor: '#f6f6f6',
+                            }}
                           >
-                            {subRole.description}
-                          </span>
-                          <span
-                            className="font-pressura-ext"
-                            style={{ fontSize: '16px', color: '#6f6f6f', fontWeight: 350 }}
-                          >
-                            {subRole.dateRange}
-                          </span>
+                            <img
+                              src={subRole.logo}
+                              alt={subRole.title}
+                              className="object-cover"
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: subRole.shape === 'circle' ? '44px' : '8px',
+                              }}
+                            />
+                          </div>
+
+                          {/* Sub-role info */}
+                          <div className="flex flex-col" style={{ gap: '0px' }}>
+                            <span
+                              className="font-pressura-ext"
+                              style={{ fontSize: '18px', color: '#202020' }}
+                            >
+                              {subRole.title}
+                            </span>
+                            <span
+                              className="font-pressura-ext"
+                              style={{ fontSize: '16px', color: '#6f6f6f', fontWeight: 350 }}
+                            >
+                              {subRole.description}
+                            </span>
+                            <span
+                              className="font-pressura-ext"
+                              style={{ fontSize: '16px', color: '#6f6f6f', fontWeight: 350 }}
+                            >
+                              {subRole.dateRange}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Straight vertical connector between Fantasy and Critical Mass */}
+              {exp.company === 'Fantasy' && (
+                <div
+                  className="absolute"
+                  style={{
+                    left: '16.75px',
+                    bottom: '-19px',
+                    width: '3px',
+                    height: '55px',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <VerticalLine />
                 </div>
               )}
 
@@ -361,7 +543,7 @@ export function AddNewRoleContent({
                     width: '28px',
                     height: '28px',
                     borderRadius: '44px',
-                    border: '2.5px solid #f6f6f6',
+                    boxShadow: '0 0 0 2.5px #f6f6f6',
                     backgroundColor: '#999',
                     overflow: 'hidden',
                   }}

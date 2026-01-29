@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 21.5 79.5" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Group 44">
+<path id="Line 3" d="M1.25 1.25L1.25 38.75" stroke="var(--stroke-0, #CFCFCF)" stroke-width="2.5" stroke-linecap="round"/>
+<g id="thread">
+<path id="Vector" d="M1.25 58.25C1.25 39.25 20.25 39.25 20.25 48.9234C20.25 58.5967 1.25 59.541 1.25 39.25" stroke="var(--stroke-0, #CFCFCF)" stroke-width="2.5" stroke-linecap="round"/>
+</g>
+<path id="Line 4" d="M1.25 58.25L1.25 78.25" stroke="var(--stroke-0, #CFCFCF)" stroke-width="2.5" stroke-linecap="round"/>
+</g>
+</svg>
