@@ -72,20 +72,6 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
     setter({ x, y })
   }, [])
 
-  // Spotlight gradient generator for fill effect
-  const getSpotlightGradient = (mousePos: { x: number; y: number }, isDark = false) => {
-    const lightColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.12)'
-    const midColor = isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.04)'
-    return `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, ${lightColor} 0%, ${midColor} 50%, transparent 100%)`
-  }
-
-  // Border spotlight gradient
-  const getBorderSpotlight = (mousePos: { x: number; y: number }) => {
-    return `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.2) 25%, rgba(255, 255, 255, 0.08) 50%, transparent 100%)`
-  }
-
-  // Logo card border spotlight (matching TopCards/MorphingCard style)
-  const logoCardBorderColor = 'rgba(255, 255, 255, 0.12)'
   const getLogoCardSpotlight = () => {
     if (!logoCardHovered) return 'none'
     return `radial-gradient(circle at ${logoCardMouse.x}% ${logoCardMouse.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, rgba(255, 255, 255, 0.8) 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`

@@ -26,7 +26,7 @@ interface StageBackgroundProps {
  * that transitions between states, rather than two separate elements
  * trying to coordinate their visibility.
  */
-export function StageBackground({ viewMode, transitionPhase, activeStageIndex, onNavigateToStage, onHoverChange, isNavHovered = false }: StageBackgroundProps) {
+export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _activeStageIndex, onNavigateToStage, onHoverChange, isNavHovered = false }: StageBackgroundProps) {
   const { borderRadius, horizontalPadding, frontBladePeek } = bladeStackConfig
 
   // Front blade is index 0 (closest to viewer, widest)

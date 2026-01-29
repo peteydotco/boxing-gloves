@@ -26,14 +26,6 @@ const stageDescriptionCardColors: Record<number, string> = {
   3: '#E9D7DA', // Placeholder
 }
 
-// Nav item dimensions for the sliding border
-interface NavItemRect {
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
 export function PersistentNav({
   viewMode,
   transitionPhase,
@@ -55,7 +47,7 @@ export function PersistentNav({
 
   // Track hover states manually to prevent stuck hover during transitions
   const [hoveredItem, setHoveredItem] = useState<'selectedWorks' | 'logo' | 'about' | null>(null)
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Handle nav item hover with delayed reset
   // This prevents blade 0 from losing its hover state when mouse moves from nav item back to blade surface
@@ -247,7 +239,7 @@ export function PersistentNav({
   // Calculate zoomed stage dimensions (matches StagesContainer)
   const getZoomDimensions = () => {
     if (typeof window === 'undefined') {
-      return { width: window?.innerWidth || 1000, height: window?.innerHeight || 800, top: 124, left: 24 }
+      return { width: 1000, height: 800, top: 124, left: 24 }
     }
 
     const horizontalPadding = 48 // 24px * 2 (TopCards container padding)
@@ -352,8 +344,7 @@ export function PersistentNav({
   // Border hover expansion - grows when active nav item is hovered
   const borderHoverExpansion = 2 // px to expand on each side
   const isActiveBorderHovered = (activeNavItem === 'selectedWorks' && hoveredItem === 'selectedWorks') ||
-                                 (activeNavItem === 'logo' && hoveredItem === 'logo') ||
-                                 (activeNavItem === 'about' && hoveredItem === 'about')
+                                 (activeNavItem === 'logo' && hoveredItem === 'logo')
 
   return (
     <>
