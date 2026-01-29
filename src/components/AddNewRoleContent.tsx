@@ -334,7 +334,7 @@ export function AddNewRoleContent({
                   margin: 0,
                   border: 'none',
                   height: 'auto',
-                  caretColor: 'rgba(0,0,0,0.55)',
+                  caretColor: '#000000',
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -349,6 +349,7 @@ export function AddNewRoleContent({
         style={{ marginTop: '48px', padding: '3px' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
         transition={{ duration: 0.3, delay: 0.15 }}
       >
         {workExperience.map((exp) => {
@@ -573,6 +574,7 @@ export function AddNewRoleContent({
         style={{ gap: '8px', marginTop: '16px' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
         transition={{ duration: 0.25, delay: 0.3 }}
       >
         <button
