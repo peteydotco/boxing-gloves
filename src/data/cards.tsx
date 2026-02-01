@@ -21,7 +21,7 @@ export const cards: CardData[] = [
       ],
       reflectionsCard: {
         title: 'Reflecting on 4 years at SVA',
-        image: '/images/sva-reflections-preview.png',
+        image: '/images/sva-frame-1.jpg',
         href: 'https://www.figma.com/deck/sFOBagRUK2l9waMlT6zexC/PD-Share---Prof-Pete-at-SVA?node-id=1-22&viewport=-145%2C-68%2C0.67&t=m1Mn8tfrLRHBYgSH-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1',
         previewFrames: [
           '/images/sva-frame-1.jpg',
