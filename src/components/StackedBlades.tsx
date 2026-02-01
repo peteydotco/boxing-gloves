@@ -10,6 +10,9 @@ interface StackedBladesProps {
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
   transitionPhase?: TransitionPhase
   viewMode?: ViewMode
+  nycTime?: string
+  colonVisible?: boolean
+  isDaylight?: boolean
 }
 
 export function StackedBlades({
@@ -17,6 +20,9 @@ export function StackedBlades({
   themeMode = 'light',
   transitionPhase = 'idle',
   viewMode = 'hero',
+  nycTime = '',
+  colonVisible = true,
+  isDaylight = true,
 }: StackedBladesProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -232,7 +238,18 @@ export function StackedBlades({
               ease: 'easeInOut',
             }}
           >
-            SCROLL TO BEGIN
+            {nycTime ? (
+              <>
+                {(() => {
+                  const colonIndex = nycTime.indexOf(':')
+                  if (colonIndex === -1) return nycTime
+                  const before = nycTime.slice(0, colonIndex)
+                  const after = nycTime.slice(colonIndex + 1)
+                  return <>{before}<span style={{ opacity: colonVisible ? 1 : 0 }}>:</span>{after}</>
+                })()}
+                {' '}{isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
+              </>
+            ) : 'SCROLL TO BEGIN'}
           </motion.p>
         </div>
       )}

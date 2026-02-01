@@ -509,6 +509,9 @@ function App() {
           themeMode={themeMode}
           transitionPhase={transitionPhase}
           viewMode={viewMode}
+          nycTime={nycTime}
+          colonVisible={colonVisible}
+          isDaylight={isDaylight}
         />
       )}
 
