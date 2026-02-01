@@ -215,7 +215,7 @@ export function StackedBlades({
           <motion.p
             style={{
               fontFamily: 'GT Pressura Mono',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: 400,
               letterSpacing: '0.3px',
               textTransform: 'uppercase',
