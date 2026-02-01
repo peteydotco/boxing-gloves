@@ -357,31 +357,11 @@ export function AddNewRoleContent({
               }}
               style={{ cursor: inputValue ? 'pointer' : 'default' }}
             >
-              <AnimatePresence mode="wait" initial={false}>
-                {inputValue ? (
-                  <motion.span
-                    key="close"
-                    className={`inline-flex ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <SlClose className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
-                  </motion.span>
-                ) : (
-                  <motion.span
-                    key="plus"
-                    className={`inline-flex ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
-                  </motion.span>
-                )}
-              </AnimatePresence>
+              {inputValue ? (
+                <SlClose className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
+              ) : (
+                <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
+              )}
             </motion.span>
             {/* Input field with custom placeholder overlay */}
             <span className="relative flex-1">
