@@ -405,7 +405,7 @@ export function AddNewRoleContent({
       </div>
 
       {/* MIDDLE CLUSTER - Scrollable work experience list */}
-      {/* On mobile: center content vertically between title and buttons */}
+      {/* On mobile: flex + margin:auto centers content when shorter than container, scrolls naturally when taller */}
       <motion.div
         className="flex-1 overflow-y-auto overflow-x-hidden relative"
         style={{
@@ -413,13 +413,13 @@ export function AddNewRoleContent({
           padding: '3px',
           display: isMobile ? 'flex' : undefined,
           flexDirection: isMobile ? 'column' : undefined,
-          justifyContent: isMobile ? 'center' : undefined,
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
         transition={{ duration: 0.3, delay: 0.15 }}
       >
+        <div style={isMobile ? { margin: 'auto 0' } : undefined}>
         {workExperience.map((exp) => {
           const hasSubRoles = exp.subRoles && exp.subRoles.length > 0
 
@@ -634,6 +634,7 @@ export function AddNewRoleContent({
             </div>
           )
         })}
+        </div>
       </motion.div>
 
       {/* BOTTOM CLUSTER - Buttons */}
