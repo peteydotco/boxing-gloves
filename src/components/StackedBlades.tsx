@@ -220,8 +220,8 @@ export function StackedBlades({
               letterSpacing: '0.3px',
               textTransform: 'uppercase',
               color: themeMode === 'dark' || themeMode === 'darkInverted'
-                ? 'rgba(255, 255, 255, 0.4)'
-                : 'rgba(0, 0, 0, 0.35)',
+                ? 'rgba(255, 255, 255, 0.55)'
+                : 'rgba(0, 0, 0, 0.55)',
             }}
             animate={{
               opacity: [0.4, 0.7, 0.4],

@@ -21,7 +21,7 @@ const themes = {
     textColor: 'rgba(0, 0, 0, 0.44)',
     logoFill: '#1A1A2E',
     bioFill: '#000000',
-    bioOpacity: 0.44,
+    bioOpacity: 0.55,
   },
   inverted: {
     bgColor: '#E0E0E0',
@@ -31,7 +31,7 @@ const themes = {
     textColor: 'rgba(0, 0, 0, 0.5)',
     logoFill: '#1A1A2E',
     bioFill: '#000000',
-    bioOpacity: 0.5,
+    bioOpacity: 0.55,
   },
   dark: {
     bgColor: '#0E0E16', // ink-850 (cool-biased)
@@ -41,7 +41,7 @@ const themes = {
     textColor: 'rgba(255, 255, 255, 0.6)',
     logoFill: '#FFFFFF',
     bioFill: '#FFFFFF',
-    bioOpacity: 0.6,
+    bioOpacity: 0.55,
   },
   darkInverted: {
     bgColor: '#0A0A10', // ink-900 (cool-biased)
@@ -51,7 +51,7 @@ const themes = {
     textColor: 'rgba(255, 255, 255, 0.6)',
     logoFill: '#FFFFFF',
     bioFill: '#FFFFFF',
-    bioOpacity: 0.6,
+    bioOpacity: 0.55,
   },
 }
 
