@@ -286,10 +286,7 @@ export function StagesContainer({
             borderRadius: isZoomedNav ? 24 : 0,
           }}
           exit={{ opacity: 0 }}
-          transition={transitionPhase === 'collapsing'
-            ? { duration: 0 }
-            : zoomSpringTransition
-          }
+          transition={zoomSpringTransition}
           onClick={isZoomedNav ? onExitZoomedNav : undefined}
         >
           {/* Progress dots - hidden in zoomed nav mode */}

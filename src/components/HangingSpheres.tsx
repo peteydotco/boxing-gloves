@@ -89,12 +89,14 @@ function DraggableGloveWithRope({
   dropDelay = 0,
   themeMode = 'light',
   modelUrl,
+  yRotation = Math.PI,
 }: {
   anchorOffset: [number, number, number]
   settings: Settings
   dropDelay?: number // Delay in ms before enabling physics (for staggered drop)
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' // Theme mode for color adjustments
   modelUrl: string // URL to the glove GLB model
+  yRotation?: number // Initial Y-axis rotation in radians
 }) {
   const gloveRef = useRef<RapierRigidBody>(null)
   const tubeRef = useRef<THREE.Mesh>(null)
@@ -207,7 +209,7 @@ function DraggableGloveWithRope({
   if (!visualRotation.current) {
     // Initialize with the glove's starting rotation (facing user)
     visualRotation.current = new THREE.Quaternion()
-    visualRotation.current.setFromEuler(new THREE.Euler(0, Math.PI, 0))
+    visualRotation.current.setFromEuler(new THREE.Euler(0, yRotation, 0))
   }
 
   // Soft string constraint + rope visual update
@@ -482,7 +484,7 @@ function DraggableGloveWithRope({
       <RigidBody
         ref={gloveRef}
         position={gloveStartPosition}
-        rotation={[0, Math.PI, 0]}
+        rotation={[0, yRotation, 0]}
         colliders={false}
         mass={settings.mass}
         restitution={settings.restitution}
@@ -545,7 +547,7 @@ function DraggableGloveWithRope({
       <group
         ref={visualGroupRef}
         position={gloveStartPosition}
-        rotation={[0, Math.PI, 0]}
+        rotation={[0, yRotation, 0]}
       >
         <primitive
           object={useMemo(() => {
@@ -693,6 +695,7 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
         dropDelay={100}
         themeMode={themeMode}
         modelUrl={leftGloveModelUrl}
+        yRotation={Math.PI + Math.PI / 6}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.25,
