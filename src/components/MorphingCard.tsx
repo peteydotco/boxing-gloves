@@ -934,7 +934,7 @@ export function MorphingCard({
             WebkitOverflowScrolling: 'touch',
           }}
           initial={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
-          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '20px 16px' : '24px' }}
+          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '20px 16px 16px 16px' : '24px' }}
           exit={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
           transition={contentSpring}
           onTouchStart={(e) => {
