@@ -831,7 +831,7 @@ export function MorphingCard({
           left: Math.round(collapsedPosition.left),
           width: Math.round(collapsedPosition.width),
           height: Math.round(collapsedPosition.height),
-          borderRadius: 14,
+          borderRadius: 16,
           rotate: 0,
           scale: 1,
         }}
@@ -849,7 +849,7 @@ export function MorphingCard({
           left: Math.round((exitPosition ?? collapsedPosition).left),
           width: Math.round((exitPosition ?? collapsedPosition).width),
           height: Math.round((exitPosition ?? collapsedPosition).height),
-          borderRadius: 14,
+          borderRadius: 16,
           rotate: 0,
           scale: 1,
           transition: {
@@ -892,9 +892,9 @@ export function MorphingCard({
           style={{
             border: `1px solid ${styles.expandedBorder}`,
           }}
-          initial={{ borderRadius: 14 }}
+          initial={{ borderRadius: 16 }}
           animate={{ borderRadius: 16 }}
-          exit={{ borderRadius: 14 }}
+          exit={{ borderRadius: 16 }}
           transition={contentSpring}
         />
 
@@ -1503,7 +1503,7 @@ export function MorphingCard({
   return (
     <motion.div
       ref={cardRef}
-      className="rounded-[14px] overflow-hidden cursor-pointer relative"
+      className="rounded-[16px] overflow-hidden cursor-pointer relative"
       style={{
         backgroundColor: styles.bg,
         color: styles.textColor,
@@ -1533,7 +1533,7 @@ export function MorphingCard({
     >
       {/* Border */}
       <div
-        className="absolute inset-0 rounded-[14px] pointer-events-none"
+        className="absolute inset-0 rounded-[16px] pointer-events-none"
         style={{
           border: `1px solid ${styles.border}`,
         }}
@@ -1543,13 +1543,13 @@ export function MorphingCard({
       {isHovered && (
         <>
           <div
-            className="absolute inset-0 rounded-[14px] pointer-events-none"
+            className="absolute inset-0 rounded-[16px] pointer-events-none"
             style={{
               background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%)`,
             }}
           />
           <div
-            className="absolute inset-0 rounded-[14px] pointer-events-none"
+            className="absolute inset-0 rounded-[16px] pointer-events-none"
             style={{
               background: spotlightGradient,
               mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
