@@ -429,10 +429,10 @@ export function PersistentNav({
             padding: '5px 8px 8px 8px',
           }}
           animate={{
-            backgroundColor: (!isZoomedNav && hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks')
+            backgroundColor: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks')
               ? `${navColor}33` // 20% opacity
               : `${navColor}00`, // transparent
-            scale: (!isZoomedNav && hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1.04 : 1,
+            scale: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1.04 : 1,
           }}
           initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -442,7 +442,7 @@ export function PersistentNav({
           <motion.span
             style={{ ...linkTextStyle, display: 'block', lineHeight: 1 }}
             animate={{
-              scale: (!isZoomedNav && hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1 / 1.04 : 1,
+              scale: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1 / 1.04 : 1,
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
@@ -484,10 +484,10 @@ export function PersistentNav({
             padding: '5px 8px 8px 8px',
           }}
           animate={{
-            backgroundColor: (!isZoomedNav && hoveredItem === 'logo' && activeNavItem !== 'logo')
+            backgroundColor: (hoveredItem === 'logo' && activeNavItem !== 'logo')
               ? `${navColor}33` // 20% opacity
               : `${navColor}00`, // transparent
-            scale: (!isZoomedNav && hoveredItem === 'logo' && activeNavItem !== 'logo') ? 1.04 : 1,
+            scale: (hoveredItem === 'logo' && activeNavItem !== 'logo') ? 1.04 : 1,
           }}
           initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -506,7 +506,7 @@ export function PersistentNav({
               lineHeight: 1,
             }}
             animate={{
-              scale: (!isZoomedNav && hoveredItem === 'logo' && activeNavItem !== 'logo') ? 1 / 1.04 : 1,
+              scale: (hoveredItem === 'logo' && activeNavItem !== 'logo') ? 1 / 1.04 : 1,
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
@@ -555,10 +555,10 @@ export function PersistentNav({
             padding: '5px 8px 8px 8px',
           }}
           animate={{
-            backgroundColor: (!isZoomedNav && hoveredItem === 'about')
+            backgroundColor: (hoveredItem === 'about')
               ? `${navColor}33` // 20% opacity
               : `${navColor}00`, // transparent
-            scale: (!isZoomedNav && hoveredItem === 'about') ? 1.04 : 1,
+            scale: (hoveredItem === 'about') ? 1.04 : 1,
           }}
           initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -568,7 +568,7 @@ export function PersistentNav({
           <motion.span
             style={{ ...linkTextStyle, display: 'block', lineHeight: 1 }}
             animate={{
-              scale: (!isZoomedNav && hoveredItem === 'about') ? 1 / 1.04 : 1,
+              scale: (hoveredItem === 'about') ? 1 / 1.04 : 1,
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >

@@ -237,6 +237,8 @@ export function AddNewRoleContent({
   const companyNameColor = themeTitle
   // Input typed text color — slightly stronger than title
   const inputTypedColor = isDark ? (styles?.secondaryText ?? 'rgba(255,255,255,0.85)') : '#202020'
+  // Ghosted text color — lighter than themeText for the expanded title/label hint
+  const themeGhostedText = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'
   // Caret color
   const caretColor = isDark ? 'rgba(255,255,255,0.9)' : '#000000'
 
@@ -269,7 +271,7 @@ export function AddNewRoleContent({
           <motion.div
             className="font-pressura-mono leading-normal text-left uppercase"
             style={{
-              color: themeText,
+              color: themeGhostedText,
               fontSize: '13px',
               letterSpacing: '0.39px',
               transformOrigin: 'top left',
@@ -338,7 +340,7 @@ export function AddNewRoleContent({
             letterSpacing: '-0.3px',
           }}
           initial={{ scale: 1, marginTop: '0px', color: themeTitle, opacity: 0 }}
-          animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px', color: themeText, opacity: 1 }}
+          animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px', color: themeGhostedText, opacity: 1 }}
           exit={{ scale: 1, marginTop: '0px', color: themeTitle, opacity: isMobile ? 0 : 1, transition: isMobile ? { opacity: { duration: 0.1, delay: 0, ease: 'easeOut' } } : undefined }}
           transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
         >
