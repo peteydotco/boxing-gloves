@@ -152,18 +152,14 @@ function App() {
     }, 450)
   }, [])
 
-  // Handle logo click - toggles zoomed nav in stages, navigates to hero if already zoomed, cycles theme in hero
+  // Handle logo click - toggles zoomed nav in stages, cycles theme in hero
   const handleLogoClick = useCallback(() => {
     if (viewMode === 'stages') {
-      if (isZoomedNav) {
-        navigateToHero()
-      } else {
-        setIsZoomedNav(true)
-      }
+      setIsZoomedNav(!isZoomedNav)
     } else {
       cycleTheme()
     }
-  }, [viewMode, isZoomedNav, cycleTheme, navigateToHero])
+  }, [viewMode, isZoomedNav, cycleTheme])
 
   // Exit zoomed nav mode (clicking the scaled stage)
   const exitZoomedNav = useCallback(() => {
