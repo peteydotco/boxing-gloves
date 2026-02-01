@@ -276,8 +276,8 @@ export function AddNewRoleContent({
             }}
             initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
             animate={{ scale: 14 / 13, marginTop: '1px', opacity: 1 }}
-            exit={{ scale: 1, marginTop: '0px', opacity: 1 }}
-            transition={contentSpring}
+            exit={{ scale: 1, marginTop: '0px', opacity: 0 }}
+            transition={{ ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } }}
           >
             - EMPTY SLOT -
           </motion.div>
@@ -336,10 +336,10 @@ export function AddNewRoleContent({
             transformOrigin: 'top left',
             letterSpacing: '-0.3px',
           }}
-          initial={{ scale: 1, marginTop: '0px', color: themeTitle }}
-          animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px', color: themeText }}
-          exit={{ scale: 1, marginTop: '0px', color: themeTitle }}
-          transition={contentSpring}
+          initial={{ scale: 1, marginTop: '0px', color: themeTitle, opacity: 1 }}
+          animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px', color: themeText, opacity: 1 }}
+          exit={{ scale: 1, marginTop: '0px', color: themeTitle, opacity: 0 }}
+          transition={{ ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } }}
         >
           <span className="flex items-center gap-3">
             <motion.span
