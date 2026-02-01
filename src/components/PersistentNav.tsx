@@ -450,7 +450,7 @@ export function PersistentNav({
         className="fixed z-[60]"
         style={{
           transformOrigin: 'center center',
-          cursor: !isZoomedNav ? 'pointer' : 'default',
+          cursor: 'pointer',
         }}
         initial={{
           top: navIdleTop,
@@ -468,7 +468,7 @@ export function PersistentNav({
           scale: 1, // No scaling needed - stage resizes, content reflows
         }}
         transition={shouldApplyHoverOffset && getNavAnimate() !== 'expanded' ? { type: 'spring', stiffness: 400, damping: 30 } : getNavTransition()}
-        onClick={!isZoomedNav ? onLogoClick : undefined}
+        onClick={onLogoClick}
       >
         {/* Container measured for sliding border dimensions */}
         <motion.div
