@@ -169,8 +169,12 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
   const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
 
   // Autoplay slideshow effect - cycle through preview frames only when active
+  // Reset to first frame when navigating away
   useEffect(() => {
-    if (!previewFrames || previewFrames.length <= 1 || !isActive) return
+    if (!previewFrames || previewFrames.length <= 1 || !isActive) {
+      setCurrentFrameIndex(0)
+      return
+    }
 
     const interval = setInterval(() => {
       setCurrentFrameIndex(prev => (prev + 1) % previewFrames.length)
