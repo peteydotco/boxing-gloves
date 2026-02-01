@@ -245,7 +245,7 @@ export function AddNewRoleContent({
   // Focus input when card becomes focused, blur when not
   // Use preventScroll to stop browser from auto-scrolling the card container
   useEffect(() => {
-    if (isFocused && inputRef.current) {
+    if (isFocused && inputRef.current && !isMobile) {
       inputRef.current.focus({ preventScroll: true })
     } else if (!isFocused && inputRef.current) {
       inputRef.current.blur()
@@ -269,17 +269,24 @@ export function AddNewRoleContent({
         {/* Header row */}
         <div className="flex items-start justify-between w-full">
           <motion.div
-            className="font-pressura-mono leading-normal text-left uppercase"
+            className="font-pressura leading-normal text-left uppercase"
             style={{
               color: themeText,
-              fontSize: '13px',
+              fontSize: '12px',
               letterSpacing: '0.39px',
               transformOrigin: 'top left',
               whiteSpace: 'nowrap',
             }}
             initial={{ scale: 1, marginTop: '0px', opacity: 0 }}
-            animate={{ scale: 14 / 13, marginTop: '1px', opacity: 1 }}
-            exit={{ scale: 1, marginTop: '0px', opacity: isMobile ? 0 : 1, transition: isMobile ? { opacity: { duration: 0.1, delay: 0, ease: 'easeOut' } } : undefined }}
+            animate={{ scale: 14 / 12, marginTop: '1px', opacity: 1 }}
+            exit={{
+              scale: 1, marginTop: '0px', opacity: isMobile ? 0 : 1,
+              transition: {
+                scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                ...(isMobile ? { opacity: { duration: 0.1, delay: 0, ease: 'easeOut' } } : {}),
+              },
+            }}
             transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
           >
             - EMPTY SLOT -
@@ -341,7 +348,14 @@ export function AddNewRoleContent({
           }}
           initial={{ scale: 1, marginTop: '0px', color: themeTitle, opacity: 0 }}
           animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px', color: themeGhostedText, opacity: 1 }}
-          exit={{ scale: 1, marginTop: '0px', color: themeTitle, opacity: isMobile ? 0 : 1, transition: isMobile ? { opacity: { duration: 0.1, delay: 0, ease: 'easeOut' } } : undefined }}
+          exit={{
+            scale: 1, marginTop: '0px', color: themeTitle, opacity: isMobile ? 0 : 1,
+            transition: {
+              scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+              marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+              ...(isMobile ? { opacity: { duration: 0.1, delay: 0, ease: 'easeOut' } } : {}),
+            },
+          }}
           transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
         >
           <span className="flex items-center gap-3">
@@ -363,7 +377,7 @@ export function AddNewRoleContent({
                 if (inputValue) {
                   e.stopPropagation()
                   setInputValue('')
-                  inputRef.current?.focus({ preventScroll: true })
+                  if (!isMobile) inputRef.current?.focus({ preventScroll: true })
                 }
               }}
             >

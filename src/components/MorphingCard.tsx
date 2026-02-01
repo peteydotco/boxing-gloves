@@ -945,7 +945,10 @@ export function MorphingCard({
           }}
           initial={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
           animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '20px 16px 16px 16px' : '24px' }}
-          exit={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
+          exit={{
+            padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px',
+            transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] } },
+          }}
           transition={contentSpring}
           onTouchStart={(e) => {
             // Track touch start position for direction detection
@@ -1016,7 +1019,7 @@ export function MorphingCard({
           {card.variant === 'cta' ? (
             <AddNewRoleContent
               onClose={onClose}
-              isMobile={typeof window !== 'undefined' && window.innerWidth < 768}
+              isMobile={compactCta || (typeof window !== 'undefined' && window.innerWidth < 768)}
               hideShortcut={hideShortcut}
               shortcut={card.shortcut}
               contentScale={contentScale}
@@ -1027,29 +1030,38 @@ export function MorphingCard({
           <>
           {/* TOP CLUSTER: Header + Title + Date Range */}
           {/* This cluster stays at the top of the card */}
-          <div className="flex-shrink-0">
+          {/* flex flex-col gap-[0px] matches collapsed card layout to prevent 1px jump on exit */}
+          <div className="flex-shrink-0 flex flex-col gap-[0px]">
             {/* Header row with morphing label - uses same copy as collapsed card */}
-            <div className="flex items-start justify-between w-full">
+            <div className="flex items-start justify-between w-full relative">
               <motion.div
-                className="font-pressura-mono leading-normal text-left uppercase"
-                style={{ color: styles.textColor, fontSize: '13px', letterSpacing: '0.39px', transformOrigin: 'top left', whiteSpace: 'nowrap' }}
+                className="font-pressura leading-normal text-left uppercase"
+                style={{ color: styles.textColor, fontSize: '12px', letterSpacing: '0.39px', transformOrigin: 'top left', whiteSpace: 'nowrap' }}
                 initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
-                animate={{ scale: 14 / 13, marginTop: '1px', opacity: 1 }}
-                exit={{ scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1 }}
-                transition={compactCta ? { ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } } : contentSpring}
+                animate={{ scale: 14 / 12, marginTop: '1px', opacity: 1 }}
+                exit={{
+                  scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1,
+                  transition: {
+                    scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                    marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                    ...(compactCta ? { opacity: { duration: 0.1, ease: 'easeOut' } } : {}),
+                  },
+                }}
+                transition={contentSpring}
               >
                 {label}
               </motion.div>
 
               {/* Shortcut badge - morphs between ESC (expanded) and shortcut key (collapsed) */}
               {/* Always render during exit animation to prevent blinking */}
+              {/* When hideShortcut (mobile), remove from layout entirely to match collapsed card which doesn't render it */}
               <motion.div
                 onClick={(e) => {
                   e.stopPropagation()
                   onClose()
                 }}
                 className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer"
-                style={{ backgroundColor: styles.badgeBg }}
+                style={{ backgroundColor: styles.badgeBg, ...(hideShortcut ? { position: 'absolute' as const, right: 0, top: 0 } : {}) }}
                 initial={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
                 animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', opacity: hideShortcut ? 0 : 1 }}
                 // Show badge during exit animation so shortcut animates back (but not on mobile where hideShortcut is true)
@@ -1091,16 +1103,23 @@ export function MorphingCard({
             {/* white-space: nowrap prevents text from re-wrapping during scale animation */}
             {/* Mobile uses smaller scale (26/18) to fit within narrower container */}
             {/* For compactCta (mobile CTA), fade out quickly on exit since collapsed state has different layout */}
-            <motion.h2
+            <motion.div
               className="leading-normal text-left w-full uppercase font-pressura"
               style={{ color: styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px', fontSize: '18px', whiteSpace: 'nowrap' }}
               initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
               animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : 32 / 18, marginTop: '4px', opacity: 1 }}
-              exit={{ scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1 }}
-              transition={compactCta ? { ...contentSpring, opacity: { duration: 0.1, ease: 'easeOut' } } : contentSpring}
+              exit={{
+                scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1,
+                transition: {
+                  scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                  marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                  ...(compactCta ? { opacity: { duration: 0.1, ease: 'easeOut' } } : {}),
+                },
+              }}
+              transition={contentSpring}
             >
               {card.title}
-            </motion.h2>
+            </motion.div>
 
             {/* Date Range - part of top cluster */}
             {(() => {
@@ -1617,7 +1636,7 @@ export function MorphingCard({
                 transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
               }}
             >
-              <div className="text-[13px] tracking-[0.39px] font-pressura-mono leading-normal text-left uppercase">
+              <div className="text-[12px] tracking-[0.39px] font-pressura leading-normal text-left uppercase">
                 {label}
               </div>
               {!hideShortcut && (
