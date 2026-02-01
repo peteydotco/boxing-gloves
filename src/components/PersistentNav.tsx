@@ -11,6 +11,7 @@ interface PersistentNavProps {
   onNavigateToHero: () => void
   onNavigateToStages: () => void
   onLogoClick: () => void
+  onExitZoomedNav?: () => void
   isZoomedNav?: boolean
   heroBgColor?: string
   activeStageIndex?: number
@@ -32,6 +33,7 @@ export function PersistentNav({
   onNavigateToHero,
   onNavigateToStages,
   onLogoClick,
+  onExitZoomedNav,
   isZoomedNav = false,
   heroBgColor = '#FFFFFF',
   activeStageIndex = 0,
@@ -202,7 +204,11 @@ export function PersistentNav({
   // Handle link clicks based on current view
   const handleLeftClick = () => {
     if (isInStages) {
-      onNavigateToHero()
+      if (isZoomedNav && onExitZoomedNav) {
+        onExitZoomedNav()
+      } else {
+        onNavigateToHero()
+      }
     } else {
       onNavigateToStages()
     }
@@ -389,7 +395,7 @@ export function PersistentNav({
         className="fixed z-[60]"
         style={{
           transformOrigin: 'left center',
-          cursor: !isZoomedNav ? 'pointer' : 'default',
+          cursor: 'pointer',
         }}
         initial={{
           top: navIdleTop,
@@ -413,7 +419,7 @@ export function PersistentNav({
           scale: 1,
         }}
         transition={shouldApplyHoverOffset && getNavAnimate() !== 'expanded' ? { type: 'spring', stiffness: 400, damping: 30 } : getNavTransition()}
-        onClick={!isZoomedNav ? handleLeftClick : undefined}
+        onClick={handleLeftClick}
       >
         {/* Container with invisible border for spacing (real border is the sliding one) */}
         <motion.div

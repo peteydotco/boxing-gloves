@@ -555,6 +555,7 @@ function App() {
           onNavigateToHero={navigateToHero}
           onNavigateToStages={() => navigateToStage(0)}
           onLogoClick={handleLogoClick}
+          onExitZoomedNav={exitZoomedNav}
           isZoomedNav={isZoomedNav}
           heroBgColor={theme.bgColor}
           activeStageIndex={activeStageIndex}
