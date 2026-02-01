@@ -1663,7 +1663,7 @@ export function MorphingCard({
             >
   {card.variant === 'cta' ? (
                 <span className="flex items-center gap-3">
-                  <SlPlus className="w-5 h-5" style={{ color: (styles as typeof variantStylesLight.cta).ctaTitleColor, position: 'relative', top: '1px' }} />
+                  <SlPlus className="w-5 h-5" style={{ color: (styles as typeof variantStylesLight.cta).ctaTitleColor }} />
                   {card.title}
                 </span>
               ) : (
