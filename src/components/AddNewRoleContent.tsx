@@ -271,7 +271,7 @@ export function AddNewRoleContent({
           <motion.div
             className="font-pressura-mono leading-normal text-left uppercase"
             style={{
-              color: themeGhostedText,
+              color: themeText,
               fontSize: '13px',
               letterSpacing: '0.39px',
               transformOrigin: 'top left',
