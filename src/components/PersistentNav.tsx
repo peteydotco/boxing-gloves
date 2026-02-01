@@ -423,10 +423,10 @@ export function PersistentNav({
             padding: '5px 8px 8px 8px',
           }}
           animate={{
-            backgroundColor: (!isZoomedNav && !isInStages && hoveredItem === 'selectedWorks')
+            backgroundColor: (!isZoomedNav && hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks')
               ? `${navColor}33` // 20% opacity
               : `${navColor}00`, // transparent
-            scale: (!isZoomedNav && !isInStages && hoveredItem === 'selectedWorks') ? 1.04 : 1,
+            scale: (!isZoomedNav && hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1.04 : 1,
           }}
           initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -436,7 +436,7 @@ export function PersistentNav({
           <motion.span
             style={{ ...linkTextStyle, display: 'block', lineHeight: 1 }}
             animate={{
-              scale: (!isZoomedNav && !isInStages && hoveredItem === 'selectedWorks') ? 1 / 1.04 : 1,
+              scale: (!isZoomedNav && hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1 / 1.04 : 1,
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
@@ -478,10 +478,10 @@ export function PersistentNav({
             padding: '5px 8px 8px 8px',
           }}
           animate={{
-            backgroundColor: (!isZoomedNav && isInStages && !isExpanding && hoveredItem === 'logo')
+            backgroundColor: (!isZoomedNav && hoveredItem === 'logo' && activeNavItem !== 'logo')
               ? `${navColor}33` // 20% opacity
               : `${navColor}00`, // transparent
-            scale: (!isZoomedNav && isInStages && !isExpanding && hoveredItem === 'logo') ? 1.04 : 1,
+            scale: (!isZoomedNav && hoveredItem === 'logo' && activeNavItem !== 'logo') ? 1.04 : 1,
           }}
           initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
           transition={{ type: 'spring', stiffness: 400, damping: 25 }}
@@ -500,7 +500,7 @@ export function PersistentNav({
               lineHeight: 1,
             }}
             animate={{
-              scale: (!isZoomedNav && isInStages && !isExpanding && hoveredItem === 'logo') ? 1 / 1.04 : 1,
+              scale: (!isZoomedNav && hoveredItem === 'logo' && activeNavItem !== 'logo') ? 1 / 1.04 : 1,
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
