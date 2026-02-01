@@ -9,7 +9,7 @@ import { StageBackground } from './components/StageBackground'
 import { StagesContainer } from './components/StagesContainer'
 import { PersistentNav } from './components/PersistentNav'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
 
 // Theme presets for quick toggling (cycles: light → inverted → dark → darkInverted)
 const themes = {
@@ -78,10 +78,15 @@ function App() {
   // Zoomed nav mode - when true, stage scales down and TopCards become visible
   const [isZoomedNav, setIsZoomedNav] = useState(false)
 
-  // Track blade 0 hover state for nav item animation
-  const [isBlade0Hovered, setIsBlade0Hovered] = useState(false)
-  // Track nav item hover state (nav items are on blade 0, so hovering them should keep blade offset)
-  const [isNavHovered, setIsNavHovered] = useState(false)
+  // Scroll tug offset — blades rise/dip proportionally during trackpad swipes, decay smoothly when released
+  // MotionValue bypasses React re-renders: updates go straight to Framer Motion → DOM
+  const tugOffsetMV = useMotionValue(0)
+  const tugState = useRef({
+    position: 0,            // Signed position in delta-units: positive = upward tug, negative = downward
+    lastEventTime: 0,       // Timestamp of last wheel event (for decay delay)
+    rafId: null as number | null, // Active rAF handle for decay loop
+    isDecaying: false,       // Whether decay loop is running
+  })
 
   // mousePosition state is only for 2D UI elements (spotlight, marquee)
   // Scene reads from mousePositionRef directly to avoid re-renders
@@ -202,9 +207,74 @@ function App() {
   }, [])
 
   // Wheel navigation to stages from hero (scrolls to stage 0 by default)
+  // Continuous tracking: every trackpad delta feeds a signed position that maps to tugOffset
+  // Strong single gesture (deltaY >= 30) or sustained accumulation (>= 90) triggers navigation
   const wheelState = useRef({ lastTime: 0, lastNavTime: 0 })
   useEffect(() => {
     if (viewMode !== 'hero') return
+
+    const MAX_UP_POSITION = 120       // Max accumulated upward position (delta-units)
+    const MAX_DOWN_POSITION = 40      // Max accumulated downward position (absolute)
+    const MAX_TUG_PX = 15             // Max upward visual displacement (px)
+    const MAX_DOWN_TUG_PX = 6         // Max downward visual displacement (px, subtler)
+    const NAVIGATE_VIA_TUG_THRESHOLD = 90
+    const DECAY_RATE = 0.75           // Per-frame multiplier (~12 frames to near-zero)
+    const DECAY_START_DELAY = 40      // ms of silence before decay begins
+    const POSITION_DEAD_ZONE = 0.8    // Snap to zero below this absolute position
+
+    // Bidirectional ease-out mapping: signed position → signed tug pixels
+    const positionToTug = (position: number): number => {
+      if (position >= 0) {
+        const t = Math.min(position / MAX_UP_POSITION, 1)
+        const eased = 1 - Math.pow(1 - t, 2.5)
+        return eased * MAX_TUG_PX
+      } else {
+        const t = Math.min(Math.abs(position) / MAX_DOWN_POSITION, 1)
+        const eased = 1 - Math.pow(1 - t, 2.5)
+        return -(eased * MAX_DOWN_TUG_PX)
+      }
+    }
+
+    const resetTugState = () => {
+      const ts = tugState.current
+      ts.position = 0
+      ts.isDecaying = false
+      if (ts.rafId) { cancelAnimationFrame(ts.rafId); ts.rafId = null }
+      tugOffsetMV.set(0)
+    }
+
+    // rAF decay loop — smoothly drains position toward zero after input stops
+    const startDecayLoop = () => {
+      const ts = tugState.current
+      if (ts.isDecaying) return
+      ts.isDecaying = true
+
+      const tick = () => {
+        const elapsed = Date.now() - ts.lastEventTime
+        if (elapsed < DECAY_START_DELAY) {
+          // Still receiving input, keep waiting
+          ts.rafId = requestAnimationFrame(tick)
+          return
+        }
+
+        // Apply decay
+        ts.position *= DECAY_RATE
+
+        if (Math.abs(ts.position) < POSITION_DEAD_ZONE) {
+          // Close enough — snap to zero and stop
+          ts.position = 0
+          tugOffsetMV.set(0)
+          ts.isDecaying = false
+          ts.rafId = null
+          return
+        }
+
+        tugOffsetMV.set(positionToTug(ts.position))
+        ts.rafId = requestAnimationFrame(tick)
+      }
+
+      ts.rafId = requestAnimationFrame(tick)
+    }
 
     const handleWheel = (e: WheelEvent) => {
       // Skip if TopCards are expanded (they handle their own scroll)
@@ -212,10 +282,9 @@ function App() {
         return
       }
 
-      // Only handle vertical scroll down (to stages) — ignore horizontal swipes
+      // Only handle vertical scroll — ignore horizontal swipes
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
       const delta = e.deltaY
-      if (delta <= 0) return // Only scroll down
 
       const now = Date.now()
       const state = wheelState.current
@@ -224,15 +293,50 @@ function App() {
       // Require cooldown after navigation
       if (timeSinceLastNav < 800) return
 
-      // Ignore small deltas
-      if (Math.abs(delta) < 30) return
+      // NAVIGATE ZONE: single strong downward scroll triggers full transition
+      if (delta >= 30) {
+        resetTugState()
+        state.lastNavTime = now
+        navigateToStage(0)
+        return
+      }
 
-      state.lastNavTime = now
-      navigateToStage(0) // Default to first stage when scrolling
+      // CONTINUOUS TUG: every delta feeds signed position (no noise filter)
+      const ts = tugState.current
+
+      // Per-event friction: drain position toward zero between events
+      // This prevents inertia scroll (macOS keeps firing decreasing deltas after finger lifts)
+      // from holding the tug in place. Downward tug drains faster since it's meant to be fleeting.
+      const elapsed = now - ts.lastEventTime
+      if (elapsed > 0 && ts.position !== 0) {
+        const frames = elapsed / 16.67 // Approximate frames elapsed
+        const friction = ts.position < 0 ? 0.60 : 0.82 // Downward drains faster
+        ts.position *= Math.pow(friction, frames)
+        if (Math.abs(ts.position) < POSITION_DEAD_ZONE) ts.position = 0
+      }
+
+      ts.position = Math.max(-MAX_DOWN_POSITION, Math.min(ts.position + delta, MAX_UP_POSITION))
+
+      // Check if sustained upward tug triggers navigation
+      if (ts.position >= NAVIGATE_VIA_TUG_THRESHOLD) {
+        resetTugState()
+        state.lastNavTime = now
+        navigateToStage(0)
+        return
+      }
+
+      // Update visual tug offset
+      tugOffsetMV.set(positionToTug(ts.position))
+
+      ts.lastEventTime = now
+      startDecayLoop()
     }
 
     window.addEventListener('wheel', handleWheel, { passive: true })
-    return () => window.removeEventListener('wheel', handleWheel)
+    return () => {
+      window.removeEventListener('wheel', handleWheel)
+      if (tugState.current.rafId) cancelAnimationFrame(tugState.current.rafId)
+    }
   }, [viewMode, navigateToStage])
 
   // Update NYC time every minute
@@ -492,16 +596,27 @@ function App() {
       </AnimatePresence>
 
       {/* Desktop: Unified background - single element that morphs between blade and fullscreen */}
-      {/* Always rendered on desktop to provide seamless transition */}
+      {/* PersistentNav is rendered inside StageBackground so it shares the same tug/hover wrapper */}
       {isDesktop && (
         <StageBackground
           viewMode={viewMode}
           transitionPhase={transitionPhase}
           activeStageIndex={activeStageIndex}
           onNavigateToStage={navigateToStage}
-          onHoverChange={setIsBlade0Hovered}
-          isNavHovered={isNavHovered}
-        />
+          tugOffset={tugOffsetMV}
+        >
+          <PersistentNav
+            viewMode={viewMode}
+            transitionPhase={transitionPhase}
+            onNavigateToHero={navigateToHero}
+            onNavigateToStages={() => navigateToStage(0)}
+            onLogoClick={handleLogoClick}
+            onExitZoomedNav={exitZoomedNav}
+            isZoomedNav={isZoomedNav}
+            heroBgColor={theme.bgColor}
+            activeStageIndex={activeStageIndex}
+          />
+        </StageBackground>
       )}
 
       {/* Desktop: Stacked Blades (back blades 1,2,3 - blade 0 is StageBackground) */}
@@ -516,6 +631,7 @@ function App() {
           nycTime={nycTime}
           colonVisible={colonVisible}
           isDaylight={isDaylight}
+          tugOffset={tugOffsetMV}
         />
       )}
 
@@ -547,22 +663,6 @@ function App() {
         onExitZoomedNav={exitZoomedNav}
       />
 
-      {/* Desktop: Persistent Nav - single instance that animates between hero and stages */}
-      {isDesktop && (
-        <PersistentNav
-          viewMode={viewMode}
-          transitionPhase={transitionPhase}
-          onNavigateToHero={navigateToHero}
-          onNavigateToStages={() => navigateToStage(0)}
-          onLogoClick={handleLogoClick}
-          onExitZoomedNav={exitZoomedNav}
-          isZoomedNav={isZoomedNav}
-          heroBgColor={theme.bgColor}
-          activeStageIndex={activeStageIndex}
-          isBlade0Hovered={isBlade0Hovered}
-          onNavHoverChange={setIsNavHovered}
-        />
-      )}
     </div>
   )
 }

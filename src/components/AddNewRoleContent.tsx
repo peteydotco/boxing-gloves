@@ -130,32 +130,32 @@ const workExperience: WorkExperience[] = [
     location: 'NEW YORK',
     title: 'Design lead for websites editor',
     dateRange: '2023 → Now',
-    logo: '/images/logos/squarespace.png',
+    logo: '/images/logos/squarespace.webp',
     subRoles: [
       {
         title: 'Unfold app',
         description: 'Design lead for creator tools',
         dateRange: '2022 → 2024',
-        logo: '/images/logos/unfold.png',
+        logo: '/images/logos/unfold.webp',
       },
       {
         title: 'Squarespace app',
         description: 'Reimagined for first-time sellers',
         dateRange: '2022 → 2024',
-        logo: '/images/logos/squarespace-app.png',
+        logo: '/images/logos/squarespace-app.webp',
       },
       {
         title: 'Squarespace 7.1',
         description: 'Design manager for content, styling',
         dateRange: '2020 → 2021',
-        logo: '/images/logos/squarespace.png',
+        logo: '/images/logos/squarespace.webp',
         shape: 'circle',
       },
       {
         title: 'Squarespace X',
         description: 'Design lead for next-gen platform',
         dateRange: '2019 → 2020',
-        logo: '/images/logos/squarespace.png',
+        logo: '/images/logos/squarespace.webp',
         shape: 'circle',
       },
     ],
@@ -165,7 +165,7 @@ const workExperience: WorkExperience[] = [
     location: 'SAN FRANCISCO',
     title: 'Experience design lead',
     dateRange: '2017 → 2018',
-    logo: '/images/logos/fantasy.png',
+    logo: '/images/logos/fantasy.webp',
     logoBg: '#FFFFFF',
     logoFit: { width: '88%', height: '88%', left: '6.8%', top: '6.6%', objectFit: 'contain' },
   },
@@ -174,7 +174,7 @@ const workExperience: WorkExperience[] = [
     location: 'SILICON VALLEY',
     title: 'Experience design lead with Apple',
     dateRange: '2015 → 2017',
-    logo: '/images/logos/critical-mass.png',
+    logo: '/images/logos/critical-mass.webp',
     logoBg: '#000000',
     logoFit: { width: '102%', height: '75%', left: '-1%', top: '12.7%', objectFit: 'cover' },
   },
@@ -639,7 +639,7 @@ export function AddNewRoleContent({
                   }}
                 >
                   <img
-                    src="/images/logos/apple.png"
+                    src="/images/logos/apple.webp"
                     alt="Apple"
                     style={{
                       width: '80%',

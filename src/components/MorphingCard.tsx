@@ -170,8 +170,8 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
 
   // Autoplay slideshow effect - cycle through preview frames only when active
   // Reset to first frame when navigating away
-  // First transition fires after 2s (user already saw frame 1 as thumbnail),
-  // then subsequent frames hold for 5s each
+  // First transition fires after 1.5s (user already saw frame 1 as thumbnail),
+  // then subsequent frames hold for 3s each
   useEffect(() => {
     if (!previewFrames || previewFrames.length <= 1 || !isActive) {
       setCurrentFrameIndex(0)
@@ -183,8 +183,8 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
       setCurrentFrameIndex(prev => (prev + 1) % previewFrames.length)
       interval = setInterval(() => {
         setCurrentFrameIndex(prev => (prev + 1) % previewFrames.length)
-      }, 5000)
-    }, 2000)
+      }, 3000)
+    }, 1500)
 
     return () => {
       clearTimeout(initialTimeout)
@@ -335,7 +335,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{
                   opacity: index === currentFrameIndex ? 1 : 0,
-                  transition: isActive ? 'opacity 2.5s ease-in-out' : 'none',
+                  transition: isActive ? 'opacity 1.2s ease-in-out' : 'none',
                 }}
               />
             ))
@@ -944,7 +944,7 @@ export function MorphingCard({
             WebkitOverflowScrolling: 'touch',
           }}
           initial={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
-          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '20px 16px 16px 16px' : '24px' }}
+          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '20px 16px 16px 16px' : (typeof window !== 'undefined' && window.innerWidth < 1024) ? '18px' : '24px' }}
           exit={{
             padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px',
             transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] } },
@@ -1107,7 +1107,7 @@ export function MorphingCard({
               className="leading-normal text-left w-full uppercase font-pressura"
               style={{ color: styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px', fontSize: '18px', whiteSpace: 'nowrap' }}
               initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
-              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : 32 / 18, marginTop: '4px', opacity: 1 }}
+              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 28 / 18 : 32 / 18, marginTop: '4px', opacity: 1 }}
               exit={{
                 scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1,
                 transition: {
@@ -1124,15 +1124,16 @@ export function MorphingCard({
             {/* Date Range - part of top cluster */}
             {(() => {
               const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768
+              const isTabletViewport = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024
               return expandedContent.dateRange && (
                 <motion.p
                   className="font-pressura-ext"
                   style={{
                     fontWeight: 350,
-                    fontSize: isMobileViewport ? '15px' : '19px',
-                    lineHeight: isMobileViewport ? '21px' : '25px',
+                    fontSize: isMobileViewport ? '15px' : isTabletViewport ? '16px' : '19px',
+                    lineHeight: isMobileViewport ? '21px' : isTabletViewport ? '22px' : '25px',
                     color: styles.textColor,
-                    marginTop: isMobileViewport ? '20px' : '28px',
+                    marginTop: isMobileViewport ? '20px' : isTabletViewport ? '16px' : '28px',
                   }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 0.9 }}
@@ -1311,7 +1312,9 @@ export function MorphingCard({
 
           {/* DESKTOP ONLY: Middle cluster (description) + Bottom cluster (pinned content) */}
           {/* Uses flexbox space-between layout for auto-spacing between top/middle/bottom */}
-          {typeof window !== 'undefined' && window.innerWidth >= 768 && (
+          {typeof window !== 'undefined' && window.innerWidth >= 768 && (() => {
+            const isTablet = typeof window !== 'undefined' && window.innerWidth < 1024
+            return (
             <>
               {/* MIDDLE CLUSTER: Description - takes remaining space and centers vertically */}
               <div className="flex-1 flex items-center">
@@ -1330,8 +1333,8 @@ export function MorphingCard({
                   <DescriptionContainer
                     description={expandedContent.description}
                     styles={styles}
-                    isMobile={false}
-                    contentScale={contentScale}
+                    isMobile={isTablet}
+                    contentScale={isTablet ? 1 : contentScale}
                   />
                 </motion.div>
               </div>
@@ -1340,7 +1343,7 @@ export function MorphingCard({
               <motion.div
                 className="flex flex-col flex-shrink-0"
                 style={{
-                  gap: '16px',
+                  gap: isTablet ? '12px' : '16px',
                 }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -1352,8 +1355,8 @@ export function MorphingCard({
                   className="font-pressura-ext flex items-center gap-2"
                   style={{
                     fontWeight: 350,
-                    fontSize: '18px',
-                    lineHeight: '24px',
+                    fontSize: isTablet ? '15px' : '18px',
+                    lineHeight: isTablet ? '21px' : '24px',
                     color: styles.textColor,
                     opacity: 0.9,
                   }}
@@ -1368,7 +1371,7 @@ export function MorphingCard({
                   }}
                   exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: 'easeIn', delay: 0.1 } }}
                 >
-                  <RiPushpinLine style={{ width: '16px', height: '16px', transform: 'scaleX(-1)' }} />
+                  <RiPushpinLine style={{ width: isTablet ? '14px' : '16px', height: isTablet ? '14px' : '16px', transform: 'scaleX(-1)' }} />
                   <span style={{ marginLeft: '-1px' }}>Pinned Highlights</span>
                 </motion.p>
               )}
@@ -1391,6 +1394,7 @@ export function MorphingCard({
                     highlights={expandedContent.highlights}
                     styles={styles}
                     onHighlightClick={onHighlightClick}
+                    isMobile={isTablet}
                   />
                 </motion.div>
               )}
@@ -1414,7 +1418,7 @@ export function MorphingCard({
                     styles={styles}
                     themeMode={themeMode}
                     variant={card.variant}
-                    isMobile={false}
+                    isMobile={isTablet}
                   />
                 </motion.div>
               )}
@@ -1437,6 +1441,7 @@ export function MorphingCard({
                     card={expandedContent.reflectionsCard}
                     themeMode={themeMode}
                     variant={card.variant}
+                    isMobile={isTablet}
                     chip={
                       card.variant === 'blue'
                         ? { icon: 'slides', text: '35 Slides' }
@@ -1479,14 +1484,14 @@ export function MorphingCard({
                           className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
                           style={{
                             width: '100%',
-                            height: '65px',
+                            height: isTablet ? '48px' : '65px',
                             backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
                             color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
                             borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
                           }}
                         >
-                          {Icon && <Icon className="w-5 h-5" />}
-                          <span className="text-[20px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
+                          {Icon && <Icon className={isTablet ? 'w-4 h-4' : 'w-5 h-5'} />}
+                          <span className={`${isTablet ? 'text-[16px]' : 'text-[20px]'} font-pressura uppercase`} style={{ letterSpacing: '-0.8px' }}>
                             {action.label}
                           </span>
                         </button>
@@ -1497,7 +1502,8 @@ export function MorphingCard({
               )}
             </motion.div>
           </>
-        )}
+          )
+        })()}
 
         </>
         )}

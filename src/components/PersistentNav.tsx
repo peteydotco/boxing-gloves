@@ -15,8 +15,6 @@ interface PersistentNavProps {
   isZoomedNav?: boolean
   heroBgColor?: string
   activeStageIndex?: number
-  isBlade0Hovered?: boolean
-  onNavHoverChange?: (isHovered: boolean) => void
 }
 
 // Stage description card colors - matches Stage.tsx stageSurface
@@ -37,8 +35,6 @@ export function PersistentNav({
   isZoomedNav = false,
   heroBgColor = '#FFFFFF',
   activeStageIndex = 0,
-  isBlade0Hovered = false,
-  onNavHoverChange,
 }: PersistentNavProps) {
   const { frontBladePeek } = bladeStackConfig
 
@@ -110,12 +106,6 @@ export function PersistentNav({
     setHoveredItem(null)
   }, [isZoomedNav, transitionPhase, viewMode])
 
-  // Notify parent when nav items are hovered (only in hero mode)
-  useEffect(() => {
-    const isNavHoveredInHero = hoveredItem !== null && !isInStages
-    onNavHoverChange?.(isNavHoveredInHero)
-  }, [hoveredItem, isInStages, onNavHoverChange])
-
   // Measure nav item dimensions and viewport
   useEffect(() => {
     const measure = () => {
@@ -183,9 +173,9 @@ export function PersistentNav({
     transition: 'color 0.3s ease',
   }
 
-  // Nav transition matches blade 0 timing for harmonious movement
-  // - Expanding: snappy spring with 40ms delay
-  // - Collapsing: smooth ease-out for precise settling (no bounce)
+  // Nav transition matches blade 0 / StagesContainer timing identically
+  // Tug and hover offsets come from the parent nav surface wrapper —
+  // nav items only animate their own expand/collapse/zoom positioning
   const getNavTransition = () => isExpanding
     ? {
         type: 'spring' as const,
@@ -194,12 +184,23 @@ export function PersistentNav({
         mass: 1,
         delay: 0.04,
       }
-    : {
+    : isCollapsing
+    ? {
         type: 'tween' as const,
         duration: 0.5,
-        ease: [0.32, 0.72, 0, 1] as const, // Custom ease-out curve
+        ease: [0.32, 0.72, 0, 1] as const,
         delay: 0,
       }
+    : isInStages
+    ? {
+        // In stages view (entering/exiting zoom, or any position change):
+        // match StagesContainer zoomSpringTransition for lockstep animation
+        type: 'spring' as const,
+        stiffness: 320,
+        damping: 40,
+        mass: 1,
+      }
+    : { type: 'tween' as const, duration: 0 }
 
   // Handle link clicks based on current view
   const handleLeftClick = () => {
@@ -223,13 +224,9 @@ export function PersistentNav({
   // Front blade peeks 88px from the bottom
   // Center of visible peek from bottom = 44px
   // Center of peek from top = 100vh - 44px = calc(100vh - 44px)
+  // NOTE: Tug and hover Y offsets are handled by the parent nav surface wrapper.
+  // Nav items only care about their own idle/expanded positioning.
   const navIdleTop = `calc(100vh - ${frontBladePeek / 2}px)` // calc(100vh - 44px)
-
-  // Hover offset - nav items slide up when blade 0 is hovered (matches blade hover offset)
-  // Also apply offset when hovering nav items themselves (they're on blade 0)
-  const bladeHoverOffset = 3 // Matches StageBackground whileHover y offset
-  const isNavHovered = hoveredItem !== null && !isInStages // Only in hero mode
-  const shouldApplyHoverOffset = isBlade0Hovered || isNavHovered
 
   // Horizontal positioning:
   // - Idle (on blade): Links stay at proportional position within blade (~13.7% from edge)
@@ -285,11 +282,6 @@ export function PersistentNav({
     // Nav top position: stage top (124px) + nav padding within stage (24px)
     const navTop = zoomDimensions.top + 24
 
-    // Stage left edge is at 24px, so nav items need to be offset from that
-    // Left nav: 24px (stage left) + some internal padding
-    // Right nav: viewport - 24px (stage right) - some internal padding
-    // For now, just use fixed padding from stage edges
-
     return { top: navTop }
   }
 
@@ -304,12 +296,9 @@ export function PersistentNav({
 
     if (activeNavItem === 'selectedWorks') {
       // SELECTED WORKS position: left 13.7% with x transform
-      // In expanded state: top 24, x = -expandedSpreadAmount
-      // The element's left edge is at 13.7% of viewport, then shifted by x transform
       const baseLeft = viewport.width * 0.137
 
       if (isZoomedNav) {
-        // Zoomed state: positioned at stage left + 40
         return {
           left: zoomDimensions.left + 40,
           top: zoomedNavPos.top,
@@ -318,11 +307,9 @@ export function PersistentNav({
         }
       }
 
-      // Apply hover offset when blade 0 is hovered (idle state only)
-      const hoverOffset = !isExpanded && shouldApplyHoverOffset ? bladeHoverOffset : 0
       return {
         left: baseLeft + (isExpanded ? -expandedSpreadAmount : 0),
-        top: isExpanded ? 24 : (viewport.height - frontBladePeek / 2 - dims.height / 2 - hoverOffset),
+        top: isExpanded ? 24 : (viewport.height - frontBladePeek / 2 - dims.height / 2),
         width: dims.width,
         height: dims.height,
       }
@@ -337,11 +324,9 @@ export function PersistentNav({
         }
       }
 
-      // Apply hover offset when blade 0 is hovered (idle state only)
-      const hoverOffset = !isExpanded && shouldApplyHoverOffset ? bladeHoverOffset : 0
       return {
         left: viewport.width / 2 - dims.width / 2,
-        top: isExpanded ? 24 : (viewport.height - frontBladePeek / 2 - dims.height / 2 - hoverOffset),
+        top: isExpanded ? 24 : (viewport.height - frontBladePeek / 2 - dims.height / 2),
         width: dims.width,
         height: dims.height,
       }
@@ -396,6 +381,7 @@ export function PersistentNav({
         style={{
           transformOrigin: 'left center',
           cursor: 'pointer',
+          pointerEvents: 'auto',
         }}
         initial={{
           top: navIdleTop,
@@ -406,19 +392,14 @@ export function PersistentNav({
         }}
         animate={{
           top: isZoomedNav ? zoomedNavPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
-          // Keep left at 13.7% always for smooth interpolation, use x for all horizontal movement
           left: '13.7%',
-          // In zoomed: calculate x offset to position at stage left + 40px
-          // 13.7% of viewport - expandedSpread = expanded position
-          // We need x offset to land at zoomDimensions.left + 40
           x: isZoomedNav
             ? (zoomDimensions.left + 40) - (typeof window !== 'undefined' ? window.innerWidth * 0.137 : 0)
             : (getNavAnimate() === 'expanded' ? -expandedSpreadAmount : 0),
-          // In idle state: center vertically (-50%) plus hover offset when blade 0 is hovered
-          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : `calc(-50% - ${shouldApplyHoverOffset ? bladeHoverOffset : 0}px)`),
+          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
           scale: 1,
         }}
-        transition={shouldApplyHoverOffset && getNavAnimate() !== 'expanded' ? { type: 'spring', stiffness: 400, damping: 30 } : getNavTransition()}
+        transition={getNavTransition()}
         onClick={handleLeftClick}
       >
         {/* Container with invisible border for spacing (real border is the sliding one) */}
@@ -457,6 +438,7 @@ export function PersistentNav({
         style={{
           transformOrigin: 'center center',
           cursor: 'pointer',
+          pointerEvents: 'auto',
         }}
         initial={{
           top: navIdleTop,
@@ -469,11 +451,10 @@ export function PersistentNav({
           top: isZoomedNav ? zoomedNavPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
           left: '50%',
           x: '-50%',
-          // In idle state: center vertically (-50%) plus hover offset when blade 0 is hovered
-          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : `calc(-50% - ${shouldApplyHoverOffset ? bladeHoverOffset : 0}px)`),
-          scale: 1, // No scaling needed - stage resizes, content reflows
+          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
+          scale: 1,
         }}
-        transition={shouldApplyHoverOffset && getNavAnimate() !== 'expanded' ? { type: 'spring', stiffness: 400, damping: 30 } : getNavTransition()}
+        transition={getNavTransition()}
         onClick={onLogoClick}
       >
         {/* Container measured for sliding border dimensions */}
@@ -521,6 +502,7 @@ export function PersistentNav({
         style={{
           transformOrigin: 'right center',
           cursor: !isZoomedNav ? 'pointer' : 'default',
+          pointerEvents: 'auto',
         }}
         initial={{
           top: navIdleTop,
@@ -531,20 +513,14 @@ export function PersistentNav({
         }}
         animate={{
           top: isZoomedNav ? zoomedNavPos.top : (getNavAnimate() === 'expanded' ? 24 : navIdleTop),
-          // Keep right at 13.7% always for smooth interpolation, use x for all horizontal movement
           right: '13.7%',
-          // In zoomed: calculate x offset to position at viewport right - stage right - 40px
-          // right: 13.7% means element's right edge is at 13.7% from viewport right
-          // We need x offset to land at zoomDimensions.left + 40 from viewport right
-          // Since right positioning works opposite to left, positive x moves LEFT
           x: isZoomedNav
             ? (typeof window !== 'undefined' ? window.innerWidth * 0.137 : 0) - (zoomDimensions.left + 40)
             : (getNavAnimate() === 'expanded' ? expandedSpreadAmount : 0),
-          // In idle state: center vertically (-50%) plus hover offset when blade 0 is hovered
-          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : `calc(-50% - ${shouldApplyHoverOffset ? bladeHoverOffset : 0}px)`),
+          y: isZoomedNav ? 0 : (getNavAnimate() === 'expanded' ? 0 : '-50%'),
           scale: 1,
         }}
-        transition={shouldApplyHoverOffset && getNavAnimate() !== 'expanded' ? { type: 'spring', stiffness: 400, damping: 30 } : getNavTransition()}
+        transition={getNavTransition()}
         onClick={!isZoomedNav ? handleRightClick : undefined}
       >
         {/* Container with invisible border for spacing (sliding border will target this when About is active) */}

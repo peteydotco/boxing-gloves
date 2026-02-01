@@ -47,6 +47,22 @@ export const hoverTransition = {
   ease: [0.33, 1, 0.68, 1] as [number, number, number, number], // easeOutCubic
 }
 
+// Spring for scroll tug snap-back - bouncy settle for satisfying microinteraction
+export const tugSnapBackSpring = {
+  type: 'spring' as const,
+  stiffness: 350,
+  damping: 18,
+  mass: 0.7,
+}
+
+// Spring for active tug tracking - stiff and responsive during scroll
+export const tugTrackingSpring = {
+  type: 'spring' as const,
+  stiffness: 600,
+  damping: 40,
+  mass: 0.5,
+}
+
 // Carousel tuning configuration
 export const CAROUSEL_CONFIG = {
   dragThreshold: 50,

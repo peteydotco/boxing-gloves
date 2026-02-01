@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { useState, type ReactNode } from 'react'
+import { motion, useTransform, motionValue, type MotionValue } from 'framer-motion'
 import { bladeStackConfig, getBladeColor } from '../data/stages'
 
 type ViewMode = 'hero' | 'stages'
@@ -10,45 +10,44 @@ interface StageBackgroundProps {
   transitionPhase: TransitionPhase
   activeStageIndex: number
   onNavigateToStage?: (stageIndex: number) => void
-  onHoverChange?: (isHovered: boolean) => void
-  isNavHovered?: boolean
+  tugOffset?: MotionValue<number>
+  children?: ReactNode
 }
+
+// Stable fallback MotionValue (never changes, always 0)
+const ZERO_MV = motionValue(0)
 
 /**
  * Unified background that morphs between:
  * - Collapsed: A full-height card positioned to peek from the bottom (front blade position)
  * - Expanded: Fullscreen background for the active stage
  *
- * The front blade (index 0) is now MasterClass which expands to Section 1.
- * This blade is closest to the viewer and widest in the collapsed stack.
- *
- * This eliminates the "flash" problem by being a single element
- * that transitions between states, rather than two separate elements
- * trying to coordinate their visibility.
+ * Children (PersistentNav) are rendered in a SIBLING tug wrapper at z-59,
+ * separate from the blade's z-45 tug wrapper. Both wrappers read the same
+ * blade0TugY MotionValue so they move in lockstep at 60fps. The sibling
+ * approach avoids the CSS stacking context trap where the blade's z-45
+ * would flatten nav items below StagesContainer (z-50).
  */
-export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _activeStageIndex, onNavigateToStage, onHoverChange, isNavHovered = false }: StageBackgroundProps) {
+export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _activeStageIndex, onNavigateToStage, tugOffset, children }: StageBackgroundProps) {
   const { borderRadius, horizontalPadding, frontBladePeek } = bladeStackConfig
+  const mv = tugOffset ?? ZERO_MV
 
   // Front blade is index 0 (closest to viewer, widest)
   const frontBladePadding = horizontalPadding
-  // Front blade peeks at frontBladePeek from the bottom
   const frontBladePeekFromBottom = frontBladePeek
 
   const isExpanding = transitionPhase === 'expanding'
   const isCollapsing = transitionPhase === 'collapsing'
 
-  // Determine target state for animation
-  // Expand when transitioning to stages OR when in stages view
-  // The blade animates UP to fullscreen while front blades slide down
   const isExpanded = viewMode === 'stages' || isExpanding
 
-  // Get color for front blade (index 0 / MasterClass)
-  // Uses same color for both collapsed and expanded states for seamless transition
   const bladeColor = getBladeColor(0)
 
-  // Blade 0 transition timing depends on direction:
-  // - Expanding: snappy spring with 40ms delay for parallax cascade
-  // - Collapsing: smooth ease-out for precise, bounce-free settling
+  // Blade 0 tug y — derived from MotionValue, updates DOM directly at 60fps
+  const blade0TugMultiplier = 0.7
+  const blade0TugY = useTransform(mv, (v: number) => -(v * blade0TugMultiplier))
+
+  // Transition — expand/collapse springs only (tug is on the wrapper, not spring-animated)
   const backdropTransition = isExpanding
     ? {
         type: 'spring' as const,
@@ -57,22 +56,21 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
         mass: 1,
         delay: 0.04,
       }
-    : {
+    : isCollapsing
+    ? {
         type: 'tween' as const,
         duration: 0.5,
-        ease: [0.32, 0.72, 0, 1] as const, // Custom ease-out curve
+        ease: [0.32, 0.72, 0, 1] as const,
         delay: 0,
       }
+    : { type: 'tween' as const, duration: 0 }
 
   // Hover offset for blade
   const hoverOffset = 3
 
-  // Animation variants - using consistent 100vh height to avoid layout jumps
-  // The blade is always 100vh tall, only its position changes
-  // Border radii animate smoothly from 24px to 0 during expansion
+  // Variants — no tug in y, that's on the wrapper
   const backdropVariants = {
     collapsed: {
-      // Full-height card positioned to show only the peek portion
       bottom: `calc(-100vh + ${frontBladePeekFromBottom}px)`,
       left: frontBladePadding,
       right: frontBladePadding,
@@ -86,7 +84,6 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
       scale: 1,
     },
     collapsedHovered: {
-      // Same as collapsed but with hover offset
       bottom: `calc(-100vh + ${frontBladePeekFromBottom}px)`,
       left: frontBladePadding,
       right: frontBladePadding,
@@ -100,13 +97,11 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
       scale: 1.001,
     },
     expanded: {
-      // Fullscreen - covers entire viewport
       bottom: 0,
       left: 0,
       right: 0,
       top: 'auto' as const,
       height: '100vh',
-      // Animate border radius smoothly to 0 (no snap)
       borderTopLeftRadius: 0,
       borderTopRightRadius: 0,
       borderBottomLeftRadius: 0,
@@ -116,49 +111,107 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
     },
   }
 
-  // Determine if the blade should be interactive (only when collapsed in hero view)
+  // Nav surface variants — only track the y from blade hover
+  // Full-viewport overlay that just shifts y to match blade movement
+  const navSurfaceVariants = {
+    collapsed: {
+      y: 0,
+    },
+    collapsedHovered: {
+      y: -hoverOffset,
+    },
+    expanded: {
+      y: 0,
+    },
+  }
+
   const isCollapsed = !isExpanded
   const isInteractive = isCollapsed && !isExpanding && !isCollapsing
 
-  // Track if blade itself is being directly hovered (not via nav items)
-  // This is separate from isNavHovered which tracks when nav items are hovered
   const [isBladeDirectlyHovered, setIsBladeDirectlyHovered] = useState(false)
+  // Nav hover state — managed internally, no longer relayed through App
+  const [isNavItemHovered, setIsNavItemHovered] = useState(false)
 
-  // Determine which variant to animate to
-  // Use collapsedHovered when:
-  // - Nav items are hovered (isNavHovered from parent)
-  // - Blade itself is directly hovered (isBladeDirectlyHovered local state)
+  const isAnyHovered = isBladeDirectlyHovered || isNavItemHovered
+
   const getAnimateVariant = () => {
     if (isExpanded) return 'expanded'
-    if (isNavHovered || isBladeDirectlyHovered) return 'collapsedHovered'
+    if (isAnyHovered) return 'collapsedHovered'
     return 'collapsed'
   }
 
   return (
-    <motion.div
-      className={`fixed ${isInteractive ? 'cursor-pointer' : ''}`}
-      style={{
-        // Front blade needs higher z-index than back blades (z-40 container)
-        zIndex: 45,
-        backgroundColor: bladeColor,
-        // Only allow pointer events when collapsed (interactive blade)
-        pointerEvents: isCollapsed ? 'auto' : 'none',
-      }}
-      initial={isCollapsing ? 'expanded' : 'collapsed'}
-      animate={getAnimateVariant()}
-      variants={backdropVariants}
-      transition={backdropTransition}
-      onClick={() => isInteractive && onNavigateToStage?.(0)}
-      onHoverStart={() => {
-        if (isInteractive) {
-          setIsBladeDirectlyHovered(true)
-          onHoverChange?.(true)
-        }
-      }}
-      onHoverEnd={() => {
-        setIsBladeDirectlyHovered(false)
-        onHoverChange?.(false)
-      }}
-    />
+    <>
+      {/* Blade tug wrapper (z-45): tug offset at 60fps from MotionValue */}
+      <motion.div
+        className="fixed"
+        style={{
+          inset: 0,
+          zIndex: 45,
+          pointerEvents: 'none',
+          y: blade0TugY,
+        }}
+      >
+        {/* Blade visual: expand/collapse via variants + hover */}
+        <motion.div
+          className={`fixed ${isInteractive ? 'cursor-pointer' : ''}`}
+          style={{
+            zIndex: 45,
+            backgroundColor: bladeColor,
+            pointerEvents: isCollapsed ? 'auto' : 'none',
+          }}
+          initial={isCollapsing ? 'expanded' : 'collapsed'}
+          animate={getAnimateVariant()}
+          variants={backdropVariants}
+          transition={backdropTransition}
+          onClick={() => isInteractive && onNavigateToStage?.(0)}
+          onHoverStart={() => {
+            if (isInteractive) {
+              setIsBladeDirectlyHovered(true)
+            }
+          }}
+          onHoverEnd={() => {
+            setIsBladeDirectlyHovered(false)
+          }}
+        />
+      </motion.div>
+
+      {/* Nav tug wrapper (z-59): SIBLING to blade wrapper, same MotionValue for lockstep tug.
+          Separate stacking context at z-59 so nav items sit above StagesContainer (z-50). */}
+      {children && (
+        <motion.div
+          className="fixed"
+          style={{
+            inset: 0,
+            zIndex: 59,
+            pointerEvents: 'none',
+            y: blade0TugY,
+          }}
+        >
+          {/* Nav surface: hover y offset matches blade hover, identical transition */}
+          <motion.div
+            className="fixed"
+            style={{
+              inset: 0,
+              pointerEvents: 'none',
+            }}
+            initial={isCollapsing ? 'expanded' : 'collapsed'}
+            animate={getAnimateVariant()}
+            variants={navSurfaceVariants}
+            transition={backdropTransition}
+            onHoverStart={() => {
+              if (isInteractive) {
+                setIsNavItemHovered(true)
+              }
+            }}
+            onHoverEnd={() => {
+              setIsNavItemHovered(false)
+            }}
+          >
+            {children}
+          </motion.div>
+        </motion.div>
+      )}
+    </>
   )
 }
