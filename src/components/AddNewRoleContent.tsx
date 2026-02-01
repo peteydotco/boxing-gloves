@@ -360,7 +360,7 @@ export function AddNewRoleContent({
               }}
               style={{ cursor: inputValue ? 'pointer' : 'default', transformOrigin: 'center center' }}
             >
-              <SlPlus className="w-5 h-5" style={{ color: themeTitle }} />
+              <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle }} />
             </motion.span>
             {/* Input field with custom placeholder overlay */}
             <span className="relative flex-1">
@@ -405,9 +405,16 @@ export function AddNewRoleContent({
       </div>
 
       {/* MIDDLE CLUSTER - Scrollable work experience list */}
+      {/* On mobile: center content vertically between title and buttons */}
       <motion.div
         className="flex-1 overflow-y-auto overflow-x-hidden relative"
-        style={{ marginTop: `${s(48)}px`, padding: '3px' }}
+        style={{
+          marginTop: isMobile ? 0 : `${s(48)}px`,
+          padding: '3px',
+          display: isMobile ? 'flex' : undefined,
+          flexDirection: isMobile ? 'column' : undefined,
+          justifyContent: isMobile ? 'center' : undefined,
+        }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
