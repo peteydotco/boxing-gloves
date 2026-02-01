@@ -224,7 +224,7 @@ export function StackedBlades({
                 : 'rgba(0, 0, 0, 0.55)',
             }}
             animate={{
-              opacity: [0.4, 0.7, 0.4],
+              opacity: [0.7, 1, 0.7],
             }}
             transition={{
               duration: 2,
