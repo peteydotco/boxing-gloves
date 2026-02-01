@@ -5,7 +5,8 @@ import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@reac
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
 import type { Settings } from '../types'
-import glovesModelUrl from '../assets/optimized-gloves.glb?url'
+import leftGloveModelUrl from '../assets/folio-peteypete.glb?url'
+import rightGloveModelUrl from '../assets/folio-rodriguez.glb?url'
 
 // Rope segments for smooth curve
 const ROPE_SEGMENTS = 32
@@ -87,18 +88,20 @@ function DraggableGloveWithRope({
   settings,
   dropDelay = 0,
   themeMode = 'light',
+  modelUrl,
 }: {
   anchorOffset: [number, number, number]
   settings: Settings
   dropDelay?: number // Delay in ms before enabling physics (for staggered drop)
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' // Theme mode for color adjustments
+  modelUrl: string // URL to the glove GLB model
 }) {
   const gloveRef = useRef<RapierRigidBody>(null)
   const tubeRef = useRef<THREE.Mesh>(null)
   const { camera, gl } = useThree()
 
-  // Load the GLB model
-  const { scene: gloveModel } = useGLTF(glovesModelUrl)
+  // Load the GLB model (with Draco decoder for compressed meshes)
+  const { scene: gloveModel } = useGLTF(modelUrl, true)
   const isDragging = useRef(false)
   const dragPlane = useRef(new THREE.Plane())
   const intersection = useRef(new THREE.Vector3())
@@ -204,7 +207,7 @@ function DraggableGloveWithRope({
   if (!visualRotation.current) {
     // Initialize with the glove's starting rotation (facing user)
     visualRotation.current = new THREE.Quaternion()
-    visualRotation.current.setFromEuler(new THREE.Euler(0, isLeftGlove ? (Math.PI * 2) / 3 : Math.PI, 0))
+    visualRotation.current.setFromEuler(new THREE.Euler(0, Math.PI, 0))
   }
 
   // Soft string constraint + rope visual update
@@ -479,6 +482,7 @@ function DraggableGloveWithRope({
       <RigidBody
         ref={gloveRef}
         position={gloveStartPosition}
+        rotation={[0, Math.PI, 0]}
         colliders={false}
         mass={settings.mass}
         restitution={settings.restitution}
@@ -541,7 +545,7 @@ function DraggableGloveWithRope({
       <group
         ref={visualGroupRef}
         position={gloveStartPosition}
-        rotation={[0, isLeftGlove ? (Math.PI * 2) / 3 : Math.PI, 0]}
+        rotation={[0, Math.PI, 0]}
       >
         <primitive
           object={useMemo(() => {
@@ -648,12 +652,11 @@ function DraggableGloveWithRope({
             return cloned
           }, [gloveModel, themeMode])}
           scale={[
-            (isLeftGlove ? -settings.radius : settings.radius) * 0.75,
+            (isLeftGlove ? 1 : -1) * settings.radius * 0.75,
             settings.radius * 0.75,
             settings.radius * 0.75
           ]}
           position={[0, settings.radius * 1.5, 0]}
-          rotation={[0, isLeftGlove ? (Math.PI * 2) / 3 : Math.PI, 0]}
         />
       </group>
 
@@ -665,8 +668,9 @@ function DraggableGloveWithRope({
   )
 }
 
-// Preload the gloves model
-useGLTF.preload(glovesModelUrl)
+// Preload the glove models (with Draco decoder for compressed meshes)
+useGLTF.preload(leftGloveModelUrl, true)
+useGLTF.preload(rightGloveModelUrl, true)
 
 export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light' }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' }) {
   return (
@@ -683,21 +687,23 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
         <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
       </mesh>
 
-      {/* Left glove - offset left and slightly forward, drops slightly after right */}
+      {/* Left glove (peteypete) - offset left and slightly forward, drops slightly after right */}
       <DraggableGloveWithRope
         anchorOffset={[-0.25, 0, 0.15]}
         dropDelay={100}
         themeMode={themeMode}
+        modelUrl={leftGloveModelUrl}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.25,
         }}
       />
 
-      {/* Right glove - offset right and slightly back, with extended cord */}
+      {/* Right glove (rodriguez) - offset right and slightly back, with extended cord */}
       <DraggableGloveWithRope
         anchorOffset={[0.25, 0, -0.15]}
         themeMode={themeMode}
+        modelUrl={rightGloveModelUrl}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.7,

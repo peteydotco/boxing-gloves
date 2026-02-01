@@ -632,7 +632,6 @@ function App() {
           colonVisible={colonVisible}
           isDaylight={isDaylight}
           tugOffset={tugOffsetMV}
-          isZoomedNav={isZoomedNav}
         />
       )}
 
