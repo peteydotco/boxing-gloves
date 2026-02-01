@@ -12,7 +12,7 @@ export const cards: CardData[] = [
       roleLabel: 'IXD PROFESSOR AT',
       dateRange: '2021 → Present',
       description: [
-        <>I teach an accelerated interaction design course, where students create portfolio-ready soft products for the web, native apps, and beyond. Curriculum covers vibe coding, motion principles, and design systems. <a href="https://sva.edu/academics/undergraduate/bfa-design" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>SVA BFA Design</a>{' '}<RxOpenInNewWindow style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.85em' }} /></>,
+        <>I teach an accelerated interaction design course, where students create portfolio-ready soft products for the web, native apps, and beyond. Curriculum covers vibe coding, motion principles, design systems, and more. Visit <a href="https://sva.edu/academics/undergraduate/bfa-design" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>SVA BFA Design</a>{' '}<RxOpenInNewWindow style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.85em' }} /></>,
       ],
       highlights: [
         { label: "SVA'26", href: 'https://www.instagram.com/stories/highlights/18062055449168032/', image: '/images/highlights/sva-26.png' },
