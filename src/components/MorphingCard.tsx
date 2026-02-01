@@ -1175,7 +1175,7 @@ export function MorphingCard({
                         exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeIn', delay: 0.1 } } }}
                       >
                         <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
-                        <span style={{ marginLeft: '-1px' }}>Highlights</span>
+                        <span style={{ marginLeft: '-1px' }}>Pinned Highlights</span>
                       </motion.p>
                     )}
 
@@ -1341,7 +1341,7 @@ export function MorphingCard({
                   exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: 'easeIn', delay: 0.1 } }}
                 >
                   <RiPushpinLine style={{ width: '16px', height: '16px', transform: 'scaleX(-1)' }} />
-                  <span style={{ marginLeft: '-1px' }}>Highlights</span>
+                  <span style={{ marginLeft: '-1px' }}>Pinned Highlights</span>
                 </motion.p>
               )}
 
