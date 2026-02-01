@@ -174,7 +174,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
 
     const interval = setInterval(() => {
       setCurrentFrameIndex(prev => (prev + 1) % previewFrames.length)
-    }, 8000) // Change frame every 8 seconds
+    }, 6000) // Change frame every 6 seconds
 
     return () => clearInterval(interval)
   }, [previewFrames, isActive])
@@ -325,7 +325,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
                 style={{
                   borderRadius: '4px',
                   opacity: index === currentFrameIndex ? 1 : 0,
-                  transition: 'opacity 8s ease-in-out',
+                  transition: 'opacity 3s ease-in-out',
                 }}
               />
             ))
