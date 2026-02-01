@@ -410,7 +410,7 @@ export function AddNewRoleContent({
         className="flex-1 overflow-y-auto overflow-x-hidden relative"
         style={{
           marginTop: isMobile ? 0 : `${s(48)}px`,
-          padding: '3px',
+          padding: isMobile ? `${s(24)}px 3px 3px 3px` : '3px',
           display: isMobile ? 'flex' : undefined,
           flexDirection: isMobile ? 'column' : undefined,
         }}
