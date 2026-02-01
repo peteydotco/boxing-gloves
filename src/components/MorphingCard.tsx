@@ -298,7 +298,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
                 alt={card.title}
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   opacity: shouldShowVideo ? 0 : 1,
                   transition: 'opacity 0.3s ease-in-out',
                 }}
@@ -312,7 +312,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
                 playsInline
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   opacity: shouldShowVideo ? 1 : 0,
                   transition: 'opacity 0.3s ease-in-out',
                 }}
@@ -327,7 +327,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
                 alt={`${card.title} preview ${index + 1}`}
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   opacity: index === currentFrameIndex ? 1 : 0,
                   transition: 'opacity 2.5s ease-in-out',
                 }}
@@ -339,7 +339,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
               src={card.image}
               alt={card.title}
               className="w-full h-full object-cover"
-              style={{ borderRadius: '4px', display: 'block' }}
+              style={{ borderRadius: '6px', display: 'block' }}
             />
           )}
         </div>
