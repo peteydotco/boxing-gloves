@@ -566,7 +566,7 @@ export function PersistentNav({
             }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
-            MORE ABOUT ME
+            UNSELECTED WORKS
           </motion.span>
         </motion.div>
       </motion.div>
