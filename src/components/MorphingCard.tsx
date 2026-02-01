@@ -735,17 +735,20 @@ export function MorphingCard({
   const styles = getVariantStyles(themeMode)[card.variant]
   const { expandedContent } = card
 
+  // Disable spotlight on touch devices — only a desktop mouse moment
+  const hasPointer = typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches
+
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!cardRef.current) return
+    if (!hasPointer || !cardRef.current) return
     const rect = cardRef.current.getBoundingClientRect()
     const xPercent = ((e.clientX - rect.left) / rect.width) * 100
     const yPercent = ((e.clientY - rect.top) / rect.height) * 100
     setMousePos({ x: xPercent, y: yPercent })
   }
 
-  // Spotlight gradient for hover state (works for both collapsed and expanded)
+  // Spotlight gradient for hover state (desktop only)
   const defaultBorderColor = styles.border
-  const spotlightGradient = isHovered
+  const spotlightGradient = (isHovered && hasPointer)
     ? card.variant === 'cta'
       ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, ${defaultBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
       : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(200, 210, 230, 0.8) 15%, ${defaultBorderColor} 35%, rgba(140, 140, 150, 0.3) 55%, rgba(120, 120, 130, 0.35) 100%)`
@@ -879,7 +882,7 @@ export function MorphingCard({
           // Stop propagation to prevent the backdrop click handler from closing the card
           e.stopPropagation()
         }}
-        onMouseEnter={() => !isStacked && setIsHovered(true)}
+        onMouseEnter={() => hasPointer && !isStacked && setIsHovered(true)}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setIsHovered(false)}
       >
