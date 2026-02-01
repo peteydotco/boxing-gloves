@@ -360,7 +360,7 @@ export function AddNewRoleContent({
               }}
               style={{ cursor: inputValue ? 'pointer' : 'default', transformOrigin: 'center center' }}
             >
-              <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '2px' }} />
+              <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
             </motion.span>
             {/* Input field with custom placeholder overlay */}
             <span className="relative flex-1">
