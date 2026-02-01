@@ -1,4 +1,5 @@
 import type { CardData } from '../types'
+import { RxOpenInNewWindow } from 'react-icons/rx'
 
 export const cards: CardData[] = [
   {
@@ -11,7 +12,7 @@ export const cards: CardData[] = [
       roleLabel: 'IXD PROFESSOR AT',
       dateRange: '2021 → Present',
       description: [
-        <>I teach an accelerated interaction design course, where students create portfolio-ready soft products for the web, native apps, and beyond. Curriculum covers vibe coding, motion principles, and design systems. <a href="https://sva.edu/academics/undergraduate/bfa-design" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>SVA BFA Design</a>{' ↗'}</>,
+        <>I teach an accelerated interaction design course, where students create portfolio-ready soft products for the web, native apps, and beyond. Curriculum covers vibe coding, motion principles, and design systems. <a href="https://sva.edu/academics/undergraduate/bfa-design" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>SVA BFA Design</a>{' '}<RxOpenInNewWindow style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.85em' }} /></>,
       ],
       highlights: [
         { label: "SVA'26", href: 'https://www.instagram.com/stories/highlights/18062055449168032/', image: '/images/highlights/sva-26.png' },
@@ -44,7 +45,7 @@ export const cards: CardData[] = [
       roleLabel: 'PRODUCT DESIGNER AT',
       dateRange: '2019 → Present',
       description: [
-        <>For six years, I've elevated the vision and craft of our core product. Nowadays I'm designing powerful new site tools that elevate DIYers and keep up with Pros. See our <a href="https://www.squarespace.com/refresh" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>FW2025 release</a>{' ↗'}</>,
+        <>For six years, I've elevated the vision and craft of our core product. Nowadays I'm designing powerful new site tools that elevate DIYers and keep up with Pros. See our <a href="https://www.squarespace.com/refresh" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>FW2025 release</a>{' '}<RxOpenInNewWindow style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.85em' }} /></>,
       ],
       highlights: [
         { label: 'SQSP IV', href: 'https://www.instagram.com/stories/highlights/18306770473162196/', image: '/images/highlights/sqsp-iv.png' },
