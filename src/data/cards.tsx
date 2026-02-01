@@ -92,12 +92,12 @@ export const cards: CardData[] = [
   },
   {
     id: 'cta',
-    label: '- EMPTY SLOT -',
-    title: 'ADD NEW ROLE',
+    label: 'BLANK SLOT',
+    title: 'ADD A ROLE',
     shortcut: '⌘ C',
     variant: 'cta',
     expandedContent: {
-      roleLabel: 'ADD NEW ROLE',
+      roleLabel: 'ADD A ROLE',
       dateRange: '1989 → Infinity',
       description: [
         "One of the greatest privileges of working in this space has been the incredible talent and personalities I've gotten to meet and, if I'm lucky, collab with.",

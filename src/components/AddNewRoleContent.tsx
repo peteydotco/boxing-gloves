@@ -289,7 +289,7 @@ export function AddNewRoleContent({
             }}
             transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
           >
-            - EMPTY SLOT -
+            BLANK SLOT
           </motion.div>
 
           {/* Badge - cross-fades between ESC (expanded) and shortcut (collapsed) */}
@@ -299,19 +299,17 @@ export function AddNewRoleContent({
                 e.stopPropagation()
                 onClose()
               }}
-              className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer overflow-hidden"
+              className="flex items-center justify-center rounded-full shrink-0 cursor-pointer overflow-hidden"
               style={{ backgroundColor: themeBadgeBg }}
               initial={false}
               animate={{ padding: '4px 8px' }}
               exit={{ padding: '4px 12px' }}
               transition={contentSpring}
             >
-              {/* Badge text container - dual spans for cross-fade */}
               <div
                 className="uppercase font-pressura-mono leading-[100%] relative text-[12px] whitespace-nowrap"
                 style={{ top: '-1px' }}
               >
-                {/* ESC text - absolutely positioned, visible when expanded */}
                 <motion.span
                   className="absolute inset-0 flex items-center justify-center"
                   style={{ color: themeSecondary }}
@@ -322,7 +320,6 @@ export function AddNewRoleContent({
                 >
                   ESC
                 </motion.span>
-                {/* Shortcut text - provides layout, hidden when expanded */}
                 <motion.span
                   style={{ color: themeSecondary }}
                   initial={false}
@@ -395,7 +392,7 @@ export function AddNewRoleContent({
                     lineHeight: 'inherit',
                   }}
                 >
-                  Add new role
+                  Add a role
                 </span>
               )}
               <input

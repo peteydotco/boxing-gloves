@@ -943,10 +943,10 @@ export function MorphingCard({
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch',
           }}
-          initial={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
-          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '20px 16px 16px 16px' : (typeof window !== 'undefined' && window.innerWidth < 1024) ? '18px' : '24px' }}
+          initial={{ padding: compactCta ? '10px 10px 20px 12px' : '10px 10px 20px 20px' }}
+          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '18px 14px 16px 16px' : (typeof window !== 'undefined' && window.innerWidth < 1024) ? '16px 16px 18px 18px' : '22px 22px 24px 24px' }}
           exit={{
-            padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px',
+            padding: compactCta ? '10px 10px 20px 12px' : '10px 10px 20px 20px',
             transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] } },
           }}
           transition={contentSpring}
@@ -1036,7 +1036,7 @@ export function MorphingCard({
             <div className="flex items-start justify-between w-full relative">
               <motion.div
                 className="font-pressura leading-normal text-left uppercase"
-                style={{ color: styles.textColor, fontSize: '12px', letterSpacing: '0.39px', transformOrigin: 'top left', whiteSpace: 'nowrap' }}
+                style={{ color: styles.textColor, fontSize: '12px', letterSpacing: '0.39px', fontWeight: 400, transformOrigin: 'top left', whiteSpace: 'nowrap' }}
                 initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
                 animate={{ scale: 14 / 12, marginTop: '1px', opacity: 1 }}
                 exit={{
@@ -1060,7 +1060,7 @@ export function MorphingCard({
                   e.stopPropagation()
                   onClose()
                 }}
-                className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer"
+                className="flex items-center justify-center rounded-full shrink-0 cursor-pointer"
                 style={{ backgroundColor: styles.badgeBg, ...(hideShortcut ? { position: 'absolute' as const, right: 0, top: 0 } : {}) }}
                 initial={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
                 animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', opacity: hideShortcut ? 0 : 1 }}
@@ -1514,7 +1514,7 @@ export function MorphingCard({
         {compactCta && (
           <motion.div
             className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none"
-            style={{ padding: '12px 12px 20px 12px' }}
+            style={{ padding: '10px 10px 20px 12px' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 0 }}
             exit={{ opacity: 1 }}
@@ -1599,7 +1599,7 @@ export function MorphingCard({
       {/* Collapsed content with hover slide effect */}
       <div
         className="overflow-hidden"
-        style={{ padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px' }}
+        style={{ padding: compactCta ? '10px 10px 20px 12px' : '10px 10px 20px 20px' }}
       >
         {compactCta ? (
           <div className="flex flex-col items-center justify-center gap-1 w-full" style={{ minHeight: '47px' }}>
@@ -1642,14 +1642,14 @@ export function MorphingCard({
                 transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
               }}
             >
-              <div className="text-[12px] tracking-[0.39px] font-pressura leading-normal text-left uppercase">
+              <div className="text-[12px] tracking-[0.39px] font-pressura leading-normal text-left uppercase" style={{ fontWeight: 400 }}>
                 {label}
               </div>
               {!hideShortcut && (
                 card.variant === 'cta' ? (
                   // CTA badge with animated width for email copied toast
                   <motion.div
-                    className="flex items-center justify-center rounded-[4px] shrink-0 overflow-hidden"
+                    className="flex items-center justify-center rounded-full shrink-0 overflow-hidden"
                     style={{ backgroundColor: styles.badgeBg, padding: '4px 0' }}
                     initial={false}
                     animate={{
@@ -1674,7 +1674,7 @@ export function MorphingCard({
                 ) : (
                   // Regular badge with padding-based sizing
                   <div
-                    className="flex items-center justify-center rounded-[4px] shrink-0"
+                    className="flex items-center justify-center rounded-full shrink-0"
                     style={{ padding: '4px 12px', backgroundColor: styles.badgeBg }}
                   >
                     <div className="text-[12px] uppercase font-pressura-mono leading-[100%]" style={{ position: 'relative', top: '-1px' }}>

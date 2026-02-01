@@ -147,6 +147,17 @@ export function StagesContainer({
     return () => window.removeEventListener('wheel', handleWheel)
   }, [isVisible, isZoomedNav, onNavigateToHero])
 
+  // Email copied state + handler (shared with Stage badge and ⌘+C shortcut)
+  const [emailCopied, setEmailCopied] = useState(false)
+  const emailCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleRequestCaseStudy = useCallback(() => {
+    navigator.clipboard.writeText('hello@petey.co')
+    setEmailCopied(true)
+    if (emailCopiedTimerRef.current) clearTimeout(emailCopiedTimerRef.current)
+    emailCopiedTimerRef.current = setTimeout(() => setEmailCopied(false), 2000)
+  }, [])
+
   // Keyboard navigation
   useEffect(() => {
     if (!isVisible) return
@@ -155,6 +166,16 @@ export function StagesContainer({
       // Skip if TopCards are expanded (they handle their own keyboard navigation)
       if (document.documentElement.hasAttribute('data-topcards-expanded')) {
         return
+      }
+
+      // ⌘+C to copy email (Request Case Study shortcut)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+        const selection = window.getSelection()
+        if (!selection || selection.toString().length === 0) {
+          e.preventDefault()
+          handleRequestCaseStudy()
+          return
+        }
       }
 
       if (e.key === 'Escape') {
@@ -185,17 +206,11 @@ export function StagesContainer({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isVisible, onNavigateToHero])
+  }, [isVisible, onNavigateToHero, handleRequestCaseStudy])
 
   const handleDotClick = useCallback((index: number) => {
     setActiveIndex(index)
   }, [])
-
-  const handleRequestCaseStudy = useCallback(() => {
-    // Copy email to clipboard for now
-    navigator.clipboard.writeText('hello@petey.co')
-    console.log('Case study requested for:', stages[activeIndex].title)
-  }, [activeIndex])
 
   // Calculate zoom transform for secondary nav mode
   // Instead of scale transforms (which stretch content), use actual width/height
@@ -295,6 +310,7 @@ export function StagesContainer({
                 stage={stage}
                 isActive={stageIndex === activeIndex}
                 onRequestCaseStudy={handleRequestCaseStudy}
+                emailCopied={emailCopied}
                 isExpanding={transitionPhase === 'expanding'}
                 isZoomedNav={isZoomedNav}
                 backgroundColor={getBladeColor(bladeIndex)}

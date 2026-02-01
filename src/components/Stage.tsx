@@ -18,9 +18,10 @@ interface StageProps {
   isExpanding?: boolean
   isZoomedNav?: boolean
   backgroundColor?: string
+  emailCopied?: boolean
 }
 
-export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false, isZoomedNav = false, backgroundColor = '#000000' }: StageProps) {
+export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false, isZoomedNav = false, backgroundColor = '#000000', emailCopied = false }: StageProps) {
   // Cursor tracking for card spotlight effects
   const [logoCardMouse, setLogoCardMouse] = useState({ x: 50, y: 50 })
   const [logoCardHovered, setLogoCardHovered] = useState(false)
@@ -428,18 +429,27 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           onMouseEnter={() => setCtaCardHovered(true)}
           onMouseLeave={() => setCtaCardHovered(false)}
         >
-          {/* Keyboard shortcut badge - inverts colors on hover */}
-          <div
-            className="absolute top-5 right-5 flex items-center justify-center"
+          {/* Keyboard shortcut badge - copies email on click, animates width for toast */}
+          <motion.div
+            className="absolute flex items-center justify-center overflow-hidden cursor-pointer"
             style={{
+              top: 12,
+              right: 12,
               backgroundColor: ctaCardHovered ? backgroundColor : stageSurface.secondary,
-              borderRadius: 4,
-              padding: '4px 8px',
+              borderRadius: 999,
+              padding: '4px 0',
               transition: 'background-color 0.2s ease',
             }}
+            initial={false}
+            animate={{ width: emailCopied ? 108 : 44 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onRequestCaseStudy?.()
+            }}
           >
-            <span
-              className="uppercase font-pressura-mono"
+            <div
+              className="uppercase font-pressura-mono whitespace-nowrap flex items-center justify-center gap-1"
               style={{
                 fontSize: '12px',
                 lineHeight: 1,
@@ -449,9 +459,16 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                 transition: 'color 0.2s ease',
               }}
             >
-              ⌘ R
-            </span>
-          </div>
+              {emailCopied ? (
+                <>
+                  <span style={{ position: 'relative', top: '0.5px' }}>✓</span>
+                  <span>Email Copied</span>
+                </>
+              ) : (
+                '⌘ C'
+              )}
+            </div>
+          </motion.div>
 
           {/* Button text - GT Pressura Regular (lighter than title) */}
           {/* Knockout effect on hover (transparent text reveals dark bg) */}
