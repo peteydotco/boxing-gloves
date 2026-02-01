@@ -1006,6 +1006,8 @@ export function MorphingCard({
               isMobile={typeof window !== 'undefined' && window.innerWidth < 768}
               hideShortcut={hideShortcut}
               shortcut={card.shortcut}
+              contentScale={contentScale}
+              isFocused={isFocused}
             />
           ) : (
           <>
@@ -1168,7 +1170,7 @@ export function MorphingCard({
                         exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeIn', delay: 0.1 } } }}
                       >
                         <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
-                        <span style={{ marginLeft: '-1px' }}>Pinned</span>
+                        <span style={{ marginLeft: '-1px' }}>Highlights</span>
                       </motion.p>
                     )}
 
@@ -1334,7 +1336,7 @@ export function MorphingCard({
                   exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: 'easeIn', delay: 0.1 } }}
                 >
                   <RiPushpinLine style={{ width: '16px', height: '16px', transform: 'scaleX(-1)' }} />
-                  <span style={{ marginLeft: '-1px' }}>Pinned</span>
+                  <span style={{ marginLeft: '-1px' }}>Highlights</span>
                 </motion.p>
               )}
 
@@ -1506,9 +1508,6 @@ export function MorphingCard({
       }}
       animate={{
         scale: isHovered ? 1.02 : 1,
-        boxShadow: isHovered
-          ? '0 12px 32px rgba(0,0,0,0.15)'
-          : '0 4px 10px rgba(0,0,0,0)',
       }}
       transition={hoverTransition}
       onClick={() => {

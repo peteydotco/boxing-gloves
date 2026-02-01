@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import { SlPlus } from 'react-icons/sl'
 import { contentSpring } from '../constants/animation'
@@ -10,10 +10,10 @@ const STROKE_WIDTH = 2.5
 // Inline SVG connectors — paths derived from Figma, re-oriented for vertical flow
 // First branch: from parent logo bottom → curves right to first sub-role
 // Draws: vertical down, then curves right with 11px radius
-const BranchFirst = () => (
+const BranchFirst = ({ scale = 1 }: { scale?: number }) => (
   <svg
-    width="27"
-    height="70"
+    width={Math.round(27 * scale)}
+    height={Math.round(70 * scale)}
     viewBox="0 0 27 70"
     fill="none"
     style={{ display: 'block', overflow: 'visible' }}
@@ -28,10 +28,10 @@ const BranchFirst = () => (
 )
 
 // Subsequent branch: taller vertical run, same curve right
-const BranchSub = () => (
+const BranchSub = ({ scale = 1 }: { scale?: number }) => (
   <svg
-    width="27"
-    height="97"
+    width={Math.round(27 * scale)}
+    height={Math.round(97 * scale)}
     viewBox="0 0 27 97"
     fill="none"
     style={{ display: 'block', overflow: 'visible' }}
@@ -47,10 +47,10 @@ const BranchSub = () => (
 
 // Curly loop: vertical line → figure-8 thread → vertical line
 // Used between Squarespace X and Fantasy
-const CurlyLoop = () => (
+const CurlyLoop = ({ scale = 1 }: { scale?: number }) => (
   <svg
-    width="21"
-    height="79"
+    width={Math.round(21 * scale)}
+    height={Math.round(79 * scale)}
     viewBox="0 0 21.5 79.5"
     fill="none"
     style={{ display: 'block', overflow: 'visible' }}
@@ -77,10 +77,10 @@ const CurlyLoop = () => (
 )
 
 // Straight vertical connector between Fantasy and Critical Mass
-const VerticalLine = () => (
+const VerticalLine = ({ scale = 1 }: { scale?: number }) => (
   <svg
-    width="3"
-    height="43"
+    width={Math.round(3 * scale)}
+    height={Math.round(43 * scale)}
     viewBox="0 0 2.5 43"
     fill="none"
     style={{ display: 'block', overflow: 'visible' }}
@@ -186,6 +186,8 @@ interface AddNewRoleContentProps {
   isMobile?: boolean
   hideShortcut?: boolean
   shortcut?: string
+  contentScale?: number
+  isFocused?: boolean
 }
 
 export function AddNewRoleContent({
@@ -193,23 +195,33 @@ export function AddNewRoleContent({
   isMobile = false,
   hideShortcut = false,
   shortcut = '⌘ C',
+  contentScale = 1,
+  isFocused = true,
 }: AddNewRoleContentProps) {
+  // Helper: scale a pixel value proportionally (mobile uses slightly smaller base sizes)
+  const s = (px: number) => Math.round(px * contentScale)
   const [inputValue, setInputValue] = useState('')
+  const [copied, setCopied] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Focus input on mount
+  // Focus input when card becomes focused, blur when not
+  // Use preventScroll to stop browser from auto-scrolling the card container
   useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus()
+    if (isFocused && inputRef.current) {
+      inputRef.current.focus({ preventScroll: true })
+    } else if (!isFocused && inputRef.current) {
+      inputRef.current.blur()
     }
-  }, [])
+  }, [isFocused])
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText('hello@petey.co')
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const handleLinkedIn = () => {
-    window.open('https://linkedin.com/in/peterodriguez', '_blank', 'noopener,noreferrer')
+    window.open('https://www.linkedin.com/in/peteydotco/', '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -298,11 +310,19 @@ export function AddNewRoleContent({
             <motion.span
               className="shrink-0 inline-flex"
               initial={{ marginLeft: '0px' }}
-              animate={{ marginLeft: '2.5px' }}
+              animate={{ marginLeft: '2.5px', rotate: inputValue ? 45 : 0 }}
               exit={{ marginLeft: '0px' }}
               transition={contentSpring}
+              onClick={(e) => {
+                if (inputValue) {
+                  e.stopPropagation()
+                  setInputValue('')
+                  inputRef.current?.focus({ preventScroll: true })
+                }
+              }}
+              style={{ cursor: inputValue ? 'pointer' : 'default', transformOrigin: 'center center' }}
             >
-              <SlPlus className="w-5 h-5" style={{ color: 'rgba(0,0,0,0.75)', position: 'relative', top: '1px' }} />
+              <SlPlus className="w-5 h-5" style={{ color: 'rgba(0,0,0,0.75)' }} />
             </motion.span>
             {/* Input field with custom placeholder overlay */}
             <span className="relative flex-1">
@@ -324,9 +344,11 @@ export function AddNewRoleContent({
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
+                disabled={!isFocused}
+                tabIndex={isFocused ? 0 : -1}
                 className="w-full bg-transparent outline-none font-pressura-light uppercase relative"
                 style={{
-                  color: 'inherit',
+                  color: inputValue ? '#202020' : 'inherit',
                   fontSize: 'inherit',
                   letterSpacing: 'inherit',
                   lineHeight: 'inherit',
@@ -334,7 +356,8 @@ export function AddNewRoleContent({
                   margin: 0,
                   border: 'none',
                   height: 'auto',
-                  caretColor: '#000000',
+                  caretColor: isFocused ? '#000000' : 'transparent',
+                  pointerEvents: isFocused ? 'auto' : 'none',
                 }}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -346,7 +369,7 @@ export function AddNewRoleContent({
       {/* MIDDLE CLUSTER - Scrollable work experience list */}
       <motion.div
         className="flex-1 overflow-y-auto overflow-x-hidden relative"
-        style={{ marginTop: '48px', padding: '3px' }}
+        style={{ marginTop: `${s(48)}px`, padding: '3px' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
@@ -356,17 +379,17 @@ export function AddNewRoleContent({
           const hasSubRoles = exp.subRoles && exp.subRoles.length > 0
 
           return (
-            <div key={exp.company} className="relative" style={{ marginBottom: hasSubRoles ? '16px' : '16px' }}>
+            <div key={exp.company} className="relative" style={{ marginBottom: `${s(16)}px` }}>
               {/* Parent role */}
-              <div className="flex items-start" style={{ gap: '20px' }}>
+              <div className="flex items-start" style={{ gap: `${s(20)}px` }}>
                 {/* Logo */}
                 <div
                   className="shrink-0 relative z-10 overflow-hidden"
                   style={{
-                    width: '38px',
-                    height: '38px',
-                    boxShadow: '0 0 0 2.5px #cfcfcf',
-                    borderRadius: '18px',
+                    width: `${s(38)}px`,
+                    height: `${s(38)}px`,
+                    boxShadow: `0 0 0 ${STROKE_WIDTH}px #cfcfcf`,
+                    borderRadius: '50%',
                     backgroundColor: exp.logoBg || '#f6f6f6',
                   }}
                 >
@@ -380,7 +403,7 @@ export function AddNewRoleContent({
                       left: exp.logoFit?.left,
                       top: exp.logoFit?.top,
                       objectFit: exp.logoFit?.objectFit || 'cover',
-                      borderRadius: exp.logoFit ? '0' : '18px',
+                      borderRadius: exp.logoFit ? '0' : '50%',
                     }}
                   />
                 </div>
@@ -391,14 +414,14 @@ export function AddNewRoleContent({
                   <div className="flex items-baseline">
                     <span
                       className="font-pressura-ext"
-                      style={{ fontSize: '20px', color: '#202020' }}
+                      style={{ fontSize: `${s(20)}px`, color: '#202020' }}
                     >
                       {exp.company}
                     </span>
-                    <span style={{ width: '12px' }} />
+                    <span style={{ width: `${s(12)}px` }} />
                     <span
                       className="font-pressura-mono uppercase"
-                      style={{ fontSize: '14px', color: '#6f6f6f' }}
+                      style={{ fontSize: `${s(14)}px`, color: '#6f6f6f' }}
                     >
                       {exp.location}
                     </span>
@@ -407,7 +430,7 @@ export function AddNewRoleContent({
                   {/* Description */}
                   <span
                     className="font-pressura-ext"
-                    style={{ fontSize: '18px', color: '#6f6f6f', fontWeight: 350 }}
+                    style={{ fontSize: `${s(18)}px`, color: '#6f6f6f', fontWeight: 350 }}
                   >
                     {exp.title}
                   </span>
@@ -415,7 +438,7 @@ export function AddNewRoleContent({
                   {/* Date range */}
                   <span
                     className="font-pressura-ext"
-                    style={{ fontSize: '18px', color: '#6f6f6f', fontWeight: 350 }}
+                    style={{ fontSize: `${s(18)}px`, color: '#6f6f6f', fontWeight: 350 }}
                   >
                     {exp.dateRange}
                   </span>
@@ -426,27 +449,27 @@ export function AddNewRoleContent({
               {hasSubRoles && (
                 <div
                   style={{
-                    marginLeft: '57px',
-                    marginTop: '16px',
+                    marginLeft: `${s(57)}px`,
+                    marginTop: `${s(20)}px`,
                   }}
                 >
                   {exp.subRoles!.map((subRole, subIndex) => {
                     const isLast = subIndex === exp.subRoles!.length - 1
                     return (
-                      <div key={subRole.title} className="relative" style={{ marginBottom: '10px' }}>
+                      <div key={subRole.title} className="relative" style={{ marginBottom: `${s(10)}px` }}>
                         {/* SVG curved branch connector — arm ends under the sub-role logo */}
                         <div
                           className="absolute"
                           style={{
-                            left: '-40px',
-                            bottom: 'calc(100% - 14px)',
-                            width: '27px',
-                            height: subIndex === 0 ? '64px' : '97px',
+                            left: `${s(-40)}px`,
+                            bottom: `calc(100% - ${s(14)}px)`,
+                            width: `${s(27)}px`,
+                            height: subIndex === 0 ? `${s(70)}px` : `${s(97)}px`,
                             pointerEvents: 'none',
                             zIndex: 0,
                           }}
                         >
-                          {subIndex === 0 ? <BranchFirst /> : <BranchSub />}
+                          {subIndex === 0 ? <BranchFirst scale={contentScale} /> : <BranchSub scale={contentScale} />}
                         </div>
 
                         {/* Curly loop — attached to last sub-role, bridges to Fantasy */}
@@ -454,27 +477,27 @@ export function AddNewRoleContent({
                           <div
                             className="absolute"
                             style={{
-                              left: '-40px',
-                              top: '4px',
-                              width: '21px',
-                              height: '79px',
+                              left: `${s(-40)}px`,
+                              top: `${s(4)}px`,
+                              width: `${s(21)}px`,
+                              height: `${s(79)}px`,
                               pointerEvents: 'none',
                               zIndex: 0,
                             }}
                           >
-                            <CurlyLoop />
+                            <CurlyLoop scale={contentScale} />
                           </div>
                         )}
 
-                        <div className="flex items-start" style={{ gap: '12px' }}>
+                        <div className="flex items-start" style={{ gap: `${s(12)}px` }}>
                           {/* Sub-role logo */}
                           <div
                             className="shrink-0 flex items-center justify-center relative z-10"
                             style={{
-                              width: '28px',
-                              height: '28px',
-                              boxShadow: '0 0 0 2.5px #cfcfcf',
-                              borderRadius: subRole.shape === 'circle' ? '44px' : '8px',
+                              width: `${s(28)}px`,
+                              height: `${s(28)}px`,
+                              boxShadow: `0 0 0 ${STROKE_WIDTH}px #cfcfcf`,
+                              borderRadius: subRole.shape === 'circle' ? '44px' : `${s(8)}px`,
                               backgroundColor: '#f6f6f6',
                             }}
                           >
@@ -485,7 +508,7 @@ export function AddNewRoleContent({
                               style={{
                                 width: '100%',
                                 height: '100%',
-                                borderRadius: subRole.shape === 'circle' ? '44px' : '8px',
+                                borderRadius: subRole.shape === 'circle' ? '44px' : `${s(8)}px`,
                               }}
                             />
                           </div>
@@ -494,19 +517,19 @@ export function AddNewRoleContent({
                           <div className="flex flex-col" style={{ gap: '0px' }}>
                             <span
                               className="font-pressura-ext"
-                              style={{ fontSize: '18px', color: '#202020' }}
+                              style={{ fontSize: `${s(18)}px`, color: '#202020' }}
                             >
                               {subRole.title}
                             </span>
                             <span
                               className="font-pressura-ext"
-                              style={{ fontSize: '16px', color: '#6f6f6f', fontWeight: 350 }}
+                              style={{ fontSize: `${s(16)}px`, color: '#6f6f6f', fontWeight: 350 }}
                             >
                               {subRole.description}
                             </span>
                             <span
                               className="font-pressura-ext"
-                              style={{ fontSize: '16px', color: '#6f6f6f', fontWeight: 350 }}
+                              style={{ fontSize: `${s(16)}px`, color: '#6f6f6f', fontWeight: 350 }}
                             >
                               {subRole.dateRange}
                             </span>
@@ -523,14 +546,14 @@ export function AddNewRoleContent({
                 <div
                   className="absolute"
                   style={{
-                    left: '16.75px',
-                    bottom: '-19px',
+                    left: `${s(38) / 2 - 1.5}px`,
+                    bottom: `${s(-19)}px`,
                     width: '3px',
-                    height: '55px',
+                    height: `${s(55)}px`,
                     pointerEvents: 'none',
                   }}
                 >
-                  <VerticalLine />
+                  <VerticalLine scale={contentScale} />
                 </div>
               )}
 
@@ -539,12 +562,12 @@ export function AddNewRoleContent({
                 <div
                   className="absolute z-20"
                   style={{
-                    left: '20px',
-                    top: '22px',
-                    width: '28px',
-                    height: '28px',
+                    left: `${s(20)}px`,
+                    top: `${s(22)}px`,
+                    width: `${s(28)}px`,
+                    height: `${s(28)}px`,
                     borderRadius: '44px',
-                    boxShadow: '0 0 0 2.5px #f6f6f6',
+                    boxShadow: `0 0 0 ${STROKE_WIDTH}px #f6f6f6`,
                     backgroundColor: '#999',
                     overflow: 'hidden',
                   }}
@@ -571,7 +594,7 @@ export function AddNewRoleContent({
       {/* BOTTOM CLUSTER - Buttons */}
       <motion.div
         className="flex-shrink-0 flex justify-center"
-        style={{ gap: '8px', marginTop: '16px' }}
+        style={{ gap: `${s(8)}px`, marginTop: `${s(16)}px` }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
@@ -584,8 +607,8 @@ export function AddNewRoleContent({
           }}
           className="flex items-center justify-center bg-white cursor-pointer"
           style={{
-            width: '225px',
-            height: '48px',
+            width: `${s(225)}px`,
+            height: `${s(48)}px`,
             borderRadius: '5px',
             borderBottom: '2px solid rgba(0,0,0,0.2)',
           }}
@@ -593,7 +616,7 @@ export function AddNewRoleContent({
           <span
             className="font-pressura uppercase"
             style={{
-              fontSize: '20px',
+              fontSize: `${s(20)}px`,
               color: '#000',
               letterSpacing: '-0.8px',
               fontWeight: 400,
@@ -611,25 +634,32 @@ export function AddNewRoleContent({
           }}
           className="flex items-center justify-center bg-white cursor-pointer"
           style={{
-            width: '225px',
-            height: '48px',
+            width: `${s(225)}px`,
+            height: `${s(48)}px`,
             borderRadius: '5px',
             borderBottom: '2px solid rgba(0,0,0,0.2)',
           }}
         >
-          <span
-            className="font-pressura uppercase"
-            style={{
-              fontSize: '20px',
-              color: '#000',
-              letterSpacing: '-0.8px',
-              fontWeight: 400,
-              position: 'relative',
-              top: '-1px',
-            }}
-          >
-            Copy Email
-          </span>
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={copied ? 'copied' : 'copy'}
+              className="font-pressura uppercase"
+              style={{
+                fontSize: `${s(20)}px`,
+                color: '#000',
+                letterSpacing: '-0.8px',
+                fontWeight: 400,
+                position: 'relative',
+                top: '-1px',
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {copied ? '✓ Email Copied' : 'Copy Email'}
+            </motion.span>
+          </AnimatePresence>
         </button>
       </motion.div>
     </>

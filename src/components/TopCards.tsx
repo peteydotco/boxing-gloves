@@ -25,7 +25,9 @@ const getExpandedCardDimensions = () => {
     // Maximize height - just small padding top/bottom
     const maxHeight = viewportHeight - 24 // 12px top + 12px bottom
     const height = maxHeight
-    return { width, height, gap, scale: 1 }
+    // Scale content proportionally when viewport is shorter than canonical card height
+    const scale = Math.min(1, maxHeight / CANONICAL_CARD_HEIGHT)
+    return { width, height, gap, scale }
   }
 
   // Tablet and Desktop: scale proportionally to fit viewport

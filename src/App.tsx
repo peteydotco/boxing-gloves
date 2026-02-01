@@ -208,8 +208,9 @@ function App() {
         return
       }
 
-      // Only handle scroll down (to stages)
-      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      // Only handle vertical scroll down (to stages) — ignore horizontal swipes
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+      const delta = e.deltaY
       if (delta <= 0) return // Only scroll down
 
       const now = Date.now()
