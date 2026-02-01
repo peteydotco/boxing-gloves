@@ -14,6 +14,7 @@ interface StackedBladesProps {
   colonVisible?: boolean
   isDaylight?: boolean
   tugOffset?: MotionValue<number>
+  isZoomedNav?: boolean
 }
 
 // Stable fallback MotionValue (never changes, always 0)
@@ -28,6 +29,7 @@ export function StackedBlades({
   colonVisible = true,
   isDaylight = true,
   tugOffset,
+  isZoomedNav = false,
 }: StackedBladesProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mv = tugOffset ?? ZERO_MV
@@ -76,10 +78,27 @@ export function StackedBlades({
   const blade3TugY = useTransform(mv, (v: number) => -(v * getTugMultiplier(3)))
   const bladeTugYs = [null, blade1TugY, blade2TugY, blade3TugY]
 
+  // Calculate zoomed stage position (matches StagesContainer getZoomDimensions)
+  const getZoomedStageTop = () => {
+    if (typeof window === 'undefined') return 124
+    const topPadding = 24
+    const topCardsHeight = 76
+    const gapBelowTopCards = 24
+    return topPadding + topCardsHeight + gapBelowTopCards // 124px
+  }
+
   // Variants — y handles expand/collapse only. Tug y is on the wrapper.
   const getBladeVariants = (bladeIndex: number) => {
     const slideDistance = getSlideDistance(bladeIndex)
     const paddingReduction = getBladeExpansion(bladeIndex)
+
+    // Zoomed variant: blades sit just above the zoomed stage container
+    // Position them so they peek from the top of the zoomed stage area
+    const zoomedTop = getZoomedStageTop()
+    // Blades need to slide up enough to sit behind the zoomed stage
+    // The zoomed stage top is ~124px from viewport top
+    // We want back blades stacked just above that, tucked behind blade 0
+    const zoomedSlideDistance = window.innerHeight - zoomedTop + (bladeIndex * stackOffset)
 
     return {
       idle: {
@@ -98,11 +117,21 @@ export function StackedBlades({
         borderTopLeftRadius: 0,
         borderTopRightRadius: 0,
       },
+      zoomed: {
+        y: -zoomedSlideDistance,
+        marginLeft: paddingReduction,
+        marginRight: paddingReduction,
+        opacity: 1,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+      },
     }
   }
 
   const getBladeAnimate = () => {
-    if (viewMode === 'stages' || isExpanding) return 'expanded'
+    if (isExpanding) return 'expanded'
+    if (viewMode === 'stages' && isZoomedNav) return 'zoomed'
+    if (viewMode === 'stages') return 'expanded'
     return 'idle'
   }
 
@@ -125,6 +154,16 @@ export function StackedBlades({
         duration: 0.5,
         ease: [0.32, 0.72, 0, 1] as const,
         delay: delayMs,
+      }
+    }
+    // In stages view: use zoom spring to match StagesContainer timing
+    // This keeps blades in lockstep when entering/exiting zoomed nav
+    if (viewMode === 'stages') {
+      return {
+        type: 'spring' as const,
+        stiffness: 320,
+        damping: 40,
+        mass: 1,
       }
     }
     // Idle settle — quick tween (tug y is live on the wrapper, not spring-animated)
