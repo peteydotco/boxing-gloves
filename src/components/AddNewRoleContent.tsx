@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
-import { SlPlus } from 'react-icons/sl'
+import { SlPlus, SlClose } from 'react-icons/sl'
 import { contentSpring } from '../constants/animation'
 import type { VariantStyle } from '../types'
 
@@ -344,13 +344,10 @@ export function AddNewRoleContent({
           <span className="flex items-center gap-3">
             <motion.span
               className="shrink-0 inline-flex"
-              initial={{ marginLeft: '0px', rotate: 0 }}
-              animate={{ marginLeft: '2.5px', rotate: inputValue ? 45 : 0 }}
-              exit={{ marginLeft: '0px', rotate: 0 }}
-              transition={{
-                marginLeft: contentSpring,
-                rotate: { type: 'tween', duration: 0.2, ease: 'easeInOut' },
-              }}
+              initial={{ marginLeft: '0px' }}
+              animate={{ marginLeft: '2.5px' }}
+              exit={{ marginLeft: '0px' }}
+              transition={{ marginLeft: contentSpring }}
               onClick={(e) => {
                 if (inputValue) {
                   e.stopPropagation()
@@ -358,9 +355,33 @@ export function AddNewRoleContent({
                   inputRef.current?.focus({ preventScroll: true })
                 }
               }}
-              style={{ cursor: inputValue ? 'pointer' : 'default', transformOrigin: 'center center' }}
+              style={{ cursor: inputValue ? 'pointer' : 'default' }}
             >
-              <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
+              <AnimatePresence mode="wait" initial={false}>
+                {inputValue ? (
+                  <motion.span
+                    key="close"
+                    className={`inline-flex ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <SlClose className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="plus"
+                    className={`inline-flex ${isMobile ? 'w-4 h-4' : 'w-5 h-5'}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </motion.span>
             {/* Input field with custom placeholder overlay */}
             <span className="relative flex-1">
