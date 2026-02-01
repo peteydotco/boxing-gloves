@@ -170,17 +170,26 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
 
   // Autoplay slideshow effect - cycle through preview frames only when active
   // Reset to first frame when navigating away
+  // First transition fires after 2s (user already saw frame 1 as thumbnail),
+  // then subsequent frames hold for 5s each
   useEffect(() => {
     if (!previewFrames || previewFrames.length <= 1 || !isActive) {
       setCurrentFrameIndex(0)
       return
     }
 
-    const interval = setInterval(() => {
+    let interval: ReturnType<typeof setInterval>
+    const initialTimeout = setTimeout(() => {
       setCurrentFrameIndex(prev => (prev + 1) % previewFrames.length)
-    }, 5000) // Change frame every 5 seconds
+      interval = setInterval(() => {
+        setCurrentFrameIndex(prev => (prev + 1) % previewFrames.length)
+      }, 5000)
+    }, 2000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearTimeout(initialTimeout)
+      clearInterval(interval)
+    }
   }, [previewFrames, isActive])
 
   // State for mobile auto-play after delay
