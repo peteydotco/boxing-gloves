@@ -226,10 +226,11 @@ export function AddNewRoleContent({
   const themeBtnBg = styles?.primaryButtonBg ?? defaultCtaColors.primaryButtonBg
   const themeBtnText = styles?.primaryButtonText ?? defaultCtaColors.primaryButtonText
   const themeBtnBorder = styles?.primaryButtonBorder ?? defaultCtaColors.primaryButtonBorder
-  // Stroke/divider color — in light theme #CFCFCF, in dark theme use dividerColor token
-  const themeStroke = styles?.dividerColor ?? '#CFCFCF'
   // Determine if we're in a dark theme (bg is dark)
   const isDark = styles ? styles.textColor.includes('255') : false
+  // Stroke/divider color — use solid opaque colors to prevent dark overlap artifacts
+  // where SVG connector paths intersect (rgba compounds at overlaps)
+  const themeStroke = isDark ? '#404048' : '#CFCFCF'
   // Logo container bg: light → #f6f6f6, dark → slightly lighter than card bg
   const logoContainerBg = isDark ? 'rgba(255,255,255,0.08)' : '#f6f6f6'
   // Company name color (strong text) — in light theme #202020, in dark use ctaTitleColor
