@@ -326,7 +326,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{
                   opacity: index === currentFrameIndex ? 1 : 0,
-                  transition: 'opacity 2.5s ease-in-out',
+                  transition: isActive ? 'opacity 2.5s ease-in-out' : 'none',
                 }}
               />
             ))
