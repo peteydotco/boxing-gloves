@@ -2,15 +2,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import { SlPlus } from 'react-icons/sl'
 import { contentSpring } from '../constants/animation'
+import type { VariantStyle } from '../types'
 
-// Timeline connector color
-const STROKE_COLOR = '#CFCFCF'
 const STROKE_WIDTH = 2.5
 
 // Inline SVG connectors — paths derived from Figma, re-oriented for vertical flow
 // First branch: from parent logo bottom → curves right to first sub-role
 // Draws: vertical down, then curves right with 11px radius
-const BranchFirst = ({ scale = 1 }: { scale?: number }) => (
+const BranchFirst = ({ scale = 1, strokeColor }: { scale?: number; strokeColor: string }) => (
   <svg
     width={Math.round(27 * scale)}
     height={Math.round(70 * scale)}
@@ -20,7 +19,7 @@ const BranchFirst = ({ scale = 1 }: { scale?: number }) => (
   >
     <path
       d="M1.25 1.25V58.25C1.25 64.325 6.175 69.25 12.25 69.25H25.75"
-      stroke={STROKE_COLOR}
+      stroke={strokeColor}
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
     />
@@ -28,7 +27,7 @@ const BranchFirst = ({ scale = 1 }: { scale?: number }) => (
 )
 
 // Subsequent branch: taller vertical run, same curve right
-const BranchSub = ({ scale = 1 }: { scale?: number }) => (
+const BranchSub = ({ scale = 1, strokeColor }: { scale?: number; strokeColor: string }) => (
   <svg
     width={Math.round(27 * scale)}
     height={Math.round(97 * scale)}
@@ -38,7 +37,7 @@ const BranchSub = ({ scale = 1 }: { scale?: number }) => (
   >
     <path
       d="M1.25 1.25V85.25C1.25 91.325 6.175 96.25 12.25 96.25H25.75"
-      stroke={STROKE_COLOR}
+      stroke={strokeColor}
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
     />
@@ -47,7 +46,7 @@ const BranchSub = ({ scale = 1 }: { scale?: number }) => (
 
 // Curly loop: vertical line → figure-8 thread → vertical line
 // Used between Squarespace X and Fantasy
-const CurlyLoop = ({ scale = 1 }: { scale?: number }) => (
+const CurlyLoop = ({ scale = 1, strokeColor }: { scale?: number; strokeColor: string }) => (
   <svg
     width={Math.round(21 * scale)}
     height={Math.round(79 * scale)}
@@ -57,19 +56,19 @@ const CurlyLoop = ({ scale = 1 }: { scale?: number }) => (
   >
     <path
       d="M1.25 1.25L1.25 38.75"
-      stroke={STROKE_COLOR}
+      stroke={strokeColor}
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
     />
     <path
       d="M1.25 58.25C1.25 39.25 20.25 39.25 20.25 48.9234C20.25 58.5967 1.25 59.541 1.25 39.25"
-      stroke={STROKE_COLOR}
+      stroke={strokeColor}
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
     />
     <path
       d="M1.25 58.25L1.25 78.25"
-      stroke={STROKE_COLOR}
+      stroke={strokeColor}
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
     />
@@ -77,7 +76,7 @@ const CurlyLoop = ({ scale = 1 }: { scale?: number }) => (
 )
 
 // Straight vertical connector between Fantasy and Critical Mass
-const VerticalLine = ({ scale = 1 }: { scale?: number }) => (
+const VerticalLine = ({ scale = 1, strokeColor }: { scale?: number; strokeColor: string }) => (
   <svg
     width={Math.round(3 * scale)}
     height={Math.round(43 * scale)}
@@ -90,7 +89,7 @@ const VerticalLine = ({ scale = 1 }: { scale?: number }) => (
       y1="1.25"
       x2="1.25"
       y2="41.75"
-      stroke={STROKE_COLOR}
+      stroke={strokeColor}
       strokeWidth={STROKE_WIDTH}
       strokeLinecap="round"
     />
@@ -188,6 +187,20 @@ interface AddNewRoleContentProps {
   shortcut?: string
   contentScale?: number
   isFocused?: boolean
+  styles?: VariantStyle
+}
+
+// Default light CTA colors (fallback when no styles prop)
+const defaultCtaColors = {
+  textColor: 'rgba(0,0,0,0.55)',
+  ctaTitleColor: 'rgba(0,0,0,0.75)',
+  secondaryText: 'rgba(0,0,0,0.7)',
+  badgeBg: 'rgba(0,0,0,0.08)',
+  primaryButtonBg: 'rgba(0,0,0,0.87)',
+  primaryButtonText: '#FFFFFF',
+  primaryButtonBorder: 'rgba(0,0,0,0.2)',
+  border: 'rgba(0,0,0,0.08)',
+  dividerColor: 'rgba(0,0,0,0.12)',
 }
 
 export function AddNewRoleContent({
@@ -197,12 +210,34 @@ export function AddNewRoleContent({
   shortcut = '⌘ C',
   contentScale = 1,
   isFocused = true,
+  styles,
 }: AddNewRoleContentProps) {
   // Helper: scale a pixel value proportionally (mobile uses slightly smaller base sizes)
   const s = (px: number) => Math.round(px * contentScale)
   const [inputValue, setInputValue] = useState('')
   const [copied, setCopied] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Derive theme-aware colors from styles prop (or fall back to light CTA defaults)
+  const themeText = styles?.textColor ?? defaultCtaColors.textColor
+  const themeTitle = styles?.ctaTitleColor ?? defaultCtaColors.ctaTitleColor
+  const themeSecondary = styles?.secondaryText ?? defaultCtaColors.secondaryText
+  const themeBadgeBg = styles?.badgeBg ?? defaultCtaColors.badgeBg
+  const themeBtnBg = styles?.primaryButtonBg ?? defaultCtaColors.primaryButtonBg
+  const themeBtnText = styles?.primaryButtonText ?? defaultCtaColors.primaryButtonText
+  const themeBtnBorder = styles?.primaryButtonBorder ?? defaultCtaColors.primaryButtonBorder
+  // Stroke/divider color — in light theme #CFCFCF, in dark theme use dividerColor token
+  const themeStroke = styles?.dividerColor ?? '#CFCFCF'
+  // Determine if we're in a dark theme (bg is dark)
+  const isDark = styles ? styles.textColor.includes('255') : false
+  // Logo container bg: light → #f6f6f6, dark → slightly lighter than card bg
+  const logoContainerBg = isDark ? 'rgba(255,255,255,0.08)' : '#f6f6f6'
+  // Company name color (strong text) — in light theme #202020, in dark use ctaTitleColor
+  const companyNameColor = themeTitle
+  // Input typed text color — slightly stronger than title
+  const inputTypedColor = isDark ? (styles?.secondaryText ?? 'rgba(255,255,255,0.85)') : '#202020'
+  // Caret color
+  const caretColor = isDark ? 'rgba(255,255,255,0.9)' : '#000000'
 
   // Focus input when card becomes focused, blur when not
   // Use preventScroll to stop browser from auto-scrolling the card container
@@ -233,7 +268,7 @@ export function AddNewRoleContent({
           <motion.div
             className="font-pressura-mono leading-normal text-left uppercase"
             style={{
-              color: '#6f6f6f',
+              color: themeText,
               fontSize: '13px',
               letterSpacing: '0.39px',
               transformOrigin: 'top left',
@@ -255,7 +290,7 @@ export function AddNewRoleContent({
                 onClose()
               }}
               className="flex items-center justify-center rounded-[4px] shrink-0 cursor-pointer overflow-hidden"
-              style={{ backgroundColor: 'rgba(0,0,0,0.08)' }}
+              style={{ backgroundColor: themeBadgeBg }}
               initial={false}
               animate={{ padding: '4px 8px' }}
               exit={{ padding: '4px 12px' }}
@@ -269,7 +304,7 @@ export function AddNewRoleContent({
                 {/* ESC text - absolutely positioned, visible when expanded */}
                 <motion.span
                   className="absolute inset-0 flex items-center justify-center"
-                  style={{ color: '#3e3e3e' }}
+                  style={{ color: themeSecondary }}
                   initial={false}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
@@ -279,7 +314,7 @@ export function AddNewRoleContent({
                 </motion.span>
                 {/* Shortcut text - provides layout, hidden when expanded */}
                 <motion.span
-                  style={{ color: '#3e3e3e' }}
+                  style={{ color: themeSecondary }}
                   initial={false}
                   animate={{ opacity: 0 }}
                   exit={{ opacity: 1 }}
@@ -301,18 +336,21 @@ export function AddNewRoleContent({
             transformOrigin: 'top left',
             letterSpacing: '-0.3px',
           }}
-          initial={{ scale: 1, marginTop: '0px', color: 'rgba(0,0,0,0.75)' }}
-          animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px', color: 'rgba(0,0,0,0.4)' }}
-          exit={{ scale: 1, marginTop: '0px', color: 'rgba(0,0,0,0.75)' }}
+          initial={{ scale: 1, marginTop: '0px', color: themeTitle }}
+          animate={{ scale: isMobile ? 26 / 18 : 32 / 18, marginTop: '4px', color: themeText }}
+          exit={{ scale: 1, marginTop: '0px', color: themeTitle }}
           transition={contentSpring}
         >
           <span className="flex items-center gap-3">
             <motion.span
               className="shrink-0 inline-flex"
-              initial={{ marginLeft: '0px' }}
+              initial={{ marginLeft: '0px', rotate: 0 }}
               animate={{ marginLeft: '2.5px', rotate: inputValue ? 45 : 0 }}
-              exit={{ marginLeft: '0px' }}
-              transition={contentSpring}
+              exit={{ marginLeft: '0px', rotate: 0 }}
+              transition={{
+                marginLeft: contentSpring,
+                rotate: { type: 'tween', duration: 0.2, ease: 'easeInOut' },
+              }}
               onClick={(e) => {
                 if (inputValue) {
                   e.stopPropagation()
@@ -322,7 +360,7 @@ export function AddNewRoleContent({
               }}
               style={{ cursor: inputValue ? 'pointer' : 'default', transformOrigin: 'center center' }}
             >
-              <SlPlus className="w-5 h-5" style={{ color: 'rgba(0,0,0,0.75)' }} />
+              <SlPlus className="w-5 h-5" style={{ color: themeTitle }} />
             </motion.span>
             {/* Input field with custom placeholder overlay */}
             <span className="relative flex-1">
@@ -348,7 +386,7 @@ export function AddNewRoleContent({
                 tabIndex={isFocused ? 0 : -1}
                 className="w-full bg-transparent outline-none font-pressura-light uppercase relative"
                 style={{
-                  color: inputValue ? '#202020' : 'inherit',
+                  color: inputValue ? inputTypedColor : 'inherit',
                   fontSize: 'inherit',
                   letterSpacing: 'inherit',
                   lineHeight: 'inherit',
@@ -356,7 +394,7 @@ export function AddNewRoleContent({
                   margin: 0,
                   border: 'none',
                   height: 'auto',
-                  caretColor: isFocused ? '#000000' : 'transparent',
+                  caretColor: isFocused ? caretColor : 'transparent',
                   pointerEvents: isFocused ? 'auto' : 'none',
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -388,9 +426,9 @@ export function AddNewRoleContent({
                   style={{
                     width: `${s(38)}px`,
                     height: `${s(38)}px`,
-                    boxShadow: `0 0 0 ${STROKE_WIDTH}px #cfcfcf`,
+                    boxShadow: `0 0 0 ${STROKE_WIDTH}px ${themeStroke}`,
                     borderRadius: '50%',
-                    backgroundColor: exp.logoBg || '#f6f6f6',
+                    backgroundColor: exp.logoBg || logoContainerBg,
                   }}
                 >
                   <img
@@ -414,14 +452,14 @@ export function AddNewRoleContent({
                   <div className="flex items-baseline">
                     <span
                       className="font-pressura-ext"
-                      style={{ fontSize: `${s(20)}px`, color: '#202020' }}
+                      style={{ fontSize: `${s(20)}px`, color: companyNameColor }}
                     >
                       {exp.company}
                     </span>
                     <span style={{ width: `${s(12)}px` }} />
                     <span
                       className="font-pressura-mono uppercase"
-                      style={{ fontSize: `${s(14)}px`, color: '#6f6f6f' }}
+                      style={{ fontSize: `${s(14)}px`, color: themeText }}
                     >
                       {exp.location}
                     </span>
@@ -430,7 +468,7 @@ export function AddNewRoleContent({
                   {/* Description */}
                   <span
                     className="font-pressura-ext"
-                    style={{ fontSize: `${s(18)}px`, color: '#6f6f6f', fontWeight: 350 }}
+                    style={{ fontSize: `${s(18)}px`, color: themeText, fontWeight: 350 }}
                   >
                     {exp.title}
                   </span>
@@ -438,7 +476,7 @@ export function AddNewRoleContent({
                   {/* Date range */}
                   <span
                     className="font-pressura-ext"
-                    style={{ fontSize: `${s(18)}px`, color: '#6f6f6f', fontWeight: 350 }}
+                    style={{ fontSize: `${s(18)}px`, color: themeText, fontWeight: 350 }}
                   >
                     {exp.dateRange}
                   </span>
@@ -469,7 +507,7 @@ export function AddNewRoleContent({
                             zIndex: 0,
                           }}
                         >
-                          {subIndex === 0 ? <BranchFirst scale={contentScale} /> : <BranchSub scale={contentScale} />}
+                          {subIndex === 0 ? <BranchFirst scale={contentScale} strokeColor={themeStroke} /> : <BranchSub scale={contentScale} strokeColor={themeStroke} />}
                         </div>
 
                         {/* Curly loop — attached to last sub-role, bridges to Fantasy */}
@@ -485,7 +523,7 @@ export function AddNewRoleContent({
                               zIndex: 0,
                             }}
                           >
-                            <CurlyLoop scale={contentScale} />
+                            <CurlyLoop scale={contentScale} strokeColor={themeStroke} />
                           </div>
                         )}
 
@@ -496,9 +534,9 @@ export function AddNewRoleContent({
                             style={{
                               width: `${s(28)}px`,
                               height: `${s(28)}px`,
-                              boxShadow: `0 0 0 ${STROKE_WIDTH}px #cfcfcf`,
+                              boxShadow: `0 0 0 ${STROKE_WIDTH}px ${themeStroke}`,
                               borderRadius: subRole.shape === 'circle' ? '44px' : `${s(8)}px`,
-                              backgroundColor: '#f6f6f6',
+                              backgroundColor: logoContainerBg,
                             }}
                           >
                             <img
@@ -517,19 +555,19 @@ export function AddNewRoleContent({
                           <div className="flex flex-col" style={{ gap: '0px' }}>
                             <span
                               className="font-pressura-ext"
-                              style={{ fontSize: `${s(18)}px`, color: '#202020' }}
+                              style={{ fontSize: `${s(18)}px`, color: companyNameColor }}
                             >
                               {subRole.title}
                             </span>
                             <span
                               className="font-pressura-ext"
-                              style={{ fontSize: `${s(16)}px`, color: '#6f6f6f', fontWeight: 350 }}
+                              style={{ fontSize: `${s(16)}px`, color: themeText, fontWeight: 350 }}
                             >
                               {subRole.description}
                             </span>
                             <span
                               className="font-pressura-ext"
-                              style={{ fontSize: `${s(16)}px`, color: '#6f6f6f', fontWeight: 350 }}
+                              style={{ fontSize: `${s(16)}px`, color: themeText, fontWeight: 350 }}
                             >
                               {subRole.dateRange}
                             </span>
@@ -553,7 +591,7 @@ export function AddNewRoleContent({
                     pointerEvents: 'none',
                   }}
                 >
-                  <VerticalLine scale={contentScale} />
+                  <VerticalLine scale={contentScale} strokeColor={themeStroke} />
                 </div>
               )}
 
@@ -567,7 +605,7 @@ export function AddNewRoleContent({
                     width: `${s(28)}px`,
                     height: `${s(28)}px`,
                     borderRadius: '44px',
-                    boxShadow: `0 0 0 ${STROKE_WIDTH}px #f6f6f6`,
+                    boxShadow: `0 0 0 ${STROKE_WIDTH}px ${logoContainerBg}`,
                     backgroundColor: '#999',
                     overflow: 'hidden',
                   }}
@@ -605,19 +643,20 @@ export function AddNewRoleContent({
             e.stopPropagation()
             handleLinkedIn()
           }}
-          className="flex items-center justify-center bg-white cursor-pointer"
+          className="flex items-center justify-center cursor-pointer"
           style={{
             width: `${s(225)}px`,
             height: `${s(48)}px`,
             borderRadius: '5px',
-            borderBottom: '2px solid rgba(0,0,0,0.2)',
+            borderBottom: `2px solid ${themeBtnBorder}`,
+            backgroundColor: themeBtnBg,
           }}
         >
           <span
             className="font-pressura uppercase"
             style={{
               fontSize: `${s(20)}px`,
-              color: '#000',
+              color: themeBtnText,
               letterSpacing: '-0.8px',
               fontWeight: 400,
               position: 'relative',
@@ -632,12 +671,13 @@ export function AddNewRoleContent({
             e.stopPropagation()
             handleCopyEmail()
           }}
-          className="flex items-center justify-center bg-white cursor-pointer"
+          className="flex items-center justify-center cursor-pointer"
           style={{
             width: `${s(225)}px`,
             height: `${s(48)}px`,
             borderRadius: '5px',
-            borderBottom: '2px solid rgba(0,0,0,0.2)',
+            borderBottom: `2px solid ${themeBtnBorder}`,
+            backgroundColor: themeBtnBg,
           }}
         >
           <AnimatePresence mode="wait">
@@ -646,7 +686,7 @@ export function AddNewRoleContent({
               className="font-pressura uppercase"
               style={{
                 fontSize: `${s(20)}px`,
-                color: '#000',
+                color: themeBtnText,
                 letterSpacing: '-0.8px',
                 fontWeight: 400,
                 position: 'relative',

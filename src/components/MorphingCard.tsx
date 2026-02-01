@@ -1008,6 +1008,7 @@ export function MorphingCard({
               shortcut={card.shortcut}
               contentScale={contentScale}
               isFocused={isFocused}
+              styles={styles}
             />
           ) : (
           <>
