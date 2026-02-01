@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
-import { SlPlus, SlClose } from 'react-icons/sl'
+import { SlPlus } from 'react-icons/sl'
 import { contentSpring } from '../constants/animation'
 import type { VariantStyle } from '../types'
 
@@ -343,11 +343,19 @@ export function AddNewRoleContent({
         >
           <span className="flex items-center gap-3">
             <motion.span
-              className="shrink-0 inline-flex"
-              initial={{ marginLeft: '0px' }}
-              animate={{ marginLeft: '2.5px' }}
-              exit={{ marginLeft: '0px' }}
-              transition={{ marginLeft: contentSpring }}
+              className="shrink-0 inline-flex items-center justify-center"
+              style={{
+                cursor: inputValue ? 'pointer' : 'default',
+                width: isMobile ? '16px' : '20px',
+                height: isMobile ? '16px' : '20px',
+              }}
+              initial={{ marginLeft: '0px', rotate: 0 }}
+              animate={{ marginLeft: '2.5px', rotate: inputValue ? 45 : 0 }}
+              exit={{ marginLeft: '0px', rotate: 0 }}
+              transition={{
+                marginLeft: contentSpring,
+                rotate: { type: 'tween', duration: 0.2, ease: 'easeInOut' },
+              }}
               onClick={(e) => {
                 if (inputValue) {
                   e.stopPropagation()
@@ -355,13 +363,8 @@ export function AddNewRoleContent({
                   inputRef.current?.focus({ preventScroll: true })
                 }
               }}
-              style={{ cursor: inputValue ? 'pointer' : 'default' }}
             >
-              {inputValue ? (
-                <SlClose className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
-              ) : (
-                <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle, position: 'relative', top: isMobile ? undefined : '1px' }} />
-              )}
+              <SlPlus className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} style={{ color: themeTitle }} />
             </motion.span>
             {/* Input field with custom placeholder overlay */}
             <span className="relative flex-1">
