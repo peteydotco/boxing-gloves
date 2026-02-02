@@ -5,7 +5,6 @@ import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@reac
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
 import type { Settings } from '../types'
-import leftGloveModelUrl from '../assets/folio-peteypete.glb?url'
 import rightGloveModelUrl from '../assets/folio-rodriguez.glb?url'
 
 // Rope segments for smooth curve
@@ -113,6 +112,7 @@ function DraggableGloveWithRope({
   const hasDropped = useRef(false)
   const dropDelayElapsed = useRef(dropDelay === 0)
   const dropStartTime = useRef<number | null>(null)
+  const dragEndTime = useRef<number>(0) // Timestamp when drag ended, for post-drag settle
 
   // Handle drop delay - start timer on mount
   useEffect(() => {
@@ -273,6 +273,7 @@ function DraggableGloveWithRope({
       // Only trigger after drop delay has elapsed
       if (dropDelayElapsed.current && !hasDropped.current && t.gloveCenter.y < anchorPos.y + 2.5) {
         hasDropped.current = true
+        dragEndTime.current = performance.now() // Trigger post-drop settle toward front-facing
         gloveRef.current.setLinvel({ x: 0, y: -4, z: 0 }, true)
       }
 
@@ -302,13 +303,23 @@ function DraggableGloveWithRope({
             true
           )
 
-          // Add a bit of angular velocity on bounce for that wobbly tilt
+          // Add angular velocity on bounce — random wobble on X/Z, but bias Y toward front-facing
           const angVel = gloveRef.current.angvel()
           const tiltStrength = radialSpeed * 0.5
+
+          // Compute yaw correction toward the target front-facing rotation
+          const currentRot = gloveRef.current.rotation()
+          const bounceEuler = new THREE.Euler().setFromQuaternion(
+            new THREE.Quaternion(currentRot.x, currentRot.y, currentRot.z, currentRot.w), 'YXZ'
+          )
+          const yawDiff = yRotation - bounceEuler.y
+          // Normalize yawDiff to [-PI, PI]
+          const normalizedYaw = ((yawDiff + Math.PI) % (2 * Math.PI)) - Math.PI
+
           gloveRef.current.setAngvel(
             {
               x: angVel.x + (Math.random() - 0.5) * tiltStrength,
-              y: angVel.y + (Math.random() - 0.5) * tiltStrength * 0.3,
+              y: angVel.y + normalizedYaw * 0.3, // Bias toward front-facing instead of random
               z: angVel.z + (Math.random() - 0.5) * tiltStrength,
             },
             true
@@ -326,7 +337,7 @@ function DraggableGloveWithRope({
 
         // Apply a gentle restoring force when not at natural position
         if (distanceFromNatural > 0.01) {
-          const restoreStrength = 5.0 // Gentle force to restore natural position
+          const restoreStrength = 8.0 // Force to restore natural position and prevent clinging
           t.restoreForce.copy(t.toNatural).normalize().multiplyScalar(restoreStrength * distanceFromNatural)
 
           const vel = gloveRef.current.linvel()
@@ -345,8 +356,9 @@ function DraggableGloveWithRope({
         const currentRotation = gloveRef.current.rotation()
         tempQuat.current.set(currentRotation.x, currentRotation.y, currentRotation.z, currentRotation.w)
 
-        // Calculate the glove's local "down" direction (where knuckles should point)
-        t.gloveDown.set(0, -1, 0).applyQuaternion(tempQuat.current)
+        // Local "gravity target" — mostly down, slightly toward glove's front (local Z+)
+        // This makes gravity pull the front face toward the camera as it settles
+        t.gloveDown.set(0, -1, 0.4).normalize().applyQuaternion(tempQuat.current)
 
         // Calculate torque needed to align glove's bottom with world down
         t.torqueAxis.crossVectors(t.gloveDown, t.worldDown)
@@ -476,6 +488,19 @@ function DraggableGloveWithRope({
       { x: avgVelocity.x * 0.5, y: avgVelocity.y * 0.5, z: avgVelocity.z * 0.5 },
       true
     )
+
+    // On release, heavily dampen yaw spin so gravity torque can steer front-facing
+    const angVel = gloveRef.current.angvel()
+    gloveRef.current.setAngvel(
+      {
+        x: angVel.x,
+        y: angVel.y * 0.2, // Kill most yaw spin from the fling
+        z: angVel.z,
+      },
+      true
+    )
+
+    dragEndTime.current = performance.now()
   }, [gl])
 
   return (
@@ -487,10 +512,10 @@ function DraggableGloveWithRope({
         rotation={[0, yRotation, 0]}
         colliders={false}
         mass={settings.mass}
-        restitution={settings.restitution}
-        friction={settings.friction}
+        restitution={Math.max(settings.restitution, 0.6)}
+        friction={Math.min(settings.friction, 0.1)}
         linearDamping={settings.linearDamping}
-        angularDamping={0.2}
+        angularDamping={1.5}
       >
         {/* Collider for main glove body (rectangular box) */}
         <CuboidCollider
@@ -498,19 +523,19 @@ function DraggableGloveWithRope({
           position={[0, 0, 0]}
         />
 
-        {/* Collider for knuckle area (sphere on front) */}
+        {/* Collider for knuckle area (sphere, centered Z to avoid back-facing bias) */}
         <BallCollider
           args={[settings.radius * 0.9]}
-          position={[0, -settings.radius * 0.5, settings.radius * 0.8]}
+          position={[0, -settings.radius * 0.5, 0]}
         />
 
-        {/* Collider for thumb - mirrored for left glove */}
+        {/* Collider for thumb - mirrored for left glove, centered Z */}
         <CuboidCollider
           args={[settings.radius * 0.4, settings.radius * 0.6, settings.radius * 0.4]}
           position={[
             isLeftGlove ? -settings.radius * 1.2 : settings.radius * 1.2,
             -settings.radius * 0.3,
-            settings.radius * 0.5
+            0
           ]}
           rotation={[0, 0, isLeftGlove ? -0.3 : 0.3]}
         />
@@ -654,7 +679,7 @@ function DraggableGloveWithRope({
             return cloned
           }, [gloveModel, themeMode])}
           scale={[
-            (isLeftGlove ? 1 : -1) * settings.radius * 0.75,
+            (isLeftGlove ? -1 : 1) * settings.radius * 0.75,
             settings.radius * 0.75,
             settings.radius * 0.75
           ]}
@@ -671,7 +696,6 @@ function DraggableGloveWithRope({
 }
 
 // Preload the glove models (with Draco decoder for compressed meshes)
-useGLTF.preload(leftGloveModelUrl, true)
 useGLTF.preload(rightGloveModelUrl, true)
 
 export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light' }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' }) {
@@ -689,13 +713,13 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
         <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
       </mesh>
 
-      {/* Left glove (peteypete) - offset left and slightly forward, drops slightly after right */}
+      {/* Left glove (rodriguez mirrored) - offset left and slightly forward, drops slightly after right */}
       <DraggableGloveWithRope
-        anchorOffset={[-0.25, 0, 0.15]}
+        anchorOffset={[-0.4, 0, 0.15]}
         dropDelay={100}
         themeMode={themeMode}
-        modelUrl={leftGloveModelUrl}
-        yRotation={Math.PI + Math.PI / 6}
+        modelUrl={rightGloveModelUrl}
+        yRotation={Math.PI + Math.PI / 6 - Math.PI / 4}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.25,
@@ -704,9 +728,10 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
 
       {/* Right glove (rodriguez) - offset right and slightly back, with extended cord */}
       <DraggableGloveWithRope
-        anchorOffset={[0.25, 0, -0.15]}
+        anchorOffset={[0.4, 0, -0.15]}
         themeMode={themeMode}
         modelUrl={rightGloveModelUrl}
+        yRotation={Math.PI + (45 * Math.PI / 180)}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.7,
