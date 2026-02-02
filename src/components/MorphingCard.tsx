@@ -909,29 +909,28 @@ export function MorphingCard({
         />
 
         {/* Spotlight hover effects - reduced opacity for expanded cards */}
-        {isHovered && (
-          <>
-            {/* Fill spotlight - subtle light following cursor */}
-            <div
-              className="absolute inset-0 rounded-[20px] pointer-events-none"
-              style={{
-                background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 45%, transparent 80%)`,
-              }}
-            />
-            {/* Border spotlight layer */}
-            <div
-              className="absolute inset-0 rounded-[20px] pointer-events-none"
-              style={{
-                background: spotlightGradient,
-                mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
-                maskComposite: 'exclude',
-                WebkitMaskComposite: 'xor',
-                padding: '1px',
-                opacity: 0.6,
-              }}
-            />
-          </>
-        )}
+        {/* Fill spotlight - subtle light following cursor */}
+        <div
+          className="absolute inset-0 rounded-[20px] pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 45%, transparent 80%)`,
+            opacity: isHovered ? 1 : 0,
+            transition: 'opacity 0.4s ease-out',
+          }}
+        />
+        {/* Border spotlight layer */}
+        <div
+          className="absolute inset-0 rounded-[20px] pointer-events-none"
+          style={{
+            background: spotlightGradient,
+            mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+            maskComposite: 'exclude',
+            WebkitMaskComposite: 'xor',
+            padding: '1px',
+            opacity: isHovered ? 0.6 : 0,
+            transition: 'opacity 0.4s ease-out',
+          }}
+        />
 
         {/* Morphing text content - label and title scale proportionally with card */}
         {/* On mobile, this becomes a scrollable container for all content */}
@@ -1575,26 +1574,26 @@ export function MorphingCard({
       />
 
       {/* Spotlight hover effects */}
-      {isHovered && (
-        <>
-          <div
-            className="absolute inset-0 rounded-[16px] pointer-events-none"
-            style={{
-              background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%)`,
-            }}
-          />
-          <div
-            className="absolute inset-0 rounded-[16px] pointer-events-none"
-            style={{
-              background: spotlightGradient,
-              mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
-              maskComposite: 'exclude',
-              WebkitMaskComposite: 'xor',
-              padding: '1px',
-            }}
-          />
-        </>
-      )}
+      <div
+        className="absolute inset-0 rounded-[16px] pointer-events-none"
+        style={{
+          background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%)`,
+          opacity: isHovered ? 1 : 0,
+          transition: 'opacity 0.4s ease-out',
+        }}
+      />
+      <div
+        className="absolute inset-0 rounded-[16px] pointer-events-none"
+        style={{
+          background: spotlightGradient,
+          mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+          maskComposite: 'exclude',
+          WebkitMaskComposite: 'xor',
+          padding: '1px',
+          opacity: isHovered ? 1 : 0,
+          transition: 'opacity 0.4s ease-out',
+        }}
+      />
 
       {/* Collapsed content with hover slide effect */}
       <div

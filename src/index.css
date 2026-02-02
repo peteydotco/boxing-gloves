@@ -11,34 +11,129 @@
 
 /* =============================================================================
    COLOR TOKEN SYSTEM
-   Brand colors: Full saturation for hero/graphics
-   UI colors: Desaturated variants for pills/buttons/borders/accents
-   Ink: Cool-biased dark neutrals for consistent dark surfaces
+   "System louder than colors" — harmonized, mode-aware design tokens.
+
+   Hierarchy:
+     Level 1 — Brand hero: Full saturation, logo cards & hero graphics only
+     Level 2 — UI accent: Normalized luminance, pills/badges/CTAs
+     Level 3 — Surface tint: Brand hue at 12-18% sat, description cards
+     Level 4 — Neutral: Canvas, borders, dividers, disabled states
    ============================================================================= */
 :root {
-  /* Brand colors (full saturation - hero/graphics only) */
+  /* ===== Brand Colors (Level 1 — full saturation, hero/graphics only) ===== */
+  --brand-masterclass: #EF4562;
+  --brand-squarespace: #0064FF;
+  --brand-apple: #007AFF;
+  --brand-shiphero: #3C4569;
+
+  /* Legacy aliases (backwards compat) */
   --blue-brand: #0064FF;
   --blue-brand-dark: #0050D2;
   --red-brand: #EB2D37;
   --red-brand-dark: #C3232D;
 
-  /* UI colors (desaturated - pills/buttons/borders/accents) */
+  /* ===== UI Normalized (Level 2 — equal perceived weight, APCA Lc ~45) ===== */
+  --ui-masterclass: #D44060;
+  --ui-masterclass-hover: #C23A56;
+  --ui-masterclass-active: #B0344D;
+
+  --ui-squarespace: #1A5FE0;
+  --ui-squarespace-hover: #1553C8;
+  --ui-squarespace-active: #1048B0;
+
+  --ui-apple: #2070E0;
+  --ui-apple-hover: #1B63C8;
+  --ui-apple-active: #1557B0;
+
+  --ui-shiphero: #3D4468;
+  --ui-shiphero-hover: #353D5E;
+  --ui-shiphero-active: #2D3554;
+
+  /* Legacy UI aliases */
   --blue-ui: #0058E0;
   --blue-ui-dark: #004BC2;
   --red-ui: #D63240;
   --red-ui-dark: #B52833;
 
-  /* Ink neutrals (cool-biased dark surfaces) */
+  /* ===== Blade Surface Colors ===== */
+  --blade-masterclass: #0e0e0e;
+  --blade-squarespace: #EF4562;
+  --blade-apple: #0064FF;
+  --blade-shiphero: #2e2f5a;
+
+  /* ===== Ink Neutrals (cool-biased dark surfaces) ===== */
   --ink-900: #0A0A10;
   --ink-850: #0E0E16;
   --ink-800: #1A1A2E;
   --ink-750: #1B202A;
   --ink-700: #1E1E28;
+  --ink-600: #252530;
 
-  /* Stage surfaces (blush/salmon palette) */
+  /* ===== Stage Surfaces (Level 3 — blush/salmon palette) ===== */
   --blush-200: #E9D7DA;
   --blush-300: #E5C4CA;
   --blush-100: #F0D0D5;
+
+  /* ===== Mode: Light (default) ===== */
+  --canvas: #FFFFFF;
+  --canvas-subtle: #F5F5F7;
+  --surface-1: #F0F0F2;
+  --surface-2: #E6E6EB;
+  --surface-3: #DCDCE2;
+
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.10);
+  --border-emphasis: rgba(0, 0, 0, 0.16);
+
+  --text-primary: #1A1A2E;
+  --text-secondary: rgba(26, 26, 46, 0.65);
+  --text-tertiary: rgba(26, 26, 46, 0.44);
+
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-raised: 0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-modal: 0 12px 40px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.06);
+}
+
+/* ===== Mode: Dark ===== */
+[data-theme="dark"] {
+  --canvas: #0E0E16;
+  --canvas-subtle: #121218;
+  --surface-1: #1A1A2E;
+  --surface-2: #1E1E28;
+  --surface-3: #252530;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-emphasis: rgba(255, 255, 255, 0.18);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-tertiary: rgba(255, 255, 255, 0.44);
+
+  --shadow-card: none;
+  --shadow-raised: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-modal: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+/* ===== Mode: Darker ===== */
+[data-theme="darker"] {
+  --canvas: #0A0A10;
+  --canvas-subtle: #0C0C12;
+  --surface-1: #0E0E16;
+  --surface-2: #1A1A2E;
+  --surface-3: #1E1E28;
+
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-emphasis: rgba(255, 255, 255, 0.15);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.60);
+  --text-tertiary: rgba(255, 255, 255, 0.40);
+
+  --shadow-card: none;
+  --shadow-raised: 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-modal: 0 8px 30px rgba(0,0,0,0.6);
 }
 
 /* GT Pressura Fonts */

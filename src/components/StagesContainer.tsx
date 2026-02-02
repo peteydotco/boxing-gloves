@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Stage } from './Stage'
 import { ProgressDots } from './ProgressDots'
-import { stages, getBladeColor } from '../data/stages'
+import { stages, getStageBackgroundColor } from '../data/stages'
 
 type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
 
@@ -313,7 +313,7 @@ export function StagesContainer({
                 emailCopied={emailCopied}
                 isExpanding={transitionPhase === 'expanding'}
                 isZoomedNav={isZoomedNav}
-                backgroundColor={getBladeColor(bladeIndex)}
+                backgroundColor={getStageBackgroundColor(bladeIndex)}
               />
             )
           })}

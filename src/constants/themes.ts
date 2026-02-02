@@ -2,21 +2,49 @@ import type { VariantStyles } from '../types'
 
 // =============================================================================
 // COLOR TOKENS - Mirrors CSS custom properties for JS access
-// Brand: Full saturation for hero/graphics
-// UI: Desaturated variants for pills/buttons/borders/accents
+// Hierarchy: Brand (L1) → UI Normalized (L2) → Surface Tint (L3) → Neutral (L4)
 // =============================================================================
 export const colorTokens = {
-  // Brand (full saturation)
+  // Brand (Level 1 — full saturation, hero/graphics only)
+  brandMasterclass: '#EF4562',
+  brandSquarespace: '#0064FF',
+  brandApple: '#007AFF',
+  brandShiphero: '#3C4569',
+
+  // Legacy brand aliases
   blueBrand: 'rgba(0,100,255,1)',      // #0064FF
   blueBrandDark: 'rgba(0,80,210,1)',   // #0050D2
   redBrand: 'rgba(235,45,55,1)',       // #EB2D37
   redBrandDark: 'rgba(195,35,45,1)',   // #C3232D
 
-  // UI (desaturated - for buttons/pills/borders)
+  // UI Normalized (Level 2 — equal perceived weight, APCA Lc ~45)
+  uiMasterclass: '#D44060',
+  uiMasterclassHover: '#C23A56',
+  uiMasterclassActive: '#B0344D',
+
+  uiSquarespace: '#1A5FE0',
+  uiSquarespaceHover: '#1553C8',
+  uiSquarespaceActive: '#1048B0',
+
+  uiApple: '#2070E0',
+  uiAppleHover: '#1B63C8',
+  uiAppleActive: '#1557B0',
+
+  uiShiphero: '#3D4468',
+  uiShipheroHover: '#353D5E',
+  uiShipheroActive: '#2D3554',
+
+  // Legacy UI aliases
   blueUi: 'rgba(0,88,224,1)',          // #0058E0
   blueUiDark: 'rgba(0,75,194,1)',      // #004BC2
   redUi: 'rgba(214,50,64,1)',          // #D63240
   redUiDark: 'rgba(181,40,51,1)',      // #B52833
+
+  // Blade Surfaces
+  bladeMasterclass: '#0e0e0e',
+  bladeSquarespace: '#EF4562',
+  bladeApple: '#0064FF',
+  bladeShiphero: '#2e2f5a',
 
   // Ink (cool-biased dark neutrals)
   ink900: 'rgba(10,10,16,1)',          // #0A0A10
@@ -24,6 +52,7 @@ export const colorTokens = {
   ink800: 'rgba(26,26,46,1)',          // #1A1A2E
   ink750: 'rgba(27,32,42,1)',          // #1B202A
   ink700: 'rgba(30,30,40,1)',          // #1E1E28
+  ink600: '#252530',
 } as const
 
 // Light/inverted theme styles
@@ -44,6 +73,9 @@ export const variantStylesLight: VariantStyles = {
     highlightBorder: '#FFFFFF',
     highlightShadow: 'rgba(0,0,0,0.25)',
     dividerColor: 'rgba(255,255,255,0.3)',
+    uiAccent: colorTokens.uiSquarespace,
+    uiAccentHover: colorTokens.uiSquarespaceHover,
+    uiAccentActive: colorTokens.uiSquarespaceActive,
   },
   white: {
     bg: 'rgba(26,26,46,1)',
@@ -61,6 +93,9 @@ export const variantStylesLight: VariantStyles = {
     highlightBorder: '#FFFFFF',
     highlightShadow: 'rgba(0,0,0,0.25)',
     dividerColor: 'rgba(255,255,255,0.3)',
+    uiAccent: colorTokens.uiShiphero,
+    uiAccentHover: colorTokens.uiShipheroHover,
+    uiAccentActive: colorTokens.uiShipheroActive,
   },
   red: {
     bg: 'rgba(235,45,55,1)',
@@ -78,6 +113,9 @@ export const variantStylesLight: VariantStyles = {
     highlightBorder: '#FFFFFF',
     highlightShadow: 'rgba(0,0,0,0.25)',
     dividerColor: 'rgba(255,255,255,0.3)',
+    uiAccent: colorTokens.uiMasterclass,
+    uiAccentHover: colorTokens.uiMasterclassHover,
+    uiAccentActive: colorTokens.uiMasterclassActive,
   },
   cta: {
     bg: '#F6F6F6',
@@ -117,6 +155,9 @@ export const variantStylesDark: VariantStyles = {
     highlightBorder: '#FFFFFF',
     highlightShadow: 'rgba(0,0,0,0.25)',
     dividerColor: 'rgba(255,255,255,0.3)',
+    uiAccent: colorTokens.uiSquarespaceHover,
+    uiAccentHover: colorTokens.uiSquarespaceActive,
+    uiAccentActive: colorTokens.uiSquarespaceActive,
   },
   white: {
     bg: 'rgba(230,230,235,1)', // Slightly gray off-white background
@@ -134,6 +175,9 @@ export const variantStylesDark: VariantStyles = {
     highlightBorder: 'rgba(26,26,46,0.15)',
     highlightShadow: 'rgba(0,0,0,0.08)',
     dividerColor: 'rgba(26,26,46,0.12)',
+    uiAccent: colorTokens.uiShipheroHover,
+    uiAccentHover: colorTokens.uiShipheroActive,
+    uiAccentActive: colorTokens.uiShipheroActive,
   },
   red: {
     bg: 'rgba(195,35,45,1)',
@@ -151,6 +195,9 @@ export const variantStylesDark: VariantStyles = {
     highlightBorder: '#FFFFFF',
     highlightShadow: 'rgba(0,0,0,0.25)',
     dividerColor: 'rgba(255,255,255,0.3)',
+    uiAccent: colorTokens.uiMasterclassHover,
+    uiAccentHover: colorTokens.uiMasterclassActive,
+    uiAccentActive: colorTokens.uiMasterclassActive,
   },
   cta: {
     bg: colorTokens.ink700,

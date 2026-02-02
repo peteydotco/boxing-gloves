@@ -4,10 +4,40 @@ import type { StageData } from '../types'
 // Each stage represents a full-screen portfolio piece
 export const stages: StageData[] = [
   {
+    id: 'squarespace',
+    title: 'SQUARESPACE CMS & EDITOR',
+    role: 'SR STAFF PRODUCT DESIGNER',
+    description: 'I\'ve introduced novel ways for DIYers and Pros alike to directly interface with their sites \u2013 by simplifying complexity, flattening modalities, yet always letting users consent into complexity.',
+    metadata: {
+      platforms: '',
+      accolades: '',
+      agency: '',
+      customRows: [
+        { label: 'TEAMS', value: 'Websites, SQSP app, Unfold app' },
+        { label: 'KPI\'S', value: 'Retention, Trial-to-Sub, QoL' },
+        { label: 'RECENTLY\nSHIPPED', value: 'SQSP for Pros, Video tools for Unfold, Seller-centric CMS' },
+      ],
+    },
+    footer: 'DESIGNED & BUILT IN NEW YORK CITY',
+    logoSrc: '/images/stages/spotify-logo.svg',
+    logoBgColor: '#FFFFFF', // Squarespace white
+    accentColor: '#0064FF',
+    backgroundMedia: {
+      type: 'video',
+      src: '/images/vid-sqspintelligence.webm',
+    },
+    surfaceColors: {
+      primary: '#F2F2F2',
+      secondary: '#E8E8E8',
+      hover: '#F5F5F5',
+      text: '#1B202A',
+    },
+  },
+  {
     id: 'masterclass',
     title: 'MASTERCLASS MVP APP',
-    role: 'PRODUCT DESIGN LEAD',
-    description: 'Designed in 2017, it addressed the startup\'s desire to ship an MVP that was both proof of concepts and a celebration of their concept – both a product and product marketing.',
+    role: 'EXPERIENCE DESIGN LEAD',
+    description: 'We delivered on the startup\'s desire to ship an MVP that was both proof of concept and a celebration of their concept \u2013 both product and product marketing.',
     metadata: {
       platforms: 'iOS, iPadOS, Android OS',
       accolades: 'App of the Day, Webby Shortlist, Featured @WWDC \'18',
@@ -17,51 +47,65 @@ export const stages: StageData[] = [
     logoSrc: '/images/stages/masterclass-logo.svg',
     logoBgColor: '#EF4562', // MasterClass coral
     accentColor: '#EF4562',
-  },
-  {
-    id: 'spotify',
-    title: 'SPOTIFY REDESIGN',
-    role: 'SENIOR PRODUCT DESIGNER',
-    description: 'A conceptual reimagining of Spotify\'s mobile experience, focusing on discovery and social features that bring listeners together.',
-    metadata: {
-      platforms: 'iOS, Android',
-      accolades: 'Featured on Dribbble, Behance',
-      agency: 'Personal Project',
+    backgroundMedia: {
+      type: 'video',
+      src: '/images/vid-masterclass.webm',
     },
-    footer: 'DESIGNED IN BROOKLYN, NY',
-    logoSrc: '/images/stages/spotify-logo.svg',
-    logoBgColor: '#1DB954', // Spotify green
-    accentColor: '#1DB954',
   },
   {
-    id: 'nike',
-    title: 'NIKE TRAINING CLUB',
-    role: 'LEAD INTERACTION DESIGNER',
-    description: 'Crafted micro-interactions and workout flow experiences that make fitness feel achievable, one rep at a time.',
+    id: 'apple',
+    title: 'APPLE ONLINE STORE',
+    role: 'LEAD UX DESIGNER',
+    description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.',
     metadata: {
-      platforms: 'iOS, Android, Web',
-      accolades: 'Apple Design Award Finalist',
-      agency: 'R/GA',
+      platforms: '',
+      accolades: '',
+      agency: '',
+      customRows: [
+        { label: 'AUDIENCE', value: 'Americas, China, Europe, India' },
+        { label: 'KPI\'S', value: 'Increases # of items per cart, store pickups' },
+        { label: 'AGENCY', value: 'criticalmass.com' },
+      ],
     },
-    footer: 'DESIGNED IN NEW YORK CITY',
-    logoSrc: '/images/stages/nike-logo.svg',
-    logoBgColor: '#000000', // Nike black
-    accentColor: '#FF6B35',
+    footer: 'DESIGNED & BUILT IN CUPERTINO',
+    logoSrc: '',
+    logoBgColor: '#007AFF', // Apple blue
+    accentColor: '#007AFF',
+    backgroundMedia: {
+      type: 'image',
+      src: '/images/apple-bg_map.png',
+    },
+    surfaceColors: {
+      primary: '#D8EAFF',
+      secondary: '#B5DAFF',
+      hover: '#E0EEFF',
+      text: '#1B202A',
+    },
   },
   {
-    id: 'airbnb',
-    title: 'AIRBNB EXPERIENCES',
+    id: 'shiphero',
+    title: 'SHIPHERO MVP APP',
     role: 'PRODUCT DESIGNER',
-    description: 'Helped launch the Experiences vertical, designing booking flows that connect travelers with local hosts and unforgettable activities.',
+    description: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor.',
     metadata: {
-      platforms: 'iOS, Android, Web',
-      accolades: 'Fast Company Innovation Award',
-      agency: 'Airbnb Design',
+      platforms: '',
+      accolades: '',
+      agency: '',
     },
-    footer: 'DESIGNED IN SAN FRANCISCO',
-    logoSrc: '/images/stages/airbnb-logo.svg',
-    logoBgColor: '#FF5A5F', // Airbnb coral
-    accentColor: '#FF5A5F',
+    footer: 'DESIGNED & BUILT IN NEW YORK CITY',
+    logoSrc: '',
+    logoBgColor: '#F34242', // ShipHero red
+    accentColor: '#1B202A',
+    backgroundMedia: {
+      type: 'image',
+      src: '/images/shiphero-stagebg.gif',
+    },
+    surfaceColors: {
+      primary: '#FDECEC',
+      secondary: '#FDD4D4',
+      hover: '#FEF0F0',
+      text: '#1B202A',
+    },
   },
 ]
 
@@ -104,25 +148,25 @@ const bladeDefinitions: Record<string, BladeConfig> = {
   shiphero: {
     id: 'shiphero',
     name: 'ShipHero',
-    bladeColor: '#1B202A',
+    bladeColor: '#2e2f5a',
     stageColor: '#1B202A',
   },
   apple: {
     id: 'apple',
     name: 'Apple',
-    bladeColor: '#E6E6E6',
+    bladeColor: '#0064FF',
     stageColor: '#f5f5f7',
   },
   squarespace: {
     id: 'squarespace',
     name: 'Squarespace',
-    bladeColor: '#0064FF', // Unified with brand-blue
-    stageColor: '#000000',
+    bladeColor: '#EF4562',
+    stageColor: '#0e0e0e',
   },
   masterclass: {
     id: 'masterclass',
     name: 'MasterClass',
-    bladeColor: '#0A0A10', // ink-900 (subtle cool bias)
+    bladeColor: '#0e0e0e',
     stageColor: '#0A0A10',
   },
 }

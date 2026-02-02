@@ -17,12 +17,12 @@ interface PersistentNavProps {
   activeStageIndex?: number
 }
 
-// Stage description card colors - matches Stage.tsx stageSurface
+// Stage description card colors - matches each stage's surfaceColors.primary
 const stageDescriptionCardColors: Record<number, string> = {
-  0: '#E9D7DA', // MasterClass - blush/salmon
-  1: '#E9D7DA', // Placeholder - same as MasterClass for now
-  2: '#E9D7DA', // Placeholder
-  3: '#E9D7DA', // Placeholder
+  0: '#F2F2F2', // Squarespace - white/gray
+  1: '#E9D7DA', // MasterClass - blush/salmon (default)
+  2: '#D8EAFF', // Apple - light blue
+  3: '#FDECEC', // ShipHero - light pink/red
 }
 
 export function PersistentNav({
@@ -408,6 +408,9 @@ export function PersistentNav({
           style={{
             borderRadius: 14,
             padding: '5px 8px 8px 8px',
+            backdropFilter: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 'blur(12px)' : 'none',
+            WebkitBackdropFilter: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 'blur(12px)' : 'none',
+            transition: 'backdrop-filter 0.2s ease',
           }}
           animate={{
             backgroundColor: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks')
@@ -463,6 +466,9 @@ export function PersistentNav({
           style={{
             borderRadius: 14,
             padding: '5px 8px 8px 8px',
+            backdropFilter: (hoveredItem === 'logo' && activeNavItem !== 'logo') ? 'blur(12px)' : 'none',
+            WebkitBackdropFilter: (hoveredItem === 'logo' && activeNavItem !== 'logo') ? 'blur(12px)' : 'none',
+            transition: 'backdrop-filter 0.2s ease',
           }}
           animate={{
             backgroundColor: (hoveredItem === 'logo' && activeNavItem !== 'logo')

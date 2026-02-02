@@ -100,16 +100,27 @@ export interface VariantStyle {
   highlightBorder: string
   highlightShadow: string
   dividerColor: string
+  // UI-normalized accent (Level 2 — equal perceived weight across variants)
+  uiAccent?: string
+  uiAccentHover?: string
+  uiAccentActive?: string
 }
 
 export type VariantStyles = Record<CardVariant, VariantStyle>
 
 // Stage types for Selected Work section
 
+export interface StageMetadataRow {
+  label: string
+  value: string
+}
+
 export interface StageMetadata {
   platforms: string
   accolades: string
   agency: string
+  // Optional: override labels and values with custom rows
+  customRows?: StageMetadataRow[]
 }
 
 export interface StageData {
@@ -122,6 +133,13 @@ export interface StageData {
   logoSrc: string
   logoBgColor: string
   accentColor: string
+  // Optional: override stage surface colors (description card, metadata panel, etc.)
+  surfaceColors?: {
+    primary?: string
+    secondary?: string
+    hover?: string
+    text?: string
+  }
   // Optional: rich media background (video, 3D scene, or image)
   backgroundMedia?: {
     type: 'video' | 'image' | '3d'

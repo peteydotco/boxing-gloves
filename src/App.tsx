@@ -110,6 +110,18 @@ function App() {
   const [themeMode, setThemeMode] = useState<'light' | 'inverted' | 'dark' | 'darkInverted'>('light')
   const theme = themes[themeMode]
 
+  // Sync data-theme attribute on <html> for CSS mode overrides
+  useEffect(() => {
+    const root = document.documentElement
+    if (themeMode === 'dark') {
+      root.setAttribute('data-theme', 'dark')
+    } else if (themeMode === 'darkInverted') {
+      root.setAttribute('data-theme', 'darker')
+    } else {
+      root.removeAttribute('data-theme')
+    }
+  }, [themeMode])
+
   // Cycle through themes: light → inverted → dark → darkInverted → light
   const cycleTheme = useCallback(() => {
     setThemeMode(current => {
@@ -600,6 +612,7 @@ function App() {
           activeStageIndex={activeStageIndex}
           onNavigateToStage={navigateToStage}
           tugOffset={tugOffsetMV}
+          themeMode={themeMode}
         >
           <PersistentNav
             viewMode={viewMode}

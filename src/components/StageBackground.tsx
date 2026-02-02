@@ -1,9 +1,10 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useCallback, useRef, type ReactNode } from 'react'
 import { motion, useTransform, motionValue, type MotionValue } from 'framer-motion'
 import { bladeStackConfig, getBladeColor } from '../data/stages'
 
 type ViewMode = 'hero' | 'stages'
 type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
+type ThemeMode = 'light' | 'inverted' | 'dark' | 'darkInverted'
 
 interface StageBackgroundProps {
   viewMode: ViewMode
@@ -11,6 +12,7 @@ interface StageBackgroundProps {
   activeStageIndex: number
   onNavigateToStage?: (stageIndex: number) => void
   tugOffset?: MotionValue<number>
+  themeMode?: ThemeMode
   children?: ReactNode
 }
 
@@ -28,7 +30,7 @@ const ZERO_MV = motionValue(0)
  * approach avoids the CSS stacking context trap where the blade's z-45
  * would flatten nav items below StagesContainer (z-50).
  */
-export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _activeStageIndex, onNavigateToStage, tugOffset, children }: StageBackgroundProps) {
+export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _activeStageIndex, onNavigateToStage, tugOffset, themeMode: _themeMode = 'light', children }: StageBackgroundProps) {
   const { borderRadius, horizontalPadding, frontBladePeek } = bladeStackConfig
   const mv = tugOffset ?? ZERO_MV
 
@@ -63,7 +65,7 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
         ease: [0.32, 0.72, 0, 1] as const,
         delay: 0,
       }
-    : { type: 'tween' as const, duration: 0 }
+    : { type: 'spring' as const, stiffness: 300, damping: 25 }
 
   // Hover offset for blade
   const hoverOffset = 3
@@ -132,6 +134,20 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
   // Nav hover state — managed internally, no longer relayed through App
   const [isNavItemHovered, setIsNavItemHovered] = useState(false)
 
+  // Mouse tracking for cursor spotlight border effect
+  const bladeRef = useRef<HTMLDivElement>(null)
+  const [bladeMouse, setBladeMouse] = useState({ x: 50, y: 50 })
+
+  const handleBladeMouseMove = useCallback((e: React.MouseEvent) => {
+    const el = bladeRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    // Visible area is the top portion of the element (top 88px peek)
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / frontBladePeekFromBottom) * 100
+    setBladeMouse({ x, y })
+  }, [frontBladePeekFromBottom])
+
   const isAnyHovered = isBladeDirectlyHovered || isNavItemHovered
 
   const getAnimateVariant = () => {
@@ -154,11 +170,13 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
       >
         {/* Blade visual: expand/collapse via variants + hover */}
         <motion.div
+          ref={bladeRef}
           className={`fixed ${isInteractive ? 'cursor-pointer' : ''}`}
           style={{
             zIndex: 45,
             backgroundColor: bladeColor,
             pointerEvents: isCollapsed ? 'auto' : 'none',
+            overflow: 'hidden',
           }}
           initial={isCollapsing ? 'expanded' : 'collapsed'}
           animate={getAnimateVariant()}
@@ -173,7 +191,45 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
           onHoverEnd={() => {
             setIsBladeDirectlyHovered(false)
           }}
-        />
+          onMouseMove={isInteractive ? handleBladeMouseMove : undefined}
+        >
+          {/* Cursor spotlight — fill + border layers (always rendered, opacity fades) */}
+          {/* Fill spotlight */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: 0,
+              left: 0,
+              right: 0,
+              height: frontBladePeekFromBottom,
+              borderTopLeftRadius: borderRadius,
+              borderTopRightRadius: borderRadius,
+              background: `radial-gradient(circle at ${bladeMouse.x}% ${bladeMouse.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%)`,
+              opacity: isBladeDirectlyHovered && isInteractive ? 1 : 0,
+              transition: 'opacity 0.4s ease-out',
+            }}
+          />
+          {/* Border spotlight */}
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              top: 0,
+              left: 0,
+              right: 0,
+              height: frontBladePeekFromBottom,
+              borderTopLeftRadius: borderRadius,
+              borderTopRightRadius: borderRadius,
+              background: `radial-gradient(circle at ${bladeMouse.x}% ${bladeMouse.y}%, rgba(255, 255, 255, 1) 0%, rgba(200, 210, 230, 0.8) 15%, rgba(140, 140, 150, 0.3) 35%, rgba(120, 120, 130, 0.15) 55%, transparent 100%)`,
+              WebkitMask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+              mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+              maskComposite: 'exclude',
+              WebkitMaskComposite: 'xor',
+              padding: '1px 1px 0 1px',
+              opacity: isBladeDirectlyHovered && isInteractive ? 0.6 : 0,
+              transition: 'opacity 0.4s ease-out',
+            }}
+          />
+        </motion.div>
       </motion.div>
 
       {/* Nav tug wrapper (z-59): SIBLING to blade wrapper, same MotionValue for lockstep tug.
