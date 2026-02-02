@@ -231,7 +231,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           }}
         >
           <img
-            src="/images/apple-postit.png"
+            src="/images/apple-postit.webp"
             alt=""
             style={{
               width: 'clamp(129px, 16.1vw, 246px)',
