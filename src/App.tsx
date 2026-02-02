@@ -63,6 +63,7 @@ function App() {
     return typeof window !== 'undefined' ? window.innerWidth < 768 : false
   })
   const [logoHovered, setLogoHovered] = useState(false)
+  const [logoPressed, setLogoPressed] = useState(false)
   const [nycTime, setNycTime] = useState(() => {
     const now = new Date()
     return new Intl.DateTimeFormat('en-US', {
@@ -348,13 +349,17 @@ function App() {
           <div
             onClick={cycleTheme}
             onMouseEnter={() => setLogoHovered(true)}
-            onMouseLeave={() => setLogoHovered(false)}
+            onMouseLeave={() => { setLogoHovered(false); setLogoPressed(false) }}
+            onMouseDown={() => setLogoPressed(true)}
+            onMouseUp={() => setLogoPressed(false)}
             style={{
               cursor: 'pointer',
               position: 'relative',
               userSelect: 'none',
-              transform: logoHovered ? 'scale(1.04)' : 'scale(1)',
-              transition: 'transform 0.15s ease-out',
+              transform: logoPressed ? 'scale(0.98)' : logoHovered ? 'scale(1.04)' : 'scale(1)',
+              transition: logoPressed
+                ? 'transform 0.08s ease-in'
+                : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
             }}
           >
             {/* Content container — padding matches PersistentNav: 5px 8px 8px 8px */}
@@ -368,8 +373,10 @@ function App() {
                   lineHeight: '26px',
                   color: theme.logoFill,
                   display: 'block',
-                  transform: logoHovered ? `scale(${1 / 1.04})` : 'scale(1)',
-                  transition: 'transform 0.15s ease-out',
+                  transform: logoPressed ? `scale(${1 / 0.98})` : logoHovered ? `scale(${1 / 1.04})` : 'scale(1)',
+                  transition: logoPressed
+                    ? 'transform 0.08s ease-in'
+                    : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 }}
               >
                 PETEY.CO
