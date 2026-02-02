@@ -1,6 +1,5 @@
 import { Scene, mousePositionRef } from './components/Scene'
 import { TopCards } from './components/TopCards'
-import { PeteLogo } from './components/PeteLogo'
 import { LeftBioSvg } from './components/LeftBioSvg'
 import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
@@ -343,9 +342,26 @@ function App() {
           </p>
         </div>
 
-        {/* Pete Logo - stays at bottom */}
+        {/* Pete Logo - text-based treatment with stroke element */}
         <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
-          <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
+          <div
+            onClick={cycleTheme}
+            style={{
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              fontFamily: 'GT Pressura, sans-serif',
+              fontSize: '26px',
+              fontWeight: 500,
+              letterSpacing: '-0.02em',
+              lineHeight: 1,
+              color: theme.logoFill,
+              userSelect: 'none',
+            }}
+          >
+            <span style={{ opacity: 0.6, marginRight: '4px' }}>⌐</span>
+            PETEY.CO
+          </div>
         </div>
       </div>
 
