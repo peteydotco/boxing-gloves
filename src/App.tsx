@@ -342,36 +342,26 @@ function App() {
           </p>
         </div>
 
-        {/* Pete Logo - text with exact SVG border element from blades build */}
+        {/* Pete Logo - text with nav-style border from PersistentNav */}
         <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
           <div
             onClick={cycleTheme}
             style={{
               cursor: 'pointer',
-              position: 'relative',
+              border: `3px solid ${theme.logoFill}`,
+              borderRadius: 14,
+              padding: '5px 8px 8px 8px',
               userSelect: 'none',
             }}
           >
-            {/* SVG border frame + corner dots from PeteLogo */}
-            <svg width="124" height="42" viewBox="0 0 124 42" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-              <path d="M5.09375 33.4473C6.23509 35.2759 7.92917 36.7364 9.96387 37.6172C10.8672 38.0082 12.0211 38.2619 13.9258 38.3965C15.8597 38.5331 18.3275 38.5352 21.8301 38.5352H101.727C105.229 38.5352 107.698 38.5331 109.632 38.3965C111.536 38.2619 112.69 38.0081 113.593 37.6172C115.135 36.9495 116.483 35.9487 117.542 34.707H121.141C119.689 37.1393 117.478 39.0816 114.806 40.2383L114.55 40.3438C111.886 41.4061 108.429 41.4062 101.727 41.4062H21.8301C15.1273 41.4062 11.6709 41.4062 9.00684 40.3438L8.75195 40.2383C5.76384 38.9449 3.35157 36.6694 1.93359 33.8242L5.09375 33.4473ZM3.52832 18.4355C3.52585 19.174 3.52539 19.9689 3.52539 20.8281C3.52539 24.2165 3.5277 26.6038 3.66895 28.4746C3.7369 29.3745 3.83395 30.1013 3.96289 30.7109L1.01172 31.0625C0.559395 28.7375 0.556641 25.6523 0.556641 20.8281C0.556641 19.9785 0.558068 19.1827 0.560547 18.4355H3.52832ZM122.58 10.7783C122.998 13.0818 122.999 16.1306 122.999 20.8281C122.999 22.4476 122.999 23.8711 122.981 25.1357H120.014C120.031 23.9013 120.031 22.4843 120.031 20.8281C120.031 17.4397 120.029 15.0524 119.888 13.1816C119.813 12.1979 119.702 11.4215 119.555 10.7783H122.58ZM101.727 0.25C108.646 0.25 112.106 0.249299 114.806 1.41797C117.82 2.72271 120.246 5.02709 121.659 7.90723H118.267C117.131 6.21993 115.514 4.87073 113.593 4.03906C112.69 3.64813 111.536 3.39435 109.632 3.25977C107.698 3.12312 105.229 3.12109 101.727 3.12109H21.8301C18.3275 3.12109 15.8597 3.12315 13.9258 3.25977C12.0211 3.39436 10.8672 3.64808 9.96387 4.03906C7.81312 4.97004 6.04116 6.54765 4.90234 8.52441L1.69434 8.33301L1.76465 8.17676C3.06859 5.35796 5.33634 3.06656 8.17578 1.68262L8.75195 1.41797C11.4518 0.249511 14.9115 0.25 21.8301 0.25H101.727Z" fill={theme.logoFill}/>
-              <rect x="119" y="28.3281" width="4" height="4" rx="2" fill={theme.logoFill}/>
-              <rect y="11.3281" width="4" height="4" rx="2" fill={theme.logoFill}/>
-            </svg>
-            {/* Live text centered over the SVG frame */}
             <span
               style={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
                 fontFamily: 'GT Pressura, sans-serif',
-                fontSize: '16.5px',
+                fontSize: '26px',
                 fontWeight: 500,
-                letterSpacing: '0.02em',
+                letterSpacing: '-0.02em',
                 lineHeight: 1,
                 color: theme.logoFill,
-                whiteSpace: 'nowrap',
               }}
             >
               PETEY.CO
