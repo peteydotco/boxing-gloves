@@ -73,7 +73,7 @@ export const stages: StageData[] = [
     accentColor: '#007AFF',
     backgroundMedia: {
       type: 'image',
-      src: '/images/apple-bg_map.png',
+      src: '/images/apple-bg_map.webp',
     },
     surfaceColors: {
       primary: '#D8EAFF',
@@ -98,7 +98,7 @@ export const stages: StageData[] = [
     accentColor: '#1B202A',
     backgroundMedia: {
       type: 'image',
-      src: '/images/shiphero-stagebg.gif',
+      src: '/images/shiphero-stagebg.webp',
     },
     surfaceColors: {
       primary: '#FDECEC',
