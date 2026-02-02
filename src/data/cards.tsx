@@ -48,6 +48,7 @@ export const cards: CardData[] = [
         <>For six years, I've elevated the vision and craft of our core product. Nowadays I'm designing powerful new site tools that elevate DIYers and keep up with Pros. See our <a href="https://www.squarespace.com/refresh" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>FW2025 release</a>{' '}<RxOpenInNewWindow style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.85em' }} /></>,
       ],
       highlights: [
+        { label: 'SQSP V', href: 'https://www.instagram.com/stories/highlights/17880084102460736/', image: '/images/highlights/sqsp-v.webp' },
         { label: 'SQSP IV', href: 'https://www.instagram.com/stories/highlights/18306770473162196/', image: '/images/highlights/sqsp-iv.webp' },
         { label: 'SQSP III', href: 'https://www.instagram.com/stories/highlights/17986731617286794/', image: '/images/highlights/sqsp-iii.webp' },
         { label: 'SQSP II', href: 'https://www.instagram.com/stories/highlights/17926855298693100/', image: '/images/highlights/sqsp-ii.webp' },
