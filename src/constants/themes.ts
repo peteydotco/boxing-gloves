@@ -40,11 +40,11 @@ export const colorTokens = {
   redUi: 'rgba(214,50,64,1)',          // #D63240
   redUiDark: 'rgba(181,40,51,1)',      // #B52833
 
-  // Blade Surfaces
-  bladeMasterclass: '#0e0e0e',
-  bladeSquarespace: '#EF4562',
-  bladeApple: '#0064FF',
-  bladeShiphero: '#2e2f5a',
+  // Blade Surfaces (0 = front, 3 = back)
+  blade0: '#0e0e0e',
+  blade1: '#EB2D37',
+  blade2: '#0064FF',
+  blade3: '#2e2f5a',
 
   // Ink (cool-biased dark neutrals)
   ink900: 'rgba(10,10,16,1)',          // #0A0A10

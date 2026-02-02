@@ -144,30 +144,31 @@ interface BladeConfig {
 }
 
 // Define all available blades with their colors
+// Blade 0 = front (foremost), Blade 3 = back (furthest)
 const bladeDefinitions: Record<string, BladeConfig> = {
-  shiphero: {
-    id: 'shiphero',
-    name: 'ShipHero',
-    bladeColor: '#2e2f5a',
-    stageColor: '#1B202A',
+  blade0: {
+    id: 'blade0',
+    name: 'Blade 0',
+    bladeColor: '#0e0e0e',
+    stageColor: '#0A0A10',
   },
-  apple: {
-    id: 'apple',
-    name: 'Apple',
+  blade1: {
+    id: 'blade1',
+    name: 'Blade 1',
+    bladeColor: '#EB2D37',
+    stageColor: '#0e0e0e',
+  },
+  blade2: {
+    id: 'blade2',
+    name: 'Blade 2',
     bladeColor: '#0064FF',
     stageColor: '#f5f5f7',
   },
-  squarespace: {
-    id: 'squarespace',
-    name: 'Squarespace',
-    bladeColor: '#EF4562',
-    stageColor: '#0e0e0e',
-  },
-  masterclass: {
-    id: 'masterclass',
-    name: 'MasterClass',
-    bladeColor: '#0e0e0e',
-    stageColor: '#0A0A10',
+  blade3: {
+    id: 'blade3',
+    name: 'Blade 3',
+    bladeColor: '#2e2f5a',
+    stageColor: '#1B202A',
   },
 }
 
@@ -177,16 +178,16 @@ const bladeDefinitions: Record<string, BladeConfig> = {
 // Index 0 = front blade (topmost, what users see first)
 // Index 3 = back blade (furthest back)
 const bladeOrder: string[] = [
-  'masterclass',  // Front blade (index 0) - expands to Section 1
-  'squarespace',  // Second blade (index 1)
-  'apple',        // Third blade (index 2)
-  'shiphero',     // Back blade (index 3)
+  'blade0',   // Front blade (index 0)
+  'blade1',   // Second blade (index 1)
+  'blade2',   // Third blade (index 2)
+  'blade3',   // Back blade (index 3)
 ]
 
 // Get the blade config for a given blade position (0 = front, 3 = back)
 const getBladeConfig = (bladeIndex: number): BladeConfig => {
   const bladeId = bladeOrder[bladeIndex]
-  return bladeDefinitions[bladeId] ?? bladeDefinitions.masterclass
+  return bladeDefinitions[bladeId] ?? bladeDefinitions.blade0
 }
 
 // Get blade color for a blade position (collapsed/stacked preview)
