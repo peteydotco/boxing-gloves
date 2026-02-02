@@ -337,7 +337,7 @@ function DraggableGloveWithRope({
 
         // Apply a gentle restoring force when not at natural position
         if (distanceFromNatural > 0.01) {
-          const restoreStrength = 8.0 // Force to restore natural position and prevent clinging
+          const restoreStrength = 5.0 // Balanced — snappy drop without distorting the fall path
           t.restoreForce.copy(t.toNatural).normalize().multiplyScalar(restoreStrength * distanceFromNatural)
 
           const vel = gloveRef.current.linvel()
@@ -353,28 +353,32 @@ function DraggableGloveWithRope({
 
         // Apply torque to make bottom (knuckle/ball) hang lowest (heaviest part)
         // This simulates bottom-heavy center of mass - like a tree air freshener
-        const currentRotation = gloveRef.current.rotation()
-        tempQuat.current.set(currentRotation.x, currentRotation.y, currentRotation.z, currentRotation.w)
+        // Skip during initial drop so gloves fall straight, then kick in to orient front-facing
+        if (settledTime.current > 0.4) {
+          const currentRotation = gloveRef.current.rotation()
+          tempQuat.current.set(currentRotation.x, currentRotation.y, currentRotation.z, currentRotation.w)
 
-        // Local "gravity target" — mostly down, slightly toward glove's front (local Z+)
-        // This makes gravity pull the front face toward the camera as it settles
-        t.gloveDown.set(0, -1, 0.4).normalize().applyQuaternion(tempQuat.current)
+          // Local "gravity target" — mostly down, slightly toward glove's front (local Z+)
+          // This makes gravity pull the front face toward the camera as it settles
+          // Subtle bias so the initial drop looks straight, but gloves still settle front-facing
+          t.gloveDown.set(0, -1, 0.15).normalize().applyQuaternion(tempQuat.current)
 
-        // Calculate torque needed to align glove's bottom with world down
-        t.torqueAxis.crossVectors(t.gloveDown, t.worldDown)
-        const torqueMagnitude = Math.asin(Math.min(1, t.torqueAxis.length())) * 4.0 // Gentler for more swing
+          // Calculate torque needed to align glove's bottom with world down
+          t.torqueAxis.crossVectors(t.gloveDown, t.worldDown)
+          const torqueMagnitude = Math.asin(Math.min(1, t.torqueAxis.length())) * 4.0 // Gentler for more swing
 
-        if (t.torqueAxis.length() > 0.01) {
-          t.torqueAxis.normalize().multiplyScalar(torqueMagnitude)
-          const angVel = gloveRef.current.angvel()
-          gloveRef.current.setAngvel(
-            {
-              x: angVel.x + t.torqueAxis.x * 0.08,
-              y: angVel.y + t.torqueAxis.y * 0.08,
-              z: angVel.z + t.torqueAxis.z * 0.08,
-            },
-            true
-          )
+          if (t.torqueAxis.length() > 0.01) {
+            t.torqueAxis.normalize().multiplyScalar(torqueMagnitude)
+            const angVel = gloveRef.current.angvel()
+            gloveRef.current.setAngvel(
+              {
+                x: angVel.x + t.torqueAxis.x * 0.08,
+                y: angVel.y + t.torqueAxis.y * 0.08,
+                z: angVel.z + t.torqueAxis.z * 0.08,
+              },
+              true
+            )
+          }
         }
       }
     }
