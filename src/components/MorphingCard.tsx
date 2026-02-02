@@ -125,7 +125,7 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
           transition={hoverTransition}
         >
           {highlight.image ? (
-            <img src={highlight.image} alt={highlight.label} className="w-full h-full object-cover" />
+            <img src={highlight.image} alt={highlight.label} loading="lazy" className="w-full h-full object-cover" />
           ) : (
             <span className="text-[11px] font-pressura-mono uppercase" style={{ color: styles.textColor }}>
               {highlight.label.slice(0, 4)}
@@ -216,6 +216,10 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
     if (!videoRef.current || !previewVideo) return
 
     if (shouldShowVideo && isActive) {
+      // Set src lazily — only fetch video when actually needed
+      if (!videoRef.current.src || videoRef.current.src !== previewVideo) {
+        videoRef.current.src = previewVideo
+      }
       videoRef.current.currentTime = 0 // Reset to start
       videoRef.current.play().catch(() => {
         // Autoplay may be blocked, that's ok
@@ -314,7 +318,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
               {/* Video - visible on hover (desktop) or after 5s delay (mobile) */}
               <video
                 ref={videoRef}
-                src={previewVideo}
+                preload="none"
                 muted
                 loop
                 playsInline
@@ -332,6 +336,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
                 key={index}
                 src={frame}
                 alt={`${card.title} preview ${index + 1}`}
+                loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover"
                 style={{
                   opacity: index === currentFrameIndex ? 1 : 0,

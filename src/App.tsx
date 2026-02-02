@@ -491,7 +491,7 @@ function App() {
             transition={{ duration: 0.3 }}
           >
             {/* Background Marquee - scrolling text revealed by cursor */}
-            <BackgroundMarquee mousePosition={mousePosition} marqueeFill={theme.marqueeColor} />
+            <BackgroundMarquee marqueeFill={theme.marqueeColor} />
 
             {/* Radial gradient spotlight overlay - covers marquee, reveals center (desktop only) */}
             {!isMobile && (
