@@ -342,25 +342,31 @@ function App() {
           </p>
         </div>
 
-        {/* Pete Logo - text-based treatment with stroke element */}
+        {/* Pete Logo - text-based treatment with rounded border stroke */}
         <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
           <div
             onClick={cycleTheme}
             style={{
               cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              fontFamily: 'GT Pressura, sans-serif',
-              fontSize: '26px',
-              fontWeight: 500,
-              letterSpacing: '-0.02em',
-              lineHeight: 1,
-              color: theme.logoFill,
+              borderRadius: 14,
+              border: `1.5px solid ${theme.logoFill}`,
+              padding: '5px 8px 8px 8px',
               userSelect: 'none',
             }}
           >
-            <span style={{ opacity: 0.6, marginRight: '4px' }}>⌐</span>
-            PETEY.CO
+            <span
+              style={{
+                fontFamily: 'GT Pressura, sans-serif',
+                fontSize: '26px',
+                fontWeight: 500,
+                letterSpacing: '-0.02em',
+                lineHeight: 1,
+                color: theme.logoFill,
+                textTransform: 'uppercase',
+              }}
+            >
+              PETEY.CO
+            </span>
           </div>
         </div>
       </div>
