@@ -350,7 +350,7 @@ function App() {
               cursor: 'pointer',
               border: `3px solid ${theme.logoFill}`,
               borderRadius: 14,
-              padding: '5px 8px 8px 8px',
+              padding: '6px 12px 9px 12px',
               userSelect: 'none',
             }}
           >
