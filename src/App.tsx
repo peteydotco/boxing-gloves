@@ -62,6 +62,7 @@ function App() {
   const [isMobile, setIsMobile] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 768 : false
   })
+  const [logoHovered, setLogoHovered] = useState(false)
   const [nycTime, setNycTime] = useState(() => {
     const now = new Date()
     return new Intl.DateTimeFormat('en-US', {
@@ -346,10 +347,14 @@ function App() {
         <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
           <div
             onClick={cycleTheme}
+            onMouseEnter={() => setLogoHovered(true)}
+            onMouseLeave={() => setLogoHovered(false)}
             style={{
               cursor: 'pointer',
               position: 'relative',
               userSelect: 'none',
+              transform: logoHovered ? 'scale(1.04)' : 'scale(1)',
+              transition: 'transform 0.15s ease-out',
             }}
           >
             {/* Content container — padding matches PersistentNav: 5px 8px 8px 8px */}
@@ -363,6 +368,8 @@ function App() {
                   lineHeight: '26px',
                   color: theme.logoFill,
                   display: 'block',
+                  transform: logoHovered ? `scale(${1 / 1.04})` : 'scale(1)',
+                  transition: 'transform 0.15s ease-out',
                 }}
               >
                 PETEY.CO
