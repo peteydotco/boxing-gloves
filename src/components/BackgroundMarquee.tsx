@@ -1,5 +1,6 @@
+import { memo } from 'react'
+
 interface BackgroundMarqueeProps {
-  mousePosition: { x: number; y: number }
   marqueeFill?: string
 }
 
@@ -242,10 +243,7 @@ function MarqueeRow({
   )
 }
 
-export function BackgroundMarquee({ mousePosition: _mousePosition, marqueeFill = '#E0E0E0' }: BackgroundMarqueeProps) {
-  // mousePosition available for future spotlight effects
-  void _mousePosition
-
+export const BackgroundMarquee = memo(function BackgroundMarquee({ marqueeFill = '#E0E0E0' }: BackgroundMarqueeProps) {
   // 4 rows using vh units, centered vertically
   // When centered, first row is ~50% clipped at top, last row ~50% clipped at bottom
   // This maintains consistent proportions at any viewport height
@@ -296,4 +294,4 @@ export function BackgroundMarquee({ mousePosition: _mousePosition, marqueeFill =
       </div>
     </div>
   )
-}
+})

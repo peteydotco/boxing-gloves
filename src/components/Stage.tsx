@@ -11,6 +11,47 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+// Lazy video component — only fetches when isActive, releases buffer when inactive
+function StageVideo({ src, isActive }: { src: string; isActive: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    if (isActive) {
+      video.src = src
+      video.load()
+      video.play().catch(() => {})
+    } else {
+      video.pause()
+      video.removeAttribute('src')
+      video.load() // Release buffer
+    }
+  }, [isActive, src])
+
+  return (
+    <video
+      ref={videoRef}
+      loop
+      muted
+      playsInline
+      preload="none"
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        minWidth: '100%',
+        minHeight: '100%',
+        width: 'auto',
+        height: 'auto',
+        transform: 'translate(-50%, -50%)',
+        objectFit: 'cover',
+      }}
+    />
+  )
+}
+
 // Stage surface colors (blush/salmon palette tokens)
 const stageSurface = {
   primary: '#E9D7DA',   // blush-200 - description card bg
@@ -171,24 +212,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             transition: 'opacity 0.3s ease-out',
           }}
         >
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            src={stage.backgroundMedia.src}
-            style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              minWidth: '100%',
-              minHeight: '100%',
-              width: 'auto',
-              height: 'auto',
-              transform: 'translate(-50%, -50%)',
-              objectFit: 'cover',
-            }}
-          />
+          <StageVideo src={stage.backgroundMedia.src} isActive={isActive} />
         </div>
       )}
 
@@ -205,6 +229,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           <img
             src={stage.backgroundMedia.src}
             alt=""
+            loading="lazy"
             style={{
               position: 'absolute',
               top: '50%',
@@ -233,6 +258,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
           <img
             src="/images/apple-postit.webp"
             alt=""
+            loading="lazy"
             style={{
               width: 'clamp(129px, 16.1vw, 246px)',
               height: 'auto',
