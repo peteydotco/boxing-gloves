@@ -4,12 +4,7 @@ import { PeteLogo } from './components/PeteLogo'
 import { LeftBioSvg } from './components/LeftBioSvg'
 import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
-import { StackedBlades } from './components/StackedBlades'
-import { StageBackground } from './components/StageBackground'
-import { StagesContainer } from './components/StagesContainer'
-import { PersistentNav } from './components/PersistentNav'
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
+import { useState, useEffect, useRef } from 'react'
 
 // Theme presets for quick toggling (cycles: light → inverted → dark → darkInverted)
 const themes = {
@@ -55,38 +50,9 @@ const themes = {
   },
 }
 
-// View modes: 'hero' is the landing page, 'stages' is the selected work section
-type ViewMode = 'hero' | 'stages'
-
-// Transition phases for blade animation
-type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
-
 function App() {
-  // Ref for the main container - used as event source for Canvas
-  // This allows mouse events to be captured even when over TopCards
+  // Ref for the main container
   const containerRef = useRef<HTMLDivElement>(null)
-
-  // Current view mode
-  const [viewMode, setViewMode] = useState<ViewMode>('hero')
-
-  // Active stage index (which stage to show when in stages view)
-  const [activeStageIndex, setActiveStageIndex] = useState(0)
-
-  // Transition animation phase
-  const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle')
-
-  // Zoomed nav mode - when true, stage scales down and TopCards become visible
-  const [isZoomedNav, setIsZoomedNav] = useState(false)
-
-  // Scroll tug offset — blades rise/dip proportionally during trackpad swipes, decay smoothly when released
-  // MotionValue bypasses React re-renders: updates go straight to Framer Motion → DOM
-  const tugOffsetMV = useMotionValue(0)
-  const tugState = useRef({
-    position: 0,            // Signed position in delta-units: positive = upward tug, negative = downward
-    lastEventTime: 0,       // Timestamp of last wheel event (for decay delay)
-    rafId: null as number | null, // Active rAF handle for decay loop
-    isDecaying: false,       // Whether decay loop is running
-  })
 
   // mousePosition state is only for 2D UI elements (spotlight, marquee)
   // Scene reads from mousePositionRef directly to avoid re-renders
@@ -123,60 +89,14 @@ function App() {
   }, [themeMode])
 
   // Cycle through themes: light → inverted → dark → darkInverted → light
-  const cycleTheme = useCallback(() => {
+  const cycleTheme = () => {
     setThemeMode(current => {
       if (current === 'light') return 'inverted'
       if (current === 'inverted') return 'dark'
       if (current === 'dark') return 'darkInverted'
       return 'light'
     })
-  }, [])
-
-  // Navigate to a specific stage with transition animation
-  const navigateToStage = useCallback((stageIndex: number) => {
-    // Set the target stage before animation starts
-    setActiveStageIndex(stageIndex)
-    // Start the expanding animation
-    setTransitionPhase('expanding')
-    // After animation completes, switch to stages view
-    // Spring with stiffness:200, damping:30, mass:1 settles in ~700ms
-    setTimeout(() => {
-      setViewMode('stages')
-      setTransitionPhase('complete')
-      // Keep complete phase until blade 0 fully covers viewport
-      setTimeout(() => {
-        setTransitionPhase('idle')
-      }, 300)
-    }, 700)
-  }, [])
-
-  // Navigate back to hero view with collapse animation
-  const navigateToHero = useCallback(() => {
-    // Exit zoomed nav if active
-    setIsZoomedNav(false)
-    // Start the collapsing animation (blade shrinks back)
-    setTransitionPhase('collapsing')
-    // Switch view immediately so blades are visible
-    setViewMode('hero')
-    // After animation completes, reset to idle
-    setTimeout(() => {
-      setTransitionPhase('idle')
-    }, 450)
-  }, [])
-
-  // Handle logo click - toggles zoomed nav in stages, cycles theme in hero
-  const handleLogoClick = useCallback(() => {
-    if (viewMode === 'stages') {
-      setIsZoomedNav(!isZoomedNav)
-    } else {
-      cycleTheme()
-    }
-  }, [viewMode, isZoomedNav, cycleTheme])
-
-  // Exit zoomed nav mode (clicking the scaled stage)
-  const exitZoomedNav = useCallback(() => {
-    setIsZoomedNav(false)
-  }, [])
+  }
 
   useEffect(() => {
     // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
@@ -213,139 +133,6 @@ function App() {
       if (rafId !== null) cancelAnimationFrame(rafId)
     }
   }, [])
-
-  // Wheel navigation to stages from hero (scrolls to stage 0 by default)
-  // Continuous tracking: every trackpad delta feeds a signed position that maps to tugOffset
-  // Strong single gesture (deltaY >= 30) or sustained accumulation (>= 90) triggers navigation
-  const wheelState = useRef({ lastTime: 0, lastNavTime: 0 })
-  useEffect(() => {
-    if (viewMode !== 'hero') return
-
-    const MAX_UP_POSITION = 120       // Max accumulated upward position (delta-units)
-    const MAX_DOWN_POSITION = 40      // Max accumulated downward position (absolute)
-    const MAX_TUG_PX = 15             // Max upward visual displacement (px)
-    const MAX_DOWN_TUG_PX = 6         // Max downward visual displacement (px, subtler)
-    const NAVIGATE_VIA_TUG_THRESHOLD = 90
-    const DECAY_RATE = 0.75           // Per-frame multiplier (~12 frames to near-zero)
-    const DECAY_START_DELAY = 40      // ms of silence before decay begins
-    const POSITION_DEAD_ZONE = 0.8    // Snap to zero below this absolute position
-
-    // Bidirectional ease-out mapping: signed position → signed tug pixels
-    const positionToTug = (position: number): number => {
-      if (position >= 0) {
-        const t = Math.min(position / MAX_UP_POSITION, 1)
-        const eased = 1 - Math.pow(1 - t, 2.5)
-        return eased * MAX_TUG_PX
-      } else {
-        const t = Math.min(Math.abs(position) / MAX_DOWN_POSITION, 1)
-        const eased = 1 - Math.pow(1 - t, 2.5)
-        return -(eased * MAX_DOWN_TUG_PX)
-      }
-    }
-
-    const resetTugState = () => {
-      const ts = tugState.current
-      ts.position = 0
-      ts.isDecaying = false
-      if (ts.rafId) { cancelAnimationFrame(ts.rafId); ts.rafId = null }
-      tugOffsetMV.set(0)
-    }
-
-    // rAF decay loop — smoothly drains position toward zero after input stops
-    const startDecayLoop = () => {
-      const ts = tugState.current
-      if (ts.isDecaying) return
-      ts.isDecaying = true
-
-      const tick = () => {
-        const elapsed = Date.now() - ts.lastEventTime
-        if (elapsed < DECAY_START_DELAY) {
-          // Still receiving input, keep waiting
-          ts.rafId = requestAnimationFrame(tick)
-          return
-        }
-
-        // Apply decay
-        ts.position *= DECAY_RATE
-
-        if (Math.abs(ts.position) < POSITION_DEAD_ZONE) {
-          // Close enough — snap to zero and stop
-          ts.position = 0
-          tugOffsetMV.set(0)
-          ts.isDecaying = false
-          ts.rafId = null
-          return
-        }
-
-        tugOffsetMV.set(positionToTug(ts.position))
-        ts.rafId = requestAnimationFrame(tick)
-      }
-
-      ts.rafId = requestAnimationFrame(tick)
-    }
-
-    const handleWheel = (e: WheelEvent) => {
-      // Skip if TopCards are expanded (they handle their own scroll)
-      if (document.documentElement.hasAttribute('data-topcards-expanded')) {
-        return
-      }
-
-      // Only handle vertical scroll — ignore horizontal swipes
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
-      const delta = e.deltaY
-
-      const now = Date.now()
-      const state = wheelState.current
-      const timeSinceLastNav = now - state.lastNavTime
-
-      // Require cooldown after navigation
-      if (timeSinceLastNav < 800) return
-
-      // NAVIGATE ZONE: single strong downward scroll triggers full transition
-      if (delta >= 30) {
-        resetTugState()
-        state.lastNavTime = now
-        navigateToStage(0)
-        return
-      }
-
-      // CONTINUOUS TUG: every delta feeds signed position (no noise filter)
-      const ts = tugState.current
-
-      // Per-event friction: drain position toward zero between events
-      // This prevents inertia scroll (macOS keeps firing decreasing deltas after finger lifts)
-      // from holding the tug in place. Downward tug drains faster since it's meant to be fleeting.
-      const elapsed = now - ts.lastEventTime
-      if (elapsed > 0 && ts.position !== 0) {
-        const frames = elapsed / 16.67 // Approximate frames elapsed
-        const friction = ts.position < 0 ? 0.60 : 0.82 // Downward drains faster
-        ts.position *= Math.pow(friction, frames)
-        if (Math.abs(ts.position) < POSITION_DEAD_ZONE) ts.position = 0
-      }
-
-      ts.position = Math.max(-MAX_DOWN_POSITION, Math.min(ts.position + delta, MAX_UP_POSITION))
-
-      // Check if sustained upward tug triggers navigation
-      if (ts.position >= NAVIGATE_VIA_TUG_THRESHOLD) {
-        resetTugState()
-        state.lastNavTime = now
-        navigateToStage(0)
-        return
-      }
-
-      // Update visual tug offset
-      tugOffsetMV.set(positionToTug(ts.position))
-
-      ts.lastEventTime = now
-      startDecayLoop()
-    }
-
-    window.addEventListener('wheel', handleWheel, { passive: true })
-    return () => {
-      window.removeEventListener('wheel', handleWheel)
-      if (tugState.current.rafId) cancelAnimationFrame(tugState.current.rafId)
-    }
-  }, [viewMode, navigateToStage])
 
   // Update NYC time every minute
   useEffect(() => {
@@ -428,249 +215,139 @@ function App() {
     ropeDamping: 0.92,
   }
 
-  // Determine if TopCards should be visible
-  // Show in hero view, hide in stages view UNLESS zoomed nav is active
-  const isInStagesView = viewMode === 'stages' || transitionPhase === 'expanding'
-  const showTopCards = !isInStagesView || isZoomedNav
-
   return (
     <div
       ref={containerRef}
       className="relative w-full h-full flex flex-col overflow-hidden"
       style={{ backgroundColor: theme.bgColor }}
     >
-      {/* Desktop: 3D Scene - always rendered to prevent gloves from dropping on every transition */}
-      {/* Gloves stay visible during transition - blades cover them as they slide up */}
+      {/* Desktop: 3D Scene */}
       {isDesktop && (
         <div
           className="absolute inset-0"
-          style={{
-            zIndex: 10,
-            pointerEvents: viewMode === 'hero' ? 'auto' : 'none',
-            opacity: viewMode === 'hero' || transitionPhase === 'expanding' ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-          }}
+          style={{ zIndex: 10, pointerEvents: 'auto' }}
         >
           <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
         </div>
       )}
 
-      {/* Desktop: TopCards - slides up/down during transition, also shows in zoomed nav mode */}
-      {/* z-index: 20 normally, but z-60 when zoomed to appear above scaled stage */}
+      {/* Desktop: TopCards */}
       {isDesktop && (
-        <motion.div
+        <div
           className="absolute top-0 left-0 right-0"
-          style={{
-            pointerEvents: showTopCards ? 'auto' : 'none',
-            overflow: 'visible',
-            zIndex: isZoomedNav ? 60 : 20,
-          }}
-          initial={{ y: 0, opacity: 1 }}
-          animate={{
-            y: showTopCards ? 0 : -150,
-            opacity: showTopCards ? 1 : 0,
-          }}
-          transition={{
-            type: 'spring',
-            stiffness: 320,
-            damping: 40,
-            mass: 1,
-          }}
+          style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 20 }}
         >
           <TopCards themeMode={themeMode} />
-        </motion.div>
+        </div>
       )}
 
-      {/* Hero View - background elements only on desktop, full view on mobile/tablet */}
-      <AnimatePresence>
-        {viewMode === 'hero' && (
-          <motion.div
-            className="absolute inset-0"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Background Marquee - scrolling text revealed by cursor */}
-            <BackgroundMarquee mousePosition={mousePosition} marqueeFill={theme.marqueeColor} />
+      {/* Hero View */}
+      <div className="absolute inset-0">
+        {/* Background Marquee - scrolling text revealed by cursor */}
+        <BackgroundMarquee mousePosition={mousePosition} marqueeFill={theme.marqueeColor} />
 
-            {/* Radial gradient spotlight overlay - covers marquee, reveals center (desktop only) */}
-            {!isMobile && (
-              <div
-                className="absolute inset-0 z-[5] pointer-events-none"
-                style={{
-                  background: theme.spotlightInverted
-                    ? `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 15%, ${theme.spotlightOuter} 45%)`
-                    : `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
-                  transition: 'background 0.1s ease-out',
-                }}
-              />
-            )}
-
-            {/* Mobile/Tablet only: Cards inside hero (desktop has them outside for animation) */}
-            {!isDesktop && (
-              <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
-                <TopCards themeMode={themeMode} />
-              </div>
-            )}
-
-            {/* Mobile/Tablet only: 3D Scene (desktop has it outside for persistence) */}
-            {!isDesktop && (
-              <div
-                className="absolute inset-0"
-                style={{
-                  zIndex: 10,
-                  pointerEvents: 'auto',
-                }}
-              >
-                <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
-              </div>
-            )}
-
-            {/* Left biographical text - show on tablet and desktop (md+) */}
-            {/* Desktop (>=1024px): flanks gloves at vertical center */}
-            {/* Tablet (<1024px): positioned at bottom, offset +3px to center-align with taller Right Bio */}
-            <div
-              className="absolute z-20 pointer-events-none select-none hidden md:block"
-              style={{
-                left: '5%',
-                ...(isDesktop
-                  ? { top: '50%', transform: 'translateY(-50%)' }
-                  : { bottom: '214px' }
-                ),
-              }}
-            >
-              <LeftBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
-            </div>
-
-            {/* Right biographical text - show on tablet and desktop (md+) */}
-            {/* Desktop (>=1024px): flanks gloves at vertical center */}
-            {/* Tablet (<1024px): positioned at bottom, center-aligned with left bio */}
-            <div
-              className="absolute z-20 pointer-events-none select-none hidden md:block"
-              style={{
-                right: '5%',
-                maxWidth: '200px',
-                ...(isDesktop
-                  ? { top: '50%', transform: 'translateY(-50%)' }
-                  : { bottom: '211px' }
-                ),
-              }}
-            >
-              <RightBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
-            </div>
-
-            {/* Mobile/Tablet: Text lockup (time/location + coming soon) */}
-            {/* Both mobile and tablet: positioned near bottom */}
-            {!isDesktop && (
-              <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
-                <p style={{
-                  color: theme.textColor,
-                  textAlign: 'center',
-                  fontFamily: 'GT Pressura Mono',
-                  fontSize: '12px',
-                  fontStyle: 'normal',
-                  fontWeight: 400,
-                  lineHeight: '15px',
-                  letterSpacing: '0.36px',
-                  textTransform: 'uppercase',
-                }}>
-                  {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
-                </p>
-                <p style={{
-                  color: theme.textColor,
-                  textAlign: 'center',
-                  fontFamily: 'GT Pressura Mono',
-                  fontSize: '12px',
-                  fontStyle: 'normal',
-                  fontWeight: 400,
-                  lineHeight: '15px',
-                  letterSpacing: '0.36px',
-                  textTransform: 'uppercase',
-                  marginTop: '4px'
-                }}>
-                  《 Full site coming soon 》
-                </p>
-              </div>
-            )}
-
-            {/* Mobile/Tablet: Pete Logo - stays at bottom */}
-            {!isDesktop && (
-              <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
-                <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Desktop: Unified background - single element that morphs between blade and fullscreen */}
-      {/* PersistentNav is rendered inside StageBackground so it shares the same tug/hover wrapper */}
-      {isDesktop && (
-        <StageBackground
-          viewMode={viewMode}
-          transitionPhase={transitionPhase}
-          activeStageIndex={activeStageIndex}
-          onNavigateToStage={navigateToStage}
-          tugOffset={tugOffsetMV}
-          themeMode={themeMode}
-        >
-          <PersistentNav
-            viewMode={viewMode}
-            transitionPhase={transitionPhase}
-            onNavigateToHero={navigateToHero}
-            onNavigateToStages={() => navigateToStage(0)}
-            onLogoClick={handleLogoClick}
-            onExitZoomedNav={exitZoomedNav}
-            isZoomedNav={isZoomedNav}
-            heroBgColor={theme.bgColor}
-            activeStageIndex={activeStageIndex}
+        {/* Radial gradient spotlight overlay - covers marquee, reveals center (desktop only) */}
+        {!isMobile && (
+          <div
+            className="absolute inset-0 z-[5] pointer-events-none"
+            style={{
+              background: theme.spotlightInverted
+                ? `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 15%, ${theme.spotlightOuter} 45%)`
+                : `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
+              transition: 'background 0.1s ease-out',
+            }}
           />
-        </StageBackground>
-      )}
+        )}
 
-      {/* Desktop: Stacked Blades (back blades 1,2,3 - blade 0 is StageBackground) */}
-      {/* Always mounted - they sit behind blade 0 (z-45) so invisible when in stages view */}
-      {/* This prevents them from disappearing mid-animation */}
-      {isDesktop && (
-        <StackedBlades
-          onNavigateToStage={navigateToStage}
-          themeMode={themeMode}
-          transitionPhase={transitionPhase}
-          viewMode={viewMode}
-          nycTime={nycTime}
-          colonVisible={colonVisible}
-          isDaylight={isDaylight}
-          tugOffset={tugOffsetMV}
-        />
-      )}
+        {/* Mobile/Tablet only: Cards inside hero (desktop has them outside) */}
+        {!isDesktop && (
+          <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
+            <TopCards themeMode={themeMode} />
+          </div>
+        )}
 
-      {/* Zoomed nav background - shows hero bg behind scaled stage */}
-      {isZoomedNav && (
-        <motion.div
-          className="fixed inset-0"
-          style={{ backgroundColor: theme.bgColor, zIndex: 45 }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        />
-      )}
+        {/* Mobile/Tablet only: 3D Scene (desktop has it outside) */}
+        {!isDesktop && (
+          <div
+            className="absolute inset-0"
+            style={{
+              zIndex: 10,
+              pointerEvents: 'auto',
+            }}
+          >
+            <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+          </div>
+        )}
 
-      {/* Stages View - content only, background is provided by StageBackground */}
-      {/* Visible during expanding transition so cards slide up with the blade */}
-      <StagesContainer
-        isVisible={viewMode === 'stages' || transitionPhase === 'expanding'}
-        onNavigateToHero={navigateToHero}
-        onThemeToggle={cycleTheme}
-        logoFill={theme.logoFill}
-        themeMode={themeMode}
-        isInitialEntry={transitionPhase === 'complete'}
-        initialStageIndex={activeStageIndex}
-        onStageChange={setActiveStageIndex}
-        transitionPhase={transitionPhase}
-        isZoomedNav={isZoomedNav}
-        onExitZoomedNav={exitZoomedNav}
-      />
+        {/* Left biographical text - show on tablet and desktop (md+) */}
+        {/* Desktop (>=1024px): flanks gloves at vertical center */}
+        {/* Tablet (<1024px): positioned at bottom, offset +3px to center-align with taller Right Bio */}
+        <div
+          className="absolute z-20 pointer-events-none select-none hidden md:block"
+          style={{
+            left: '5%',
+            ...(isDesktop
+              ? { top: '50%', transform: 'translateY(-50%)' }
+              : { bottom: '214px' }
+            ),
+          }}
+        >
+          <LeftBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
+        </div>
+
+        {/* Right biographical text - show on tablet and desktop (md+) */}
+        {/* Desktop (>=1024px): flanks gloves at vertical center */}
+        {/* Tablet (<1024px): positioned at bottom, center-aligned with left bio */}
+        <div
+          className="absolute z-20 pointer-events-none select-none hidden md:block"
+          style={{
+            right: '5%',
+            maxWidth: '200px',
+            ...(isDesktop
+              ? { top: '50%', transform: 'translateY(-50%)' }
+              : { bottom: '211px' }
+            ),
+          }}
+        >
+          <RightBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
+        </div>
+
+        {/* Text lockup (time/location + coming soon) */}
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
+          <p style={{
+            color: theme.textColor,
+            textAlign: 'center',
+            fontFamily: 'GT Pressura Mono',
+            fontSize: '12px',
+            fontStyle: 'normal',
+            fontWeight: 400,
+            lineHeight: '15px',
+            letterSpacing: '0.36px',
+            textTransform: 'uppercase',
+          }}>
+            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
+          </p>
+          <p style={{
+            color: theme.textColor,
+            textAlign: 'center',
+            fontFamily: 'GT Pressura Mono',
+            fontSize: '12px',
+            fontStyle: 'normal',
+            fontWeight: 400,
+            lineHeight: '15px',
+            letterSpacing: '0.36px',
+            textTransform: 'uppercase',
+            marginTop: '4px'
+          }}>
+            《 Full site coming soon 》
+          </p>
+        </div>
+
+        {/* Pete Logo - stays at bottom */}
+        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
+          <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
+        </div>
+      </div>
 
     </div>
   )
