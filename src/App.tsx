@@ -342,30 +342,42 @@ function App() {
           </p>
         </div>
 
-        {/* Pete Logo - text with nav-style border from PersistentNav */}
+        {/* Pete Logo - exact PersistentNav spec: text + separate border overlay */}
         <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
           <div
             onClick={cycleTheme}
             style={{
               cursor: 'pointer',
-              border: `3px solid ${theme.logoFill}`,
-              borderRadius: 14,
-              padding: '6px 12px 9px 12px',
+              position: 'relative',
               userSelect: 'none',
             }}
           >
-            <span
+            {/* Content container — padding matches PersistentNav: 5px 8px 8px 8px */}
+            <div style={{ padding: '5px 8px 8px 8px', borderRadius: 14 }}>
+              <span
+                style={{
+                  fontFamily: 'GT Pressura, sans-serif',
+                  fontSize: '26px',
+                  fontWeight: 500,
+                  letterSpacing: '-0.52px',
+                  lineHeight: '26px',
+                  color: theme.logoFill,
+                  display: 'block',
+                }}
+              >
+                PETEY.CO
+              </span>
+            </div>
+            {/* Border overlay — separate element, flush with content edges */}
+            <div
               style={{
-                fontFamily: 'GT Pressura, sans-serif',
-                fontSize: '26px',
-                fontWeight: 500,
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-                color: theme.logoFill,
+                position: 'absolute',
+                inset: 0,
+                border: `3px solid ${theme.logoFill}`,
+                borderRadius: 14,
+                pointerEvents: 'none',
               }}
-            >
-              PETEY.CO
-            </span>
+            />
           </div>
         </div>
       </div>
