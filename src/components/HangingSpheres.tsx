@@ -5,8 +5,8 @@ import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@reac
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
 import type { Settings } from '../types'
-import leftGloveModelUrl from '../assets/folio-glove-left.glb?url'
-import rightGloveModelUrl from '../assets/folio-glove-right.glb?url'
+import leftGloveModelUrl from '../assets/gloveLEFT.glb?url'
+import rightGloveModelUrl from '../assets/gloveRIGHT.glb?url'
 
 // Rope segments for smooth curve
 const ROPE_SEGMENTS = 32
