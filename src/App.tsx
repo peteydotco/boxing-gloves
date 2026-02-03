@@ -5,6 +5,29 @@ import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { useState, useEffect, useRef } from 'react'
 
+// Hook to detect when a font is loaded
+function useFontReady(fontFamily: string) {
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    if (document.fonts) {
+      document.fonts.ready.then(() => {
+        const loaded = document.fonts.check(`16px "${fontFamily}"`)
+        setIsReady(loaded)
+        if (!loaded) {
+          document.fonts.load(`16px "${fontFamily}"`).then(() => setIsReady(true))
+        }
+      })
+    } else {
+      // Fallback for browsers without Font Loading API
+      const timeout = setTimeout(() => setIsReady(true), 100)
+      return () => clearTimeout(timeout)
+    }
+  }, [fontFamily])
+
+  return isReady
+}
+
 // Theme presets for quick toggling (cycles: light → inverted → dark → darkInverted)
 const themes = {
   light: {
@@ -76,6 +99,10 @@ function App() {
   const [colonVisible, setColonVisible] = useState(true)
   const [themeMode, setThemeMode] = useState<'light' | 'inverted' | 'dark' | 'darkInverted'>('light')
   const theme = themes[themeMode]
+
+  // Wait for fonts to load before showing text
+  const fontMonoReady = useFontReady('GT Pressura Mono')
+  const fontReady = useFontReady('GT Pressura')
 
   // Sync data-theme attribute on <html> for CSS mode overrides
   useEffect(() => {
@@ -314,86 +341,90 @@ function App() {
         </div>
 
         {/* Text lockup (time/location + coming soon) */}
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
-          <p style={{
-            color: theme.textColor,
-            textAlign: 'center',
-            fontFamily: 'GT Pressura Mono',
-            fontSize: '12px',
-            fontStyle: 'normal',
-            fontWeight: 400,
-            lineHeight: '15px',
-            letterSpacing: '0.36px',
-            textTransform: 'uppercase',
-          }}>
-            {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
-          </p>
-          <p style={{
-            color: theme.textColor,
-            textAlign: 'center',
-            fontFamily: 'GT Pressura Mono',
-            fontSize: '12px',
-            fontStyle: 'normal',
-            fontWeight: 400,
-            lineHeight: '15px',
-            letterSpacing: '0.36px',
-            textTransform: 'uppercase',
-            marginTop: '4px'
-          }}>
-            《 Full site coming soon 》
-          </p>
-        </div>
+        {fontMonoReady && (
+          <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
+            <p style={{
+              color: theme.textColor,
+              textAlign: 'center',
+              fontFamily: 'GT Pressura Mono',
+              fontSize: '12px',
+              fontStyle: 'normal',
+              fontWeight: 400,
+              lineHeight: '15px',
+              letterSpacing: '0.36px',
+              textTransform: 'uppercase',
+            }}>
+              {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
+            </p>
+            <p style={{
+              color: theme.textColor,
+              textAlign: 'center',
+              fontFamily: 'GT Pressura Mono',
+              fontSize: '12px',
+              fontStyle: 'normal',
+              fontWeight: 400,
+              lineHeight: '15px',
+              letterSpacing: '0.36px',
+              textTransform: 'uppercase',
+              marginTop: '4px'
+            }}>
+              《 Full site coming soon 》
+            </p>
+          </div>
+        )}
 
         {/* Pete Logo - exact PersistentNav spec: text + separate border overlay */}
-        <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
-          <div
-            onClick={cycleTheme}
-            onMouseEnter={() => setLogoHovered(true)}
-            onMouseLeave={() => { setLogoHovered(false); setLogoPressed(false) }}
-            onMouseDown={() => setLogoPressed(true)}
-            onMouseUp={() => setLogoPressed(false)}
-            style={{
-              cursor: 'pointer',
-              position: 'relative',
-              userSelect: 'none',
-              transform: logoPressed ? 'scale(0.98)' : logoHovered ? 'scale(1.04)' : 'scale(1)',
-              transition: logoPressed
-                ? 'transform 0.08s ease-in'
-                : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-            }}
-          >
-            {/* Content container — padding matches PersistentNav: 5px 8px 8px 8px */}
-            <div style={{ padding: '5px 8px 8px 8px', borderRadius: 14 }}>
-              <span
-                style={{
-                  fontFamily: 'GT Pressura, sans-serif',
-                  fontSize: '26px',
-                  fontWeight: 500,
-                  letterSpacing: '-0.52px',
-                  lineHeight: '26px',
-                  color: theme.logoFill,
-                  display: 'block',
-                  transform: logoPressed ? `scale(${1 / 0.98})` : logoHovered ? `scale(${1 / 1.04})` : 'scale(1)',
-                  transition: logoPressed
-                    ? 'transform 0.08s ease-in'
-                    : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                }}
-              >
-                PETEY.CO
-              </span>
-            </div>
-            {/* Border overlay — separate element, flush with content edges */}
+        {fontReady && (
+          <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
             <div
+              onClick={cycleTheme}
+              onMouseEnter={() => setLogoHovered(true)}
+              onMouseLeave={() => { setLogoHovered(false); setLogoPressed(false) }}
+              onMouseDown={() => setLogoPressed(true)}
+              onMouseUp={() => setLogoPressed(false)}
               style={{
-                position: 'absolute',
-                inset: 0,
-                border: `3px solid ${theme.logoFill}`,
-                borderRadius: 14,
-                pointerEvents: 'none',
+                cursor: 'pointer',
+                position: 'relative',
+                userSelect: 'none',
+                transform: logoPressed ? 'scale(0.98)' : logoHovered ? 'scale(1.04)' : 'scale(1)',
+                transition: logoPressed
+                  ? 'transform 0.08s ease-in'
+                  : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
               }}
-            />
+            >
+              {/* Content container — padding matches PersistentNav: 5px 8px 8px 8px */}
+              <div style={{ padding: '5px 8px 8px 8px', borderRadius: 14 }}>
+                <span
+                  style={{
+                    fontFamily: 'GT Pressura, sans-serif',
+                    fontSize: '26px',
+                    fontWeight: 500,
+                    letterSpacing: '-0.52px',
+                    lineHeight: '26px',
+                    color: theme.logoFill,
+                    display: 'block',
+                    transform: logoPressed ? `scale(${1 / 0.98})` : logoHovered ? `scale(${1 / 1.04})` : 'scale(1)',
+                    transition: logoPressed
+                      ? 'transform 0.08s ease-in'
+                      : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  }}
+                >
+                  PETEY.CO
+                </span>
+              </div>
+              {/* Border overlay — separate element, flush with content edges */}
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  border: `3px solid ${theme.logoFill}`,
+                  borderRadius: 14,
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
     </div>
