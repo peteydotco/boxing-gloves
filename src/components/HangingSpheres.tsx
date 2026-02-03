@@ -5,7 +5,8 @@ import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@reac
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
 import type { Settings } from '../types'
-import rightGloveModelUrl from '../assets/folio-rodriguez.glb?url'
+import leftGloveModelUrl from '../assets/folio-glove-left.glb?url'
+import rightGloveModelUrl from '../assets/folio-glove-right.glb?url'
 
 // Rope segments for smooth curve
 const ROPE_SEGMENTS = 32
@@ -683,7 +684,7 @@ function DraggableGloveWithRope({
             return cloned
           }, [gloveModel, themeMode])}
           scale={[
-            (isLeftGlove ? -1 : 1) * settings.radius * 0.75,
+            settings.radius * 0.75,
             settings.radius * 0.75,
             settings.radius * 0.75
           ]}
@@ -700,6 +701,7 @@ function DraggableGloveWithRope({
 }
 
 // Preload the glove models (with Draco decoder for compressed meshes)
+useGLTF.preload(leftGloveModelUrl, true)
 useGLTF.preload(rightGloveModelUrl, true)
 
 export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light' }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' }) {
@@ -717,7 +719,7 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
         <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
       </mesh>
 
-      {/* Left glove (rodriguez mirrored) - offset left and slightly forward, drops slightly after right */}
+      {/* Left glove - offset left and slightly forward, drops slightly after right */}
       <DraggableGloveWithRope
         anchorOffset={[-0.4, 0, 0.15]}
         dropDelay={100}
@@ -730,11 +732,11 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
         }}
       />
 
-      {/* Right glove (rodriguez) - offset right and slightly back, with extended cord */}
+      {/* Right glove - offset right and slightly back, with extended cord */}
       <DraggableGloveWithRope
         anchorOffset={[0.4, 0, -0.15]}
         themeMode={themeMode}
-        modelUrl={rightGloveModelUrl}
+        modelUrl={leftGloveModelUrl}
         yRotation={Math.PI + (45 * Math.PI / 180)}
         settings={{
           ...settings,
