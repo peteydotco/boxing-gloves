@@ -11,6 +11,29 @@ import { PersistentNav } from './components/PersistentNav'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
 
+// Hook to detect when a font is loaded
+function useFontReady(fontFamily: string) {
+  const [isReady, setIsReady] = useState(false)
+
+  useEffect(() => {
+    if (document.fonts) {
+      document.fonts.ready.then(() => {
+        const loaded = document.fonts.check(`16px "${fontFamily}"`)
+        setIsReady(loaded)
+        if (!loaded) {
+          document.fonts.load(`16px "${fontFamily}"`).then(() => setIsReady(true))
+        }
+      })
+    } else {
+      // Fallback for browsers without Font Loading API
+      const timeout = setTimeout(() => setIsReady(true), 100)
+      return () => clearTimeout(timeout)
+    }
+  }, [fontFamily])
+
+  return isReady
+}
+
 // Theme presets for quick toggling (cycles: light → inverted → dark → darkInverted)
 const themes = {
   light: {
@@ -109,6 +132,9 @@ function App() {
   const [colonVisible, setColonVisible] = useState(true)
   const [themeMode, setThemeMode] = useState<'light' | 'inverted' | 'dark' | 'darkInverted'>('light')
   const theme = themes[themeMode]
+
+  // Wait for GT Pressura Mono font to load before showing text
+  const fontReady = useFontReady('GT Pressura Mono')
 
   // Sync data-theme attribute on <html> for CSS mode overrides
   useEffect(() => {
@@ -561,7 +587,7 @@ function App() {
 
             {/* Mobile/Tablet: Text lockup (time/location + coming soon) */}
             {/* Both mobile and tablet: positioned near bottom */}
-            {!isDesktop && (
+            {!isDesktop && fontReady && (
               <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
                 <p style={{
                   color: theme.textColor,
@@ -594,7 +620,7 @@ function App() {
             )}
 
             {/* Mobile/Tablet: Pete Logo - stays at bottom */}
-            {!isDesktop && (
+            {!isDesktop && fontReady && (
               <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
                 <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
               </div>
