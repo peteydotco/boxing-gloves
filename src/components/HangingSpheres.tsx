@@ -724,7 +724,7 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
         anchorOffset={[-0.4, 0, 0.15]}
         dropDelay={100}
         themeMode={themeMode}
-        modelUrl={rightGloveModelUrl}
+        modelUrl={leftGloveModelUrl}
         yRotation={Math.PI + Math.PI / 6 - Math.PI / 4}
         settings={{
           ...settings,
@@ -736,7 +736,7 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
       <DraggableGloveWithRope
         anchorOffset={[0.4, 0, -0.15]}
         themeMode={themeMode}
-        modelUrl={leftGloveModelUrl}
+        modelUrl={rightGloveModelUrl}
         yRotation={Math.PI + (45 * Math.PI / 180)}
         settings={{
           ...settings,
