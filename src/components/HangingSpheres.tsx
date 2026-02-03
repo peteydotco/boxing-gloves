@@ -588,11 +588,6 @@ function DraggableGloveWithRope({
                 mesh.castShadow = true
                 mesh.receiveShadow = true
 
-                // Enable double-sided rendering (critical for mirrored left glove)
-                if (mesh.material) {
-                  (mesh.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide
-                }
-
                 // Apply color adjustments based on theme
                 const isInvertedTheme = themeMode === 'inverted'
                 const isDarkTheme = themeMode === 'dark'
