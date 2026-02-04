@@ -4,12 +4,12 @@ import { RxOpenInNewWindow } from 'react-icons/rx'
 export const cards: CardData[] = [
   {
     id: 'sva',
-    label: 'ADJUNCT IXD PROFESSOR',
-    title: 'SCHOOL OF VISUAL ARTS',
+    label: 'Adjunct IxD Professor',
+    title: 'School of Visual Arts',
     shortcut: '1',
     variant: 'blue',
     expandedContent: {
-      roleLabel: 'IXD PROFESSOR AT',
+      roleLabel: 'IxD Professor at',
       dateRange: '2021 → Present',
       description: [
         <>I teach an accelerated interaction design course, where students create portfolio-ready soft products for the web, native apps, and beyond. Curriculum covers vibe coding, motion principles, design systems, and more. <a href="https://sva.edu/academics/undergraduate/bfa-design" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>SVA BFA Design</a>{' '}<RxOpenInNewWindow style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.85em' }} /></>,
@@ -37,12 +37,12 @@ export const cards: CardData[] = [
   },
   {
     id: 'squarespace',
-    label: 'SR STAFF DESIGNER',
-    title: 'SQUARESPACE',
+    label: 'Sr Staff Designer',
+    title: 'Squarespace',
     shortcut: '2',
     variant: 'white',
     expandedContent: {
-      roleLabel: 'PRODUCT DESIGNER AT',
+      roleLabel: 'Product Designer at',
       dateRange: '2019 → Present',
       description: [
         <>For six years, I've elevated the vision and craft of our core product. Nowadays I'm designing powerful new site tools that elevate DIYers and keep up with Pros. See our <a href="https://www.squarespace.com/refresh" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>FW2025 release</a>{' '}<RxOpenInNewWindow style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.85em' }} /></>,
@@ -65,12 +65,12 @@ export const cards: CardData[] = [
   },
   {
     id: 'rio',
-    label: 'JUNIOR DAD',
-    title: 'RIO RUI RODRIGUEZ',
+    label: 'Junior Dad',
+    title: 'Rio Rui Rodriguez',
     shortcut: '3',
     variant: 'red',
     expandedContent: {
-      roleLabel: 'NEW DAD TO',
+      roleLabel: 'New Dad to',
       dateRange: '2023 → Present',
       description: [
         'Full-time dad duties: snacks, adventures, and answering "why?" approximately 400 times per day. Currently leveling up in LEGO engineering, bedtime story voice acting, and playground diplomacy.',
@@ -93,12 +93,12 @@ export const cards: CardData[] = [
   },
   {
     id: 'cta',
-    label: 'BLANK SLOT',
-    title: 'ADD A ROLE',
+    label: '- blank slot -',
+    title: 'Add new role...',
     shortcut: '⌘ C',
     variant: 'cta',
     expandedContent: {
-      roleLabel: 'ADD A ROLE',
+      roleLabel: 'Add new role...',
       dateRange: '1989 → Infinity',
       description: [
         "One of the greatest privileges of working in this space has been the incredible talent and personalities I've gotten to meet and, if I'm lucky, collab with.",
