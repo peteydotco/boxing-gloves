@@ -410,10 +410,10 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                       position: 'absolute',
                       top: 22,
                       left: 37,
-                      fontFamily: 'GT Pressura',
+                      fontFamily: 'Inter',
                       fontSize: '13px',
-                      fontWeight: 400,
-                      letterSpacing: '0.26px',
+                      fontWeight: 500,
+                      letterSpacing: '0.01em',
                       textTransform: 'uppercase',
                       color: '#000000',
                     }}
@@ -427,9 +427,9 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                       position: 'absolute',
                       top: 48,
                       left: 37,
-                      fontFamily: 'GT Pressura',
+                      fontFamily: 'Inter',
                       fontSize: '24px',
-                      fontWeight: 500,
+                      fontWeight: 600,
                       color: '#000000',
                       lineHeight: 1,
                       textTransform: 'uppercase',
@@ -458,12 +458,12 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
                   >
                     <p
                       style={{
-                        fontFamily: 'GT Pressura Ext',
+                        fontFamily: 'Inter',
                         fontSize: '16px',
-                        fontWeight: 350, // Text weight - lighter than Regular (400)
+                        fontWeight: 400,
                         color: surface.text,
                         lineHeight: 1.35,
-                        letterSpacing: '-0.32px',
+                        letterSpacing: '-0.01em',
                       }}
                     >
                       {stage.description}
@@ -541,10 +541,10 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
               <p
                 style={{
                   width: '100%',
-                  fontFamily: 'GT Pressura',
+                  fontFamily: 'Inter',
                   fontSize: '11px',
-                  fontWeight: 400,
-                  letterSpacing: '0.4px',
+                  fontWeight: 500,
+                  letterSpacing: '0.01em',
                   textTransform: 'uppercase',
                   color: 'rgba(0, 0, 0, 0.4)',
                   textAlign: 'center',
@@ -607,8 +607,10 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             }}
           >
             <div
-              className="uppercase font-pressura-mono whitespace-nowrap flex items-center justify-center gap-1"
+              className="uppercase whitespace-nowrap flex items-center justify-center gap-1"
               style={{
+                fontFamily: 'Inter',
+                fontWeight: 500,
                 fontSize: '12px',
                 lineHeight: 1,
                 position: 'relative',
@@ -628,13 +630,13 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             </div>
           </motion.div>
 
-          {/* Button text - GT Pressura Regular (lighter than title) */}
+          {/* Button text - Inter Medium */}
           {/* Knockout effect on hover (transparent text reveals dark bg) */}
           <span
             style={{
-              fontFamily: 'GT Pressura',
+              fontFamily: 'Inter',
               fontSize: '24px',
-              fontWeight: 400,
+              fontWeight: 500,
               lineHeight: 1.3,
               textTransform: 'uppercase',
               textAlign: 'center',
@@ -682,10 +684,10 @@ function MetadataRow({
     >
       <span
         style={{
-          fontFamily: 'GT Pressura',
+          fontFamily: 'Inter',
           fontSize: '11px',
-          fontWeight: 400,
-          letterSpacing: '0.4px',
+          fontWeight: 500,
+          letterSpacing: '0.01em',
           textTransform: 'uppercase',
           color: 'rgba(0, 0, 0, 0.48)',
           whiteSpace: 'pre-line',
@@ -696,12 +698,12 @@ function MetadataRow({
       </span>
       <span
         style={{
-          fontFamily: 'GT Pressura Ext',
+          fontFamily: 'Inter',
           fontSize: '14px',
-          fontWeight: 350,
+          fontWeight: 400,
           color: textColor,
           textAlign: 'right',
-          letterSpacing: '-0.02em',
+          letterSpacing: '-0.01em',
           ...(valueMaxWidth ? { maxWidth: valueMaxWidth } : {}),
         }}
       >

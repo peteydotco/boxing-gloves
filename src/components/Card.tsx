@@ -22,21 +22,29 @@ const variantStylesLight = {
   blue: {
     bg: 'rgba(22,115,255,1)',
     textColor: 'rgba(255,255,255,1)', // white
+    titleColor: 'rgba(255,255,255,1)', // same as textColor
+    badgeTextColor: 'rgba(255,255,255,1)', // same as textColor
     border: 'border-[rgba(255,255,255,0.12)]',
   },
   white: {
     bg: 'rgba(26,26,46,1)',
     textColor: 'rgba(255,255,255,1)', // white
+    titleColor: 'rgba(255,255,255,1)', // same as textColor
+    badgeTextColor: 'rgba(255,255,255,1)', // same as textColor
     border: 'border-[rgba(255,255,255,0.12)]',
   },
   red: {
     bg: 'rgba(239,68,68,1)',
     textColor: 'rgba(255,255,255,1)', // white
+    titleColor: 'rgba(255,255,255,1)', // same as textColor
+    badgeTextColor: 'rgba(255,255,255,1)', // same as textColor
     border: 'border-[rgba(255,255,255,0.12)]',
   },
   cta: {
     bg: '#F6F6F6',
-    textColor: 'rgba(0,0,0,0.48)', // black at 48% opacity
+    textColor: 'rgba(0,0,0,0.48)', // black at 48% opacity for label
+    titleColor: 'rgba(0,0,0,0.48)', // same as label - matching via explicit color on span
+    badgeTextColor: 'rgba(0,0,0,0.48)', // matches textColor for consistent badge
     border: 'border-gray-300',
   },
 }
@@ -46,21 +54,29 @@ const variantStylesDark = {
   blue: {
     bg: 'rgba(17,92,207,1)',
     textColor: 'rgba(255,255,255,1)',
+    titleColor: 'rgba(255,255,255,1)', // same as textColor
+    badgeTextColor: 'rgba(255,255,255,1)', // same as textColor
     border: 'border-[rgba(255,255,255,0.12)]',
   },
   white: {
     bg: 'rgba(22,22,39,1)',
     textColor: 'rgba(255,255,255,1)',
+    titleColor: 'rgba(255,255,255,1)', // same as textColor
+    badgeTextColor: 'rgba(255,255,255,1)', // same as textColor
     border: 'border-[rgba(255,255,255,0.12)]',
   },
   red: {
     bg: 'rgba(200,56,56,1)',
     textColor: 'rgba(255,255,255,1)',
+    titleColor: 'rgba(255,255,255,1)', // same as textColor
+    badgeTextColor: 'rgba(255,255,255,1)', // same as textColor
     border: 'border-[rgba(255,255,255,0.12)]',
   },
   cta: {
     bg: 'rgba(32,32,32,1)',
     textColor: 'rgba(255,255,255,0.3)',
+    titleColor: 'rgba(255,255,255,0.24)', // lighter for title to visually match label
+    badgeTextColor: 'rgba(255,255,255,0.48)', // matches lighter badge text
     border: 'border-[rgba(255,255,255,0.1)]',
   },
 }
@@ -112,6 +128,8 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
   // All cards: always show full color
   const bgColor = styles.bg
   const textColor = styles.textColor
+  const titleColor = styles.titleColor
+  const badgeTextColor = styles.badgeTextColor
   const badgeStyle = getShortcutBadgeStyles(themeMode)[variant]
 
   // Border colors - white at 12% for colored cards, black at 8% for CTA
@@ -238,7 +256,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
       {compactCta ? (
         /* Compact CTA layout for mobile: stacked label + icon, centered */
         <div className="flex flex-col items-center justify-center gap-1 w-full relative z-10">
-          <div className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-center uppercase">
+          <div className="text-[12px] leading-normal text-center uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '0.01em' }}>
             {label}
           </div>
           <SlPlus className="w-5 h-5" style={{ color: textColor }} />
@@ -249,7 +267,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
           {/* First row: Label and Shortcut badge */}
           <div className="flex items-start justify-between relative w-full">
             {/* Label */}
-            <div className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-left uppercase">
+            <div className="text-[12px] leading-normal text-left uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '0.01em', color: textColor }}>
               {label}
             </div>
 
@@ -263,7 +281,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
                   transition: 'background-color 0.3s ease',
                 }}
               >
-                <div className="text-[12px] uppercase font-pressura-mono leading-[100%]" style={{ position: 'relative', top: '-1px' }}>
+                <div className="text-[12px] uppercase leading-[100%]" style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.12em', position: 'relative', top: '-1px', color: badgeTextColor, whiteSpace: 'nowrap' }}>
                   {shortcut}
                 </div>
               </div>
@@ -271,9 +289,10 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
           </div>
 
           {/* Second row: Title - full width */}
-          <div className="text-[18px] tracking-[-0.015em] font-pressura font-medium leading-normal text-left w-full uppercase">
+          {/* CTA uses weight 500 and lighter titleColor to visually match label */}
+          <div className="text-[18px] leading-normal text-left w-full uppercase" style={{ fontFamily: 'Inter', fontWeight: variant === 'cta' ? 500 : 600, letterSpacing: '-0.01em', color: titleColor }}>
             {variant === 'cta' ? (
-              <span className="flex items-center gap-3">
+              <span className="flex items-center gap-3" style={{ color: titleColor }}>
                 <SlPlus className="w-5 h-5" style={{ color: textColor }} />
                 {title}
               </span>

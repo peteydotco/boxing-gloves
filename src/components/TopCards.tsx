@@ -744,11 +744,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
             }}
           >
             {visibleCards.map((card) => {
-              const isCtaCard = card.variant === 'cta'
               const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
 
-              // For mobile & tablet, CTA card is compact
-              const isCompactCtaCard = !isDesktop && isCtaCard
+              // Use desktop treatment (label + title) for CTA card on all breakpoints
+              const isCompactCtaCard = false
 
               return (
                 <div
@@ -838,8 +837,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                 onPointerCancel={handlePointerUp}
               >
                 {visibleCards.map((card) => {
-                  // Tablet + Mobile: CTA card is compact
-                  const isCompactCtaCard = !isDesktop && card.variant === 'cta'
+                  // Use desktop treatment (label + title) for CTA card on all breakpoints
+                  const isCompactCtaCard = false
                   const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
                   const collapsedPos = getCollapsedPosition(card.id)
 

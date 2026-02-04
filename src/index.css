@@ -5,6 +5,9 @@
   --font-pressura-light: 'GT Pressura Light', 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
   --font-pressura-ext: 'GT Pressura Ext', 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
   --font-pressura-mono: 'GT Pressura Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace;
+  --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-share-tech-mono: 'Share Tech Mono', ui-monospace, monospace;
+  --font-dotgothic: 'DotGothic16', ui-monospace, monospace;
 
   --breakpoint-tablet: 810px;
 }

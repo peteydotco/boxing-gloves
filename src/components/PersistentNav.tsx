@@ -161,12 +161,12 @@ export function PersistentNav({
 
   const navColor = getNavColor()
 
-  // Text styling for nav links - uses GT Pressura (same as card titles) at 24px
+  // Text styling for nav links - uses Inter (same as card titles) at 24px
   const linkTextStyle: React.CSSProperties = {
-    fontFamily: 'GT Pressura, sans-serif',
+    fontFamily: 'Inter',
     fontSize: '24px',
-    fontWeight: 400,
-    letterSpacing: '-0.3px',
+    fontWeight: 500,
+    letterSpacing: '-0.01em',
     textTransform: 'uppercase',
     color: navColor,
     cursor: 'pointer',
@@ -485,7 +485,7 @@ export function PersistentNav({
             style={{
               ...linkTextStyle,
               fontSize: '26px',
-              fontWeight: 500, // Pressura Medium
+              fontWeight: 600, // Inter Semi-bold
               letterSpacing: '-0.02em',
               display: 'flex',
               alignItems: 'center',
