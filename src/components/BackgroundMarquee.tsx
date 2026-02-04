@@ -201,16 +201,16 @@ function MarqueeRow({
       }
     : fontType === 'gothic'
     ? {
-        fontFamily: 'GT Pressura, sans-serif',
+        fontFamily: 'Inter',
         fontSize: '36vh',
-        fontWeight: 500,
-        letterSpacing: '-0.09em',
+        fontWeight: 600,
+        letterSpacing: '-0.04em',
       }
     : {
-        fontFamily: 'GT Pressura Mono, monospace',
+        fontFamily: 'Inter',
         fontSize: '34vh',
-        fontWeight: 350,
-        letterSpacing: '-0.06em',
+        fontWeight: 400,
+        letterSpacing: '-0.02em',
       }
 
   // Create the repeated content string

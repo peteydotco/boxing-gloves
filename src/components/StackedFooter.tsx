@@ -115,16 +115,16 @@ export function StackedFooter() {
               {/* Only show content on the top card */}
               {index === cards.length - 1 && (
                 <div className="w-full h-full flex items-center justify-between px-12">
-                  <span className="text-white font-bold text-sm tracking-wider uppercase">
+                  <span className="font-bold text-sm tracking-wider uppercase" style={{ color: 'rgba(0, 0, 0, 0.8)' }}>
                     ABOUT PETEY
                   </span>
                   <div className="flex items-center">
-                    <span className="text-white text-2xl font-black tracking-tight flex items-center">
-                      <span className="text-white/60 mr-1">⌐</span>
+                    <span className="text-2xl font-black tracking-tight flex items-center" style={{ color: 'rgba(0, 0, 0, 0.8)' }}>
+                      <span className="mr-1" style={{ color: 'rgba(0, 0, 0, 0.5)' }}>⌐</span>
                       PETEY.CO
                     </span>
                   </div>
-                  <span className="text-white font-bold text-sm tracking-wider uppercase">
+                  <span className="font-bold text-sm tracking-wider uppercase" style={{ color: 'rgba(0, 0, 0, 0.8)' }}>
                     SELECTED WORK
                   </span>
                 </div>

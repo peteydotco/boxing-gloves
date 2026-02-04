@@ -244,10 +244,10 @@ export function StackedBlades({
         >
           <motion.p
             style={{
-              fontFamily: 'GT Pressura Mono',
+              fontFamily: 'Inter',
               fontSize: '12px',
-              fontWeight: 400,
-              letterSpacing: '0.3px',
+              fontWeight: 500,
+              letterSpacing: '0.01em',
               textTransform: 'uppercase',
               color: themeMode === 'dark' || themeMode === 'darkInverted'
                 ? 'rgba(255, 255, 255, 0.55)'

@@ -36,6 +36,7 @@ const themes = {
     spotlightInverted: false,
     marqueeColor: '#E0E0E0',
     textColor: 'rgba(0, 0, 0, 0.44)',
+    footerTextColor: 'rgba(0, 0, 0, 0.52)',
     logoFill: '#1A1A2E',
     bioFill: '#000000',
     bioOpacity: 0.55,
@@ -46,6 +47,7 @@ const themes = {
     spotlightInverted: false,
     marqueeColor: '#FFFFFF',
     textColor: 'rgba(0, 0, 0, 0.5)',
+    footerTextColor: 'rgba(0, 0, 0, 0.58)',
     logoFill: '#1A1A2E',
     bioFill: '#000000',
     bioOpacity: 0.55,
@@ -56,6 +58,7 @@ const themes = {
     spotlightInverted: false,
     marqueeColor: 'rgba(255,255,255,0.08)',
     textColor: 'rgba(255, 255, 255, 0.6)',
+    footerTextColor: 'rgba(255, 255, 255, 0.68)',
     logoFill: '#FFFFFF',
     bioFill: '#FFFFFF',
     bioOpacity: 0.55,
@@ -66,6 +69,7 @@ const themes = {
     spotlightInverted: true, // Darkest at edges, lighter at center
     marqueeColor: '#1A1A2E', // ink-800 (cool-biased, visible on near-black)
     textColor: 'rgba(255, 255, 255, 0.6)',
+    footerTextColor: 'rgba(255, 255, 255, 0.68)',
     logoFill: '#FFFFFF',
     bioFill: '#FFFFFF',
     bioOpacity: 0.55,
@@ -101,8 +105,8 @@ function App() {
   const theme = themes[themeMode]
 
   // Wait for fonts to load before showing text
-  const fontMonoReady = useFontReady('GT Pressura Mono')
-  const fontReady = useFontReady('GT Pressura')
+  const fontMonoReady = useFontReady('Inter')
+  const fontReady = useFontReady('Inter')
 
   // Sync data-theme attribute on <html> for CSS mode overrides
   useEffect(() => {
@@ -125,42 +129,6 @@ function App() {
       return 'light'
     })
   }
-
-  useEffect(() => {
-    // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
-    let rafId: number | null = null
-    let pendingX = 0.5
-    let pendingY = 0.5
-
-    const handleMouseMove = (e: MouseEvent) => {
-      // Normalize mouse position to 0-1 range
-      pendingX = e.clientX / window.innerWidth
-      pendingY = e.clientY / window.innerHeight
-      // Update ref for Scene immediately (no re-render)
-      mousePositionRef.current = { x: pendingX, y: pendingY }
-
-      // Batch state updates with RAF to prevent excessive re-renders
-      if (rafId === null) {
-        rafId = requestAnimationFrame(() => {
-          setMousePosition({ x: pendingX, y: pendingY })
-          rafId = null
-        })
-      }
-    }
-
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024)
-      setIsMobile(window.innerWidth < 768)
-    }
-
-    window.addEventListener('mousemove', handleMouseMove)
-    window.addEventListener('resize', handleResize)
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      window.removeEventListener('resize', handleResize)
-      if (rafId !== null) cancelAnimationFrame(rafId)
-    }
-  }, [])
 
   // Update NYC time every minute
   useEffect(() => {
@@ -205,6 +173,43 @@ function App() {
       </>
     )
   }
+
+  useEffect(() => {
+    // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
+    let rafId: number | null = null
+    let pendingX = 0.5
+    let pendingY = 0.5
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Normalize mouse position to 0-1 range
+      pendingX = e.clientX / window.innerWidth
+      pendingY = e.clientY / window.innerHeight
+      // Update ref for Scene immediately (no re-render)
+      mousePositionRef.current = { x: pendingX, y: pendingY }
+
+      // Batch state updates with RAF to prevent excessive re-renders
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          setMousePosition({ x: pendingX, y: pendingY })
+          rafId = null
+        })
+      }
+    }
+
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024)
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('resize', handleResize)
+      if (rafId !== null) cancelAnimationFrame(rafId)
+    }
+  }, [])
+
 
   // Hardcoded shadow settings
   const shadowSettings = {
@@ -315,8 +320,8 @@ function App() {
           style={{
             left: '5%',
             ...(isDesktop
-              ? { top: '50%', transform: 'translateY(-50%)' }
-              : { bottom: '214px' }
+              ? { top: '50%', transform: 'translateY(-50%) scale(0.9)' }
+              : { bottom: '214px', transform: 'scale(0.9)' }
             ),
           }}
         >
@@ -332,8 +337,8 @@ function App() {
             right: '5%',
             maxWidth: '200px',
             ...(isDesktop
-              ? { top: '50%', transform: 'translateY(-50%)' }
-              : { bottom: '211px' }
+              ? { top: '50%', transform: 'translateY(-50%) scale(0.9)' }
+              : { bottom: '211px', transform: 'scale(0.9)' }
             ),
           }}
         >
@@ -344,27 +349,27 @@ function App() {
         {fontMonoReady && (
           <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
             <p style={{
-              color: theme.textColor,
+              color: theme.footerTextColor,
               textAlign: 'center',
-              fontFamily: 'GT Pressura Mono',
+              fontFamily: 'DotGothic16',
               fontSize: '12px',
               fontStyle: 'normal',
               fontWeight: 400,
-              lineHeight: '15px',
-              letterSpacing: '0.36px',
+              lineHeight: '19px',
+              letterSpacing: '0.12em',
               textTransform: 'uppercase',
             }}>
               {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
             </p>
             <p style={{
-              color: theme.textColor,
+              color: theme.footerTextColor,
               textAlign: 'center',
-              fontFamily: 'GT Pressura Mono',
+              fontFamily: 'DotGothic16',
               fontSize: '12px',
               fontStyle: 'normal',
               fontWeight: 400,
-              lineHeight: '15px',
-              letterSpacing: '0.36px',
+              lineHeight: '19px',
+              letterSpacing: '0.12em',
               textTransform: 'uppercase',
               marginTop: '4px'
             }}>
@@ -393,14 +398,14 @@ function App() {
               }}
             >
               {/* Content container — padding matches PersistentNav: 5px 8px 8px 8px */}
-              <div style={{ padding: '5px 8px 8px 8px', borderRadius: 14 }}>
+              <div style={{ padding: '8px 13px 9px 14px', borderRadius: 9999 }}>
                 <span
                   style={{
-                    fontFamily: 'GT Pressura, sans-serif',
-                    fontSize: '26px',
-                    fontWeight: 500,
-                    letterSpacing: '-0.52px',
-                    lineHeight: '26px',
+                    fontFamily: 'Inter',
+                    fontSize: '22px',
+                    fontWeight: 700,
+                    letterSpacing: '-0.02em',
+                    lineHeight: '22px',
                     color: theme.logoFill,
                     display: 'block',
                     transform: logoPressed ? `scale(${1 / 0.98})` : logoHovered ? `scale(${1 / 1.04})` : 'scale(1)',
@@ -418,7 +423,7 @@ function App() {
                   position: 'absolute',
                   inset: 0,
                   border: `3px solid ${theme.logoFill}`,
-                  borderRadius: 14,
+                  borderRadius: 9999,
                   pointerEvents: 'none',
                 }}
               />
