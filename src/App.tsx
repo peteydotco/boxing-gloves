@@ -4,6 +4,7 @@ import { LeftBioSvg } from './components/LeftBioSvg'
 import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { useState, useEffect, useRef } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 
 // Hook to detect when a font is loaded
 function useFontReady(fontFamily: string) {
@@ -427,6 +428,7 @@ function App() {
         )}
       </div>
 
+      <Analytics />
     </div>
   )
 }
