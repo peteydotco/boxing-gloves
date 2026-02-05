@@ -4,7 +4,6 @@ import { LeftBioSvg } from './components/LeftBioSvg'
 import { RightBioSvg } from './components/RightBioSvg'
 import { BackgroundMarquee } from './components/BackgroundMarquee'
 import { useState, useEffect, useRef } from 'react'
-import { Analytics } from '@vercel/analytics/react'
 
 // Hook to detect when a font is loaded
 function useFontReady(fontFamily: string) {
@@ -399,12 +398,12 @@ function App() {
               }}
             >
               {/* Content container — padding matches PersistentNav: 5px 8px 8px 8px */}
-              <div style={{ padding: '8px 13px 9px 14px', borderRadius: 9999 }}>
+              <div style={{ padding: '6px 11px 7px 12px', borderRadius: 9999 }}>
                 <span
                   style={{
                     fontFamily: 'Inter',
                     fontSize: '22px',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     letterSpacing: '-0.02em',
                     lineHeight: '22px',
                     color: theme.logoFill,
@@ -433,7 +432,6 @@ function App() {
         )}
       </div>
 
-      <Analytics />
     </div>
   )
 }

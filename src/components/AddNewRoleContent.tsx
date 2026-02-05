@@ -341,7 +341,14 @@ export function AddNewRoleContent({
       )}
 
       {/* TOP CLUSTER - matches collapsed card's flex-col gap-[5px] structure */}
-      <div className="flex-shrink-0 flex flex-col gap-[5px]">
+      {/* Extra 4px left padding brings content to 28px from card edge (24px card padding + 4px) */}
+      <motion.div
+        className="flex-shrink-0 flex flex-col gap-[5px]"
+        initial={{ paddingLeft: '0px' }}
+        animate={{ paddingLeft: '4px' }}
+        exit={{ paddingLeft: '0px', transition: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] } }}
+        transition={contentSpring}
+      >
         {/* Label row */}
         <motion.div
           className="text-left"
@@ -366,7 +373,7 @@ export function AddNewRoleContent({
           }}
           transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
         >
-          - blank slot -
+          Blank slot
         </motion.div>
 
         {/* Title input row - morphs from collapsed to expanded */}
@@ -440,7 +447,7 @@ export function AddNewRoleContent({
             </span>
           </span>
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* MIDDLE CLUSTER - Scrollable work experience list */}
       {/* On mobile: flex + margin:auto centers content when shorter than container, scrolls naturally when taller */}
@@ -604,7 +611,7 @@ export function AddNewRoleContent({
                           {/* Sub-role info */}
                           <div className="flex flex-col" style={{ gap: '0px' }}>
                             <span
-                              style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: `${s(19)}px`, letterSpacing: 0, color: companyNameColor }}
+                              style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: `${s(18)}px`, letterSpacing: 0, color: companyNameColor }}
                             >
                               {subRole.title}
                             </span>

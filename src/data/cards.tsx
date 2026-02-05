@@ -37,7 +37,7 @@ export const cards: CardData[] = [
   },
   {
     id: 'squarespace',
-    label: 'Sr Staff Designer',
+    label: 'Sr Staff Product Designer',
     title: 'Squarespace',
     shortcut: '2',
     variant: 'white',
@@ -93,7 +93,7 @@ export const cards: CardData[] = [
   },
   {
     id: 'cta',
-    label: '- blank slot -',
+    label: 'Blank slot',
     title: 'Add new role...',
     shortcut: '⌘ C',
     variant: 'cta',
