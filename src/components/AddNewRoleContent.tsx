@@ -267,25 +267,6 @@ export function AddNewRoleContent({
 
   return (
     <>
-      {/* Mobile collapsed state overlay - fades in at end of exit to prevent blank flash */}
-      {/* This shows the centered "Add new role..." text that matches the collapsed card */}
-      {isMobile && (
-        <motion.div
-          className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-          style={{ padding: '18px 10px 19px 12px' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0 }}
-          exit={{ opacity: 1, transition: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
-        >
-          <div
-            className="text-[12px] text-center"
-            style={{ fontFamily: 'Inter', fontWeight: 500, lineHeight: '15px', letterSpacing: '-0.01em', color: themeTitle }}
-          >
-            Add new role...
-          </div>
-        </motion.div>
-      )}
-
       {/* Two separate badges that crossfade - solves width/padding issues */}
       {/* Each badge sizes itself naturally based on its text content */}
       {!hideShortcut && (
