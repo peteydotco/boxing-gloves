@@ -1538,24 +1538,6 @@ export function MorphingCard({
 
         </motion.div>
 
-        {/* Mobile CTA: Collapsed content overlay - fades in during exit animation */}
-        {compactCta && (
-          <motion.div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none"
-            style={{ padding: '10px 10px 20px 12px' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0 }}
-            exit={{ opacity: 1 }}
-            transition={{ opacity: { duration: 0.15, delay: 0.05 } }}
-          >
-            <div
-              className="text-[12px] leading-normal text-center uppercase"
-              style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '0.01em', color: styles.textColor }}
-            >
-              Add Role
-            </div>
-          </motion.div>
-        )}
 
       </motion.div>
     )
