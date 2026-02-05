@@ -346,10 +346,9 @@ export function AddNewRoleContent({
           initial={{ scale: 1, opacity: 0 }}
           animate={{ scale: 14 / 12, opacity: 1 }}
           exit={{
-            scale: 1, opacity: isMobile ? 0 : 1,
+            scale: 1, opacity: 1,
             transition: {
               scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-              ...(isMobile ? { opacity: { duration: 0.1, delay: 0, ease: 'easeOut' } } : {}),
             },
           }}
           transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
@@ -373,12 +372,11 @@ export function AddNewRoleContent({
           initial={{ scale: 1, marginTop: '-4px', marginLeft: '0px', color: themeTitle, opacity: 0 }}
           animate={{ scale: isMobile ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 28 / 18 : 32 / 18, marginTop: '1px', marginLeft: '-1px', color: themeGhostedText, opacity: 1 }}
           exit={{
-            scale: 1, marginTop: '-4px', marginLeft: '0px', color: themeTitle, opacity: isMobile ? 0 : 1,
+            scale: 1, marginTop: '-4px', marginLeft: '0px', color: themeTitle, opacity: 1,
             transition: {
               scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
               marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
               marginLeft: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-              ...(isMobile ? { opacity: { duration: 0.1, delay: 0, ease: 'easeOut' } } : {}),
             },
           }}
           transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
