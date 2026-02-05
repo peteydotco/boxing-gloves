@@ -119,7 +119,7 @@ export function StackedFooter() {
                     ABOUT PETEY
                   </span>
                   <div className="flex items-center">
-                    <span className="text-2xl font-black tracking-tight flex items-center" style={{ color: 'rgba(0, 0, 0, 0.8)' }}>
+                    <span className="text-2xl font-bold tracking-tight flex items-center" style={{ color: 'rgba(0, 0, 0, 0.8)' }}>
                       <span className="mr-1" style={{ color: 'rgba(0, 0, 0, 0.5)' }}>⌐</span>
                       PETEY.CO
                     </span>
