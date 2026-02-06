@@ -258,17 +258,17 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
       }}
-      className="w-full rounded-[8px] overflow-hidden relative cursor-pointer"
+      className="w-full rounded-[10px] overflow-hidden relative cursor-pointer"
       style={{
         backgroundColor: getBackgroundColor(),
-        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
+        boxShadow: 'none',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Inner stroke overlay on video container */}
       <div
-        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+        className="absolute inset-0 rounded-[10px] pointer-events-none z-10"
         style={{
           boxShadow: isInvertedWhite
             ? 'inset 0 0 0 1px rgba(0,0,0,0.06)'
@@ -360,7 +360,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
         {/* Chip badge - bottom left */}
         {chip && (
           <div
-            className="absolute pointer-events-none flex items-center rounded-[4px]"
+            className="absolute pointer-events-none flex items-center rounded-[6px]"
             style={{
               bottom: isMobile ? '8px' : `${Math.round(10 * contentScale)}px`,
               left: isMobile ? '8px' : `${Math.round(10 * contentScale)}px`,
@@ -393,11 +393,11 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
             </span>
           </div>
         )}
-        {/* Inner stroke overlay on thumbnail */}
+        {/* Outer stroke overlay on thumbnail */}
         <div
-          className="absolute inset-0 rounded-[4px] pointer-events-none"
+          className="absolute inset-0 rounded-[6px] pointer-events-none"
           style={{
-            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.08)',
           }}
         />
       </motion.div>
@@ -449,10 +449,10 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
       }}
-      className="w-full rounded-[8px] overflow-hidden relative cursor-pointer"
+      className="w-full rounded-[10px] overflow-hidden relative cursor-pointer"
       style={{
         backgroundColor: getBackgroundColor(),
-        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
+        boxShadow: 'none',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -460,7 +460,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
     >
       {/* Inner stroke overlay */}
       <div
-        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+        className="absolute inset-0 rounded-[10px] pointer-events-none z-10"
         style={{
           boxShadow: (variant === 'white' && (themeMode === 'dark' || themeMode === 'darkInverted'))
             ? 'inset 0 0 0 1px rgba(0,0,0,0.06)'
@@ -603,15 +603,15 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
 
   return (
     <div
-      className="w-full rounded-[8px] overflow-hidden relative"
+      className="w-full rounded-[10px] overflow-hidden relative"
       style={{
         backgroundColor: styles.highlightShadow,
-        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
+        boxShadow: 'none',
       }}
     >
       {/* Inner stroke overlay */}
       <div
-        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+        className="absolute inset-0 rounded-[10px] pointer-events-none z-10"
         style={{
           boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
         }}
@@ -883,7 +883,9 @@ export function MorphingCard({
           borderRadius: 16,
           rotate: 0,
           scale: 1,
-          boxShadow: '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
+          boxShadow: (typeof window !== 'undefined' && window.innerWidth < 768)
+            ? '0 12px 24px 0 rgba(0,0,0,0.04), 0 4px 12px 0 rgba(0,0,0,0.08)'
+            : '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
           transition: {
             top: mobileCollapseSpring,
             left: mobileCollapseSpring,
@@ -1557,7 +1559,9 @@ export function MorphingCard({
         color: styles.textColor,
         width: '100%',
         height: 'auto',
-        boxShadow: '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
+        boxShadow: (typeof window !== 'undefined' && window.innerWidth < 768)
+          ? '0 12px 24px 0 rgba(0,0,0,0.04), 0 4px 12px 0 rgba(0,0,0,0.08)'
+          : '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
       }}
       animate={{
         scale: isHovered ? 1.02 : 1,

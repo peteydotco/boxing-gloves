@@ -672,7 +672,7 @@ export function AddNewRoleContent({
       {/* BOTTOM CLUSTER - Buttons */}
       <motion.div
         className="flex-shrink-0 flex justify-center"
-        style={{ gap: `${s(8)}px`, marginTop: `${s(16)}px` }}
+        style={{ gap: `${s(8)}px`, marginTop: 'auto' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
