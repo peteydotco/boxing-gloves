@@ -807,7 +807,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               {/* Backdrop - samples bg color from focused card, smoothly transitions */}
               <motion.div
                 className="fixed inset-0"
-                style={{ zIndex: 9998, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}
+                style={{ zIndex: 9998, mixBlendMode: 'multiply' }}
                 initial={{ opacity: 0, backgroundColor: backdropColors[themeMode === 'dark' || themeMode === 'darkInverted' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'] }}
                 animate={{
                   opacity: 1,

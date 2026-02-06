@@ -219,19 +219,19 @@ export const variantStylesDark: VariantStyles = {
   },
 }
 
-// Backdrop colors for expanded card overlay
+// Backdrop colors for expanded card overlay (multiply blend mode)
 export const backdropColors = {
   light: {
-    blue: 'rgba(0,100,255,0.48)',
-    white: 'rgba(45,35,80,0.48)',
-    red: 'rgba(235,45,55,0.48)',
-    cta: 'rgba(0,0,0,0.48)',
+    blue: 'rgba(0,20,80,0.92)',
+    white: 'rgba(18,18,32,0.92)',
+    red: 'rgba(80,10,15,0.92)',
+    cta: 'rgba(12,12,12,0.92)',
   },
   dark: {
-    blue: 'rgba(0,75,200,0.48)',
-    white: 'rgba(200,200,210,0.48)', // Lighter backdrop for inverted white card
-    red: 'rgba(185,35,45,0.48)',
-    cta: 'rgba(35,35,35,0.48)',
+    blue: 'rgba(0,15,60,0.92)',
+    white: 'rgba(40,40,50,0.92)',
+    red: 'rgba(60,8,12,0.92)',
+    cta: 'rgba(8,8,10,0.92)',
   },
 }
 
