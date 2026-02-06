@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, type ReactNode } from 'react'
 import { motion, useTransform, motionValue, type MotionValue } from 'framer-motion'
 import { bladeStackConfig, getBladeColor } from '../data/stages'
+import { signatureSpring } from '../constants/animation'
 
 type ViewMode = 'hero' | 'stages'
 type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
@@ -52,10 +53,7 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
   // Transition — expand/collapse springs only (tug is on the wrapper, not spring-animated)
   const backdropTransition = isExpanding
     ? {
-        type: 'spring' as const,
-        stiffness: 300,
-        damping: 35,
-        mass: 1,
+        ...signatureSpring,
         delay: 0.04,
       }
     : isCollapsing
@@ -65,7 +63,7 @@ export function StageBackground({ viewMode, transitionPhase, activeStageIndex: _
         ease: [0.32, 0.72, 0, 1] as const,
         delay: 0,
       }
-    : { type: 'spring' as const, stiffness: 300, damping: 25 }
+    : signatureSpring
 
   // Hover offset for blade
   const hoverOffset = 3

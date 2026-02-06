@@ -118,7 +118,7 @@ export const variantStylesLight: VariantStyles = {
     uiAccentActive: colorTokens.uiMasterclassActive,
   },
   cta: {
-    bg: '#F6F6F6',
+    bg: '#FFFFFF',
     textColor: 'rgba(0,0,0,0.55)',
     secondaryText: 'rgba(0,0,0,0.7)',
     ctaTitleColor: 'rgba(0,0,0,0.55)',

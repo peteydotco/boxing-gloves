@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useState, useRef } from 'react'
 import { SlPlus } from 'react-icons/sl'
+import { signatureSpring } from '../constants/animation'
 
 interface CardProps {
   id: string
@@ -153,13 +154,8 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
   // Border width for the inner stroke effect
   const borderWidth = 1
 
-  // Tuned for smaller cards: subtler scale, gentler spring with less overshoot
-  const springTransition = {
-    type: 'spring' as const,
-    stiffness: 200,
-    damping: 20,
-    mass: 0.8,
-  }
+  // Use signature spring for card interactions
+  const springTransition = signatureSpring
 
   return (
     <motion.div
@@ -178,11 +174,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
       }}
       whileTap={{ scale: 0.98 }}
       transition={{
-        layout: {
-          type: 'spring',
-          stiffness: 300,
-          damping: 30,
-        },
+        layout: signatureSpring,
         ...springTransition,
       }}
     >

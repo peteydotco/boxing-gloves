@@ -47,7 +47,7 @@ const getExpandedCardDimensions = () => {
   // Apply scale to get final dimensions
   const width = Math.round(CANONICAL_CARD_WIDTH * scale)
   const height = Math.round(CANONICAL_CARD_HEIGHT * scale)
-  const gap = viewportWidth < 1024 ? 24 : 32
+  const gap = 36
 
   return { width, height, gap, scale }
 }
@@ -490,8 +490,11 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       return // Don't navigate when springing back
     }
 
-    // Apply momentum from drag velocity
-    velocityState.current.rawVelocity += -state.dragVelocity * CAROUSEL_CONFIG.momentumMultiplier
+    // Apply momentum from drag velocity — skip at boundaries to avoid double bounce
+    if (!boundaryDragState.current.isDraggingAtBoundary) {
+      velocityState.current.rawVelocity += -state.dragVelocity * CAROUSEL_CONFIG.momentumMultiplier
+    }
+    boundaryDragState.current.isDraggingAtBoundary = false
 
     // Navigate one card at a time if drag exceeded threshold
     // Swipe left = next card, swipe right = previous card

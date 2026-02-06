@@ -10,6 +10,7 @@ import type { CardData, VariantStyle, ThemeMode } from '../types'
 import { variantStylesLight, getVariantStyles } from '../constants/themes'
 import { AddNewRoleContent } from './AddNewRoleContent'
 import {
+  signatureSpring,
   positionSpring,
   stackedRotationSpring,
   ctaEntranceSpring,
@@ -295,7 +296,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
           scale: isHovered ? 1.03 : 1,
           opacity: 1,
           transition: isMobile ? hoverTransition : {
-            scale: { type: 'spring', stiffness: 300, damping: 20 },
+            scale: signatureSpring,
             opacity: { duration: 0.2, ease: 'easeOut' }
           }
         }}
@@ -471,7 +472,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
 
       {/* Content area - match Highlights container height */}
       <div
-        className="flex items-center gap-3"
+        className="relative flex items-center gap-3"
         style={{
           paddingLeft: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
           paddingRight: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
@@ -480,6 +481,22 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
           minHeight: isMobile ? 'auto' : `${Math.round(140 * contentScale)}px`,
         }}
       >
+        {/* Apple Music icon - top right */}
+        <div
+          className="absolute flex items-center justify-center"
+          style={{
+            top: isMobile ? '10px' : `${Math.round(12 * contentScale)}px`,
+            right: isMobile ? '10px' : `${Math.round(12 * contentScale)}px`,
+            width: isMobile ? '22px' : `${Math.round(28 * contentScale)}px`,
+            height: isMobile ? '22px' : `${Math.round(28 * contentScale)}px`,
+          }}
+        >
+          <SiApplemusic
+            size={isMobile ? 20 : Math.round(24 * contentScale)}
+            color={isInvertedWhite ? 'rgba(26,26,46,0.6)' : 'rgba(255,255,255,0.6)'}
+          />
+        </div>
+
         {/* Album art - larger size to match Highlights section height */}
         <motion.div
           className="shrink-0 rounded-[6px] overflow-hidden relative"
@@ -492,7 +509,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
             scale: isHovered ? 1.03 : 1,
             opacity: 1,
             transition: isMobile ? hoverTransition : {
-              scale: { type: 'spring', stiffness: 300, damping: 20 },
+              scale: signatureSpring,
               opacity: { duration: 0.2, ease: 'easeOut' }
             }
           }}
@@ -559,21 +576,6 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
           >
             {card.artist}
           </span>
-        </div>
-
-        {/* Apple Music icon */}
-        <div
-          className="shrink-0 flex items-center justify-center"
-          style={{
-            width: isMobile ? '22px' : `${Math.round(28 * contentScale)}px`,
-            height: isMobile ? '22px' : `${Math.round(28 * contentScale)}px`,
-            marginLeft: '-8px',
-          }}
-        >
-          <SiApplemusic
-            size={isMobile ? 20 : Math.round(24 * contentScale)}
-            color={isInvertedWhite ? 'rgba(26,26,46,0.6)' : 'rgba(255,255,255,0.6)'}
-          />
         </div>
       </div>
     </motion.button>
@@ -645,14 +647,14 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
                 x: 0,
                 opacity: 1,
                 transition: {
-                  x: { type: 'spring', stiffness: 300, damping: 24, delay: itemDelay },
+                  x: { ...signatureSpring, delay: itemDelay },
                   opacity: { duration: 0.15, ease: 'easeOut', delay: itemDelay }
                 }
               } : {
                 scale: 1,
                 opacity: 1,
                 transition: {
-                  scale: { type: 'spring', stiffness: 300, damping: 20, delay: itemDelay },
+                  scale: { ...signatureSpring, delay: itemDelay },
                   opacity: { duration: 0.2, ease: 'easeOut', delay: itemDelay }
                 }
               }}
@@ -660,14 +662,14 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
                 x: stackedX,
                 opacity: 0,
                 transition: {
-                  x: { type: 'spring', stiffness: 400, damping: 35 },
+                  x: contentSpring,
                   opacity: { duration: 0.1, ease: 'easeIn' }
                 }
               } : {
                 scale: 0.25,
                 opacity: 0,
                 transition: {
-                  scale: { type: 'spring', stiffness: 400, damping: 30 },
+                  scale: contentSpring,
                   opacity: { duration: 0.1, ease: 'easeIn' }
                 }
               }}
@@ -716,10 +718,10 @@ function DescriptionContainer({ description, styles, isMobile = false, contentSc
           key={i}
           style={{
             fontFamily: 'Inter',
-            fontWeight: 400,
+            fontWeight: 300,
             fontSize: `${fontSize}px`,
             lineHeight: `${lineHeight}px`,
-            letterSpacing: '-0.01em',
+            letterSpacing: '0',
             color: styles.textColor,
           }}
         >
@@ -881,6 +883,7 @@ export function MorphingCard({
           borderRadius: 16,
           rotate: 0,
           scale: 1,
+          boxShadow: '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
           transition: {
             top: mobileCollapseSpring,
             left: mobileCollapseSpring,
@@ -889,6 +892,7 @@ export function MorphingCard({
             borderRadius: mobileCollapseSpring,
             rotate: mobileCollapseSpring,
             scale: mobileCollapseSpring,
+            boxShadow: { duration: 0.4, ease: 'easeOut' },
           },
         }}
         transition={{
@@ -1221,7 +1225,7 @@ export function MorphingCard({
                         exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeIn', delay: 0.1 } } }}
                       >
                         <RiPushpinLine style={{ width: '12px', height: '12px', transform: 'scaleX(-1)' }} />
-                        <span style={{ marginLeft: '-1px' }}>Pinned highlights</span>
+                        <span style={{ marginLeft: '-1px' }}>Pinned</span>
                       </motion.p>
                     )}
 
@@ -1343,7 +1347,7 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.2, ease: 'easeOut', delay: 0.08 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.08 }
+                      y: { ...contentSpring, delay: 0.08 }
                     }
                   }}
                   exit={{ opacity: 0, y: -8, transition: { duration: 0.1, ease: 'easeIn' } }}
@@ -1387,13 +1391,13 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.2, ease: 'easeOut', delay: 0.12 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.12 }
+                      y: { ...contentSpring, delay: 0.12 }
                     }
                   }}
                   exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: 'easeIn', delay: 0.1 } }}
                 >
                   <RiPushpinLine style={{ width: `${Math.round(16 * contentScale)}px`, height: `${Math.round(16 * contentScale)}px`, transform: 'scaleX(-1)' }} />
-                  <span style={{ marginLeft: '-1px' }}>Pinned highlights</span>
+                  <span style={{ marginLeft: '-1px' }}>Pinned</span>
                 </motion.p>
               )}
 
@@ -1406,7 +1410,7 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.25, ease: 'easeOut', delay: 0.18 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.18 }
+                      y: { ...contentSpring, delay: 0.18 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.08 } }}
@@ -1430,7 +1434,7 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.25, ease: 'easeOut', delay: 0.24 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.24 }
+                      y: { ...contentSpring, delay: 0.24 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.05 } }}
@@ -1455,7 +1459,7 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.25, ease: 'easeOut', delay: 0.30 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.30 }
+                      y: { ...contentSpring, delay: 0.30 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.02 } }}
@@ -1491,7 +1495,7 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.25, ease: 'easeOut', delay: 0.36 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.36 }
+                      y: { ...contentSpring, delay: 0.36 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn' } }}
@@ -1553,6 +1557,7 @@ export function MorphingCard({
         color: styles.textColor,
         width: '100%',
         height: 'auto',
+        boxShadow: '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
       }}
       animate={{
         scale: isHovered ? 1.02 : 1,
@@ -1627,7 +1632,7 @@ export function MorphingCard({
               animate={{
                 width: emailCopied ? 116 : 52,
               }}
-              transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+              transition={signatureSpring}
             >
               <div
                 className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"

@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from 'react'
 import { motion, useTransform, motionValue, type MotionValue } from 'framer-motion'
 import { bladeStackConfig, getBladeColor } from '../data/stages'
+import { signatureSpring } from '../constants/animation'
 
 type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
 type ViewMode = 'hero' | 'stages'
@@ -142,8 +143,8 @@ export function StackedBlades({
         delay: delayMs,
       }
     }
-    // Idle settle — light spring for hover interactions
-    return { type: 'spring' as const, stiffness: 300, damping: 25 }
+    // Idle settle — signature spring for hover interactions
+    return signatureSpring
   }
 
   return (

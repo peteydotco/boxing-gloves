@@ -217,6 +217,7 @@ export function AddNewRoleContent({
   const s = (px: number) => Math.round(px * contentScale)
   const [inputValue, setInputValue] = useState('')
   const [copied, setCopied] = useState(false)
+  const [hoveredButton, setHoveredButton] = useState<'linkedin' | 'email' | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Derive theme-aware colors from styles prop (or fall back to light CTA defaults)
@@ -229,9 +230,9 @@ export function AddNewRoleContent({
   const themeBadgeText = isDark ? 'rgba(255,255,255,0.48)' : defaultCtaColors.badgeTextColor
   // Stroke/divider color — use solid opaque colors to prevent dark overlap artifacts
   // where SVG connector paths intersect (rgba compounds at overlaps)
-  const themeStroke = isDark ? '#404048' : '#CFCFCF'
+  const themeStroke = isDark ? '#404048' : '#E0E0E0'
   // Logo container bg: light → #f6f6f6, dark → slightly lighter than card bg
-  const logoContainerBg = isDark ? 'rgba(255,255,255,0.08)' : '#f6f6f6'
+  const logoContainerBg = isDark ? 'rgba(255,255,255,0.08)' : '#F0F0F0'
   // Company name color (strong text) — black in light theme, white in dark
   const companyNameColor = isDark ? '#FFFFFF' : '#000000'
   // Input typed text color — slightly stronger than title
@@ -266,7 +267,7 @@ export function AddNewRoleContent({
   const badgeTop = isMobile ? 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 16 : 22
 
   return (
-    <>
+    <div className="flex flex-col h-full w-full">
       {/* Two separate badges that crossfade - solves width/padding issues */}
       {/* Each badge sizes itself naturally based on its text content */}
       {!hideShortcut && (
@@ -429,26 +430,23 @@ export function AddNewRoleContent({
       </motion.div>
 
       {/* MIDDLE CLUSTER - Scrollable work experience list */}
-      {/* On mobile: flex + margin:auto centers content when shorter than container, scrolls naturally when taller */}
+      {/* flex + margin:auto centers content when shorter than container, scrolls naturally when taller */}
       <motion.div
-        className="flex-1 overflow-y-auto overflow-x-hidden relative"
+        className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col"
         style={{
-          marginTop: isMobile ? 0 : `${s(48)}px`,
           padding: isMobile ? `${s(24)}px 3px 3px 3px` : '3px',
-          display: isMobile ? 'flex' : undefined,
-          flexDirection: isMobile ? 'column' : undefined,
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
         transition={{ duration: 0.3, delay: 0.15 }}
       >
-        <div style={isMobile ? { margin: 'auto 0' } : undefined}>
+        <div style={{ margin: 'auto 0' }}>
         {workExperience.map((exp) => {
           const hasSubRoles = exp.subRoles && exp.subRoles.length > 0
 
           return (
-            <div key={exp.company} className="relative" style={{ marginBottom: `${s(16)}px` }}>
+            <div key={exp.company} className="relative" style={{ marginBottom: `${s(20)}px` }}>
               {/* Parent role */}
               <div className="flex items-start" style={{ gap: `${s(20)}px` }}>
                 {/* Logo */}
@@ -482,7 +480,7 @@ export function AddNewRoleContent({
                   {/* Company + Location */}
                   <div className="flex items-baseline">
                     <span
-                      style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: `${s(21)}px`, color: companyNameColor }}
+                      style={{ fontFamily: 'Inter', fontWeight: 600, fontSize: `${s(21)}px`, color: companyNameColor }}
                     >
                       {exp.company}
                     </span>
@@ -524,7 +522,7 @@ export function AddNewRoleContent({
                 <div
                   style={{
                     marginLeft: `${s(57)}px`,
-                    marginTop: `${s(20)}px`,
+                    marginTop: `${s(24)}px`,
                   }}
                 >
                   {exp.subRoles!.map((subRole, subIndex) => {
@@ -563,7 +561,7 @@ export function AddNewRoleContent({
                           </div>
                         )}
 
-                        <div className="flex items-start" style={{ gap: `${s(12)}px` }}>
+                        <div className="flex items-start" style={{ gap: `${s(16)}px` }}>
                           {/* Sub-role logo */}
                           <div
                             className="shrink-0 flex items-center justify-center relative z-10"
@@ -590,17 +588,17 @@ export function AddNewRoleContent({
                           {/* Sub-role info */}
                           <div className="flex flex-col" style={{ gap: '0px' }}>
                             <span
-                              style={{ fontFamily: 'Inter', fontWeight: 500, fontSize: `${s(18)}px`, letterSpacing: 0, color: companyNameColor }}
+                              style={{ fontFamily: 'Inter', fontWeight: 600, fontSize: `${s(18)}px`, letterSpacing: 0, color: companyNameColor }}
                             >
                               {subRole.title}
                             </span>
                             <span
-                              style={{ fontFamily: 'Inter', fontWeight: 400, fontSize: `${s(15)}px`, letterSpacing: '0.01em', color: themeText }}
+                              style={{ fontFamily: 'Inter', fontWeight: 400, fontSize: `${s(15)}px`, letterSpacing: '0', color: themeText }}
                             >
                               {subRole.description}
                             </span>
                             <span
-                              style={{ fontFamily: 'Inter', fontWeight: 400, fontSize: `${s(15)}px`, letterSpacing: '0.01em', color: themeText }}
+                              style={{ fontFamily: 'Inter', fontWeight: 400, fontSize: `${s(15)}px`, letterSpacing: '0', color: themeText }}
                             >
                               {subRole.dateRange.includes('→') ? (
                                 <>
@@ -626,7 +624,7 @@ export function AddNewRoleContent({
                   className="absolute"
                   style={{
                     left: `${s(38) / 2 - 1.5}px`,
-                    bottom: `${s(-19)}px`,
+                    bottom: `${s(-23)}px`,
                     width: '3px',
                     height: `${s(55)}px`,
                     pointerEvents: 'none',
@@ -685,15 +683,20 @@ export function AddNewRoleContent({
             e.stopPropagation()
             handleLinkedIn()
           }}
+          onMouseEnter={() => setHoveredButton('linkedin')}
+          onMouseLeave={() => setHoveredButton(null)}
           className="flex items-center justify-center cursor-pointer"
           style={{
             width: `${s(225)}px`,
             height: `${s(48)}px`,
             borderRadius: '5px',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: hoveredButton === 'linkedin' ? '#FFFFFF' : 'transparent',
+            border: '1px solid rgba(0,0,0,0.09)',
+            boxShadow: hoveredButton === 'linkedin' ? '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
+            transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
           }}
           whileHover={{ scale: 1.03 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: 0.3 }}
         >
           <span
             style={{
@@ -713,15 +716,20 @@ export function AddNewRoleContent({
             e.stopPropagation()
             handleCopyEmail()
           }}
+          onMouseEnter={() => setHoveredButton('email')}
+          onMouseLeave={() => setHoveredButton(null)}
           className="flex items-center justify-center cursor-pointer"
           style={{
             width: `${s(225)}px`,
             height: `${s(48)}px`,
             borderRadius: '5px',
-            backgroundColor: '#FFFFFF',
+            backgroundColor: hoveredButton === 'email' ? '#FFFFFF' : 'transparent',
+            border: '1px solid rgba(0,0,0,0.09)',
+            boxShadow: hoveredButton === 'email' ? '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
+            transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
           }}
           whileHover={{ scale: 1.03 }}
-          transition={{ duration: 0.15 }}
+          transition={{ duration: 0.3 }}
         >
           <AnimatePresence mode="wait">
             <motion.span
@@ -744,6 +752,6 @@ export function AddNewRoleContent({
           </AnimatePresence>
         </motion.button>
       </motion.div>
-    </>
+    </div>
   )
 }

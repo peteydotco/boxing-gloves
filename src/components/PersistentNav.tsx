@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { bladeStackConfig } from '../data/stages'
+import { signatureSpring } from '../constants/animation'
 
 type ViewMode = 'hero' | 'stages'
 type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
@@ -178,10 +179,7 @@ export function PersistentNav({
   // nav items only animate their own expand/collapse/zoom positioning
   const getNavTransition = () => isExpanding
     ? {
-        type: 'spring' as const,
-        stiffness: 300,
-        damping: 35,
-        mass: 1,
+        ...signatureSpring,
         delay: 0.04,
       }
     : isCollapsing
@@ -195,10 +193,7 @@ export function PersistentNav({
     ? {
         // In stages view (entering/exiting zoom, or any position change):
         // match StagesContainer zoomSpringTransition for lockstep animation
-        type: 'spring' as const,
-        stiffness: 320,
-        damping: 40,
-        mass: 1,
+        ...signatureSpring,
       }
     : { type: 'tween' as const, duration: 0 }
 
@@ -371,7 +366,7 @@ export function PersistentNav({
             width: borderPosition.width + (isActiveBorderHovered ? borderHoverExpansion * 2 : 0),
             height: borderPosition.height + (isActiveBorderHovered ? borderHoverExpansion * 2 : 0),
           }}
-          transition={isActiveBorderHovered ? { type: 'spring', stiffness: 400, damping: 25 } : getNavTransition()}
+          transition={isActiveBorderHovered ? signatureSpring : getNavTransition()}
         />
       )}
 
@@ -419,7 +414,7 @@ export function PersistentNav({
             scale: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1.04 : 1,
           }}
           initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          transition={signatureSpring}
           onMouseEnter={() => handleNavItemHover('selectedWorks')}
           onMouseLeave={() => handleNavItemHover(null)}
         >
@@ -428,7 +423,7 @@ export function PersistentNav({
             animate={{
               scale: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1 / 1.04 : 1,
             }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            transition={signatureSpring}
           >
             SELECTED WORKS
           </motion.span>
@@ -477,7 +472,7 @@ export function PersistentNav({
             scale: (hoveredItem === 'logo' && activeNavItem !== 'logo') ? 1.04 : 1,
           }}
           initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          transition={signatureSpring}
           onMouseEnter={() => handleNavItemHover('logo')}
           onMouseLeave={() => handleNavItemHover(null)}
         >
@@ -495,7 +490,7 @@ export function PersistentNav({
             animate={{
               scale: (hoveredItem === 'logo' && activeNavItem !== 'logo') ? 1 / 1.04 : 1,
             }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            transition={signatureSpring}
           >
             PETEY.CO
           </motion.span>
@@ -543,7 +538,7 @@ export function PersistentNav({
             scale: (hoveredItem === 'about') ? 1.04 : 1,
           }}
           initial={{ backgroundColor: `${navColor}00`, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          transition={signatureSpring}
           onMouseEnter={() => handleNavItemHover('about')}
           onMouseLeave={() => handleNavItemHover(null)}
         >
@@ -552,7 +547,7 @@ export function PersistentNav({
             animate={{
               scale: (hoveredItem === 'about') ? 1 / 1.04 : 1,
             }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            transition={signatureSpring}
           >
             UNSELECTED WORKS
           </motion.span>

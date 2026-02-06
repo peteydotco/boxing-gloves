@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import type { StageData } from '../types'
 import { bladeStackConfig } from '../data/stages'
+import { signatureSpring } from '../constants/animation'
 
 // Convert hex color to rgba with alpha
 function hexToRgba(hex: string, alpha: number): string {
@@ -172,13 +173,8 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
   // isExpanding just controls the animation, not visibility
   const shouldBeVisible = isActive
 
-  // Spring transition for cards - matches blade animation exactly
-  const cardsSpringTransition = {
-    type: 'spring' as const,
-    stiffness: 320,
-    damping: 40,
-    mass: 1,
-  }
+  // Spring transition for cards - uses signature spring
+  const cardsSpringTransition = signatureSpring
 
   return (
     <motion.div
@@ -600,7 +596,7 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
             }}
             initial={false}
             animate={{ width: emailCopied ? 108 : 44 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+            transition={signatureSpring}
             onClick={(e) => {
               e.stopPropagation()
               onRequestCaseStudy?.()
