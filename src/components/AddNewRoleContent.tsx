@@ -188,6 +188,7 @@ interface AddNewRoleContentProps {
   contentScale?: number
   isFocused?: boolean
   styles?: VariantStyle
+  emailCopied?: boolean
 }
 
 // Default light CTA colors (fallback when no styles prop)
@@ -212,11 +213,13 @@ export function AddNewRoleContent({
   contentScale = 1,
   isFocused = true,
   styles,
+  emailCopied: emailCopiedProp = false,
 }: AddNewRoleContentProps) {
   // Helper: scale a pixel value proportionally (mobile uses slightly smaller base sizes)
   const s = (px: number) => Math.round(px * contentScale)
   const [inputValue, setInputValue] = useState('')
-  const [copied, setCopied] = useState(false)
+  const [localCopied, setLocalCopied] = useState(false)
+  const copied = localCopied || emailCopiedProp
   const [hoveredButton, setHoveredButton] = useState<'linkedin' | 'email' | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -254,8 +257,8 @@ export function AddNewRoleContent({
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText('hello@petey.co')
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setLocalCopied(true)
+    setTimeout(() => setLocalCopied(false), 2000)
   }
 
   const handleLinkedIn = () => {

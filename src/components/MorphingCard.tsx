@@ -822,7 +822,7 @@ export function MorphingCard({
               fontWeight: 400,
               lineHeight: '100%',
               color: styles.secondaryText,
-              padding: '4px 8px',
+              padding: '4.5px 8px 3.5px',
               backgroundColor: styles.badgeBg,
               borderRadius: 4,
             }}
@@ -1049,6 +1049,7 @@ export function MorphingCard({
               contentScale={contentScale}
               isFocused={isFocused}
               styles={styles}
+              emailCopied={emailCopied}
             />
           ) : (
           <>
@@ -1061,15 +1062,15 @@ export function MorphingCard({
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
             style={{ backgroundColor: styles.badgeBg }}
-            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
+            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: hideShortcut ? 0 : 1 }}
             animate={{ right: (typeof window !== 'undefined' && window.innerWidth < 768) ? 14 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 16 : 22, top: (typeof window !== 'undefined' && window.innerWidth < 768) ? 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 16 : 22, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: hideShortcut ? 0 : 1 }}
-            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
+            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: hideShortcut ? 0 : 1 }}
             transition={contentSpring}
           >
             {/* Badge text - same size as collapsed card */}
             <div
               className="uppercase leading-[100%] relative text-[12px]"
-              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.12em', top: '-1px' }}
+              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.12em', top: '-0.5px' }}
             >
               {/* ESC text - absolutely positioned, fades in when expanded */}
               <motion.span
@@ -1634,13 +1635,13 @@ export function MorphingCard({
               style={{ backgroundColor: styles.badgeBg, padding: '4px 4px' }}
               initial={false}
               animate={{
-                width: emailCopied ? 116 : 52,
+                width: emailCopied ? 116 : 46,
               }}
               transition={signatureSpring}
             >
               <div
                 className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
-                style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-1px' }}
+                style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px' }}
               >
                 {emailCopied ? (
                   <>
@@ -1656,9 +1657,9 @@ export function MorphingCard({
             // Regular badge with padding-based sizing
             <div
               className="flex items-center justify-center rounded-full shrink-0"
-              style={{ padding: '4px 12px', backgroundColor: styles.badgeBg }}
+              style={{ padding: '4px 8px', backgroundColor: styles.badgeBg }}
             >
-              <div className="text-[12px] uppercase leading-[100%]" style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-1px' }}>
+              <div className="text-[12px] uppercase leading-[100%]" style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px' }}>
                 {card.shortcut}
               </div>
             </div>
