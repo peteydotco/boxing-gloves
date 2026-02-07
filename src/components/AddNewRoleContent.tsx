@@ -675,7 +675,7 @@ export function AddNewRoleContent({
       {/* BOTTOM CLUSTER - Buttons */}
       <motion.div
         className="flex-shrink-0 flex justify-center"
-        style={{ gap: `${s(8)}px`, marginTop: 'auto' }}
+        style={{ gap: `${s(8)}px`, marginTop: 'auto', paddingBottom: '3px' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: { duration: 0.12, delay: 0, ease: 'easeOut' } }}
@@ -694,7 +694,7 @@ export function AddNewRoleContent({
             height: `${s(48)}px`,
             borderRadius: '5px',
             backgroundColor: hoveredButton === 'linkedin' ? '#FFFFFF' : 'transparent',
-            border: '1px solid rgba(0,0,0,0.09)',
+            border: hoveredButton === 'linkedin' ? '1px solid rgba(0,0,0,0.075)' : '1px solid rgba(0,0,0,0.09)',
             boxShadow: hoveredButton === 'linkedin' ? '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
             transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
           }}
@@ -727,7 +727,7 @@ export function AddNewRoleContent({
             height: `${s(48)}px`,
             borderRadius: '5px',
             backgroundColor: hoveredButton === 'email' ? '#FFFFFF' : 'transparent',
-            border: '1px solid rgba(0,0,0,0.09)',
+            border: hoveredButton === 'email' ? '1px solid rgba(0,0,0,0.075)' : '1px solid rgba(0,0,0,0.09)',
             boxShadow: hoveredButton === 'email' ? '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
             transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
           }}
