@@ -12,7 +12,8 @@ export function LogoMarqueeSection() {
       className=""
       style={{
         position: 'relative',
-        overflow: 'hidden',
+        overflowX: 'hidden',
+        overflowY: 'visible',
         height: '140vh',
       }}
       data-scroll

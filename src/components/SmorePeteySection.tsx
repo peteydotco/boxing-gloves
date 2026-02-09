@@ -2,7 +2,7 @@ export function SmorePeteySection() {
   return (
     <section
       className=""
-      style={{ position: 'relative', padding: '0 0 80px', marginTop: -120, zIndex: 2 }}
+      style={{ position: 'relative', padding: '0 0 80px', marginTop: '-19vh', zIndex: 2 }}
       data-scroll
       data-scroll-section
     >
