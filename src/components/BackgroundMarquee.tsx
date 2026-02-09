@@ -251,7 +251,7 @@ export const BackgroundMarquee = memo(function BackgroundMarquee({ marqueeFill =
 
   return (
     <div
-      className="absolute inset-0 overflow-hidden pointer-events-none select-none"
+      className="absolute inset-0 overflow-x-hidden overflow-y-visible pointer-events-none select-none"
       style={{ zIndex: 1 }}
     >
       {/* Container for 4-row marquee pattern - centered vertically
