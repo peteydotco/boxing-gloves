@@ -1,5 +1,5 @@
 interface ProjectCardProps {
-  width: number
+  width: number | string
   height: number
   imageSrc: string
   logoSrc: string
@@ -22,7 +22,9 @@ export function ProjectCard({
   descriptionBg = '#FDEFEF',
   logoPosition = 'left',
 }: ProjectCardProps) {
-  const metabarWidth = width - 40 // 20px padding on each side
+  // Support both numeric and calc() string widths
+  const metabarWidth =
+    typeof width === 'number' ? width - 40 : `calc(${width} - 40px)`
 
   return (
     <div
@@ -95,7 +97,7 @@ export function ProjectCard({
           <img
             src={logoSrc}
             alt=""
-            style={{ width: '60%', height: '60%', objectFit: 'contain' }}
+            style={{ maxWidth: '60%', maxHeight: '60%', width: 'auto', height: 'auto', objectFit: 'contain' }}
           />
         </div>
 

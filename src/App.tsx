@@ -7,7 +7,7 @@ import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SmorePeteySection } from './components/SmorePeteySection'
 import { SiteFooter } from './components/SiteFooter'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import LocomotiveScroll from 'locomotive-scroll'
 
 function App() {
@@ -18,6 +18,14 @@ function App() {
   })
 
   const themeMode = 'light' as const
+
+  // Debug grid overlay — toggle with "G" key
+  const [showGrid, setShowGrid] = useState(false)
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Ignore when typing in inputs
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+    if (e.key === 'g' || e.key === 'G') setShowGrid(prev => !prev)
+  }, [])
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -32,11 +40,13 @@ function App() {
 
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('resize', handleResize)
+    window.addEventListener('keydown', handleKeyDown)
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('resize', handleResize)
+      window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [])
+  }, [handleKeyDown])
 
   // Initialize Locomotive Scroll (smooth scrolling + data-scroll detection)
   useEffect(() => {
@@ -57,8 +67,8 @@ function App() {
     lightX: 0,
     lightY: 2.5,
     lightZ: 10,
-    shadowMapSize: 1024,
-    shadowCameraBounds: 6,
+    shadowMapSize: 2048,
+    shadowCameraBounds: 8,
     shadowCameraFar: 30,
     shadowRadius: 4,
     shadowBias: -0.0001,
@@ -88,14 +98,16 @@ function App() {
     <div
       ref={containerRef}
       className="relative w-full min-h-screen flex flex-col"
-      style={{ backgroundColor: '#FFFFFF' }}
     >
+      {/* Global grain texture — FIRST child so content paints on top */}
+      <div className="grain-overlay" />
+
       {/* ===== Hero Section ===== */}
-      <section className="relative h-screen w-full flex-shrink-0 overflow-hidden">
+      <section className="relative h-screen w-full flex-shrink-0">
         {/* Graffiti tag background image */}
         <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ opacity: 0.10, zIndex: 1 }}
+          className="absolute pointer-events-none"
+          style={{ top: '-15%', bottom: '-15%', left: '-7.5%', right: '-7.5%', opacity: 0.10, zIndex: 1, transform: 'scale(1.2)', transformOrigin: 'center bottom' }}
         >
           <img
             src="/images/graffiti-tag.png"
@@ -104,20 +116,11 @@ function App() {
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              objectPosition: 'center 60%',
+              objectPosition: 'center -50%',
               display: 'block',
             }}
           />
-          <div
-            className="absolute inset-0"
-            style={{ backgroundColor: 'white', mixBlendMode: 'difference' }}
-          />
-          <div
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(to bottom, transparent 67%, #E9E9E9 100%)',
-            }}
-          />
+{/* mix-blend-difference overlay removed — was causing hero/bio seam */}
         </div>
 
         {/* Desktop: 3D Scene */}
@@ -155,15 +158,6 @@ function App() {
           </>
         )}
 
-        {/* Bottom gradient scrim — sits under gloves, bleeds into bio section */}
-        <div
-          className="absolute bottom-0 left-0 right-0 pointer-events-none"
-          style={{
-            height: 444,
-            background: 'linear-gradient(to bottom, transparent 0%, #F9F9F9 100%)',
-            zIndex: 4,
-          }}
-        />
       </section>
 
       {/* ===== Bio Copy Section ===== */}
@@ -186,6 +180,33 @@ function App() {
 
       {/* ===== Footer ===== */}
       <SiteFooter />
+
+      {/* Debug grid overlay — toggled with G key (Figma: 12 cols, 25px margin, 20px gutter) */}
+      {showGrid && (
+        <div
+          className="debug-grid-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            pointerEvents: 'none',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(12, 1fr)',
+            gap: 20,
+            padding: '0 25px',
+          }}
+        >
+          {Array.from({ length: 12 }, (_, i) => (
+            <div
+              key={i}
+              style={{
+                backgroundColor: 'rgba(255, 0, 0, 0.04)',
+                height: '100%',
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

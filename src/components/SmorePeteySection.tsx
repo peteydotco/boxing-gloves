@@ -1,14 +1,19 @@
 export function SmorePeteySection() {
   return (
     <section
-      style={{ backgroundColor: '#E5E5E5', padding: '80px 0' }}
+      className=""
+      style={{ position: 'relative', padding: '80px 0' }}
       data-scroll
       data-scroll-section
     >
       <div
         style={{
-          width: 1390,
-          maxWidth: 'calc(100% - 50px)',
+          /* 10 of 12 columns: 10 × colWidth + 9 × gutter
+             contentArea = 100vw - 50px (2 × 25px margin)
+             colWidth = (contentArea - 11 × 20px) / 12
+             10 cols = 10 × colWidth + 9 × 20px */
+          width: 'calc((10 * ((100vw - 50px - 220px) / 12)) + 9 * 20px)',
+          maxWidth: 'calc(100vw - 50px)',
           margin: '0 auto',
           backgroundColor: '#FFFFFF',
           borderRadius: 32,

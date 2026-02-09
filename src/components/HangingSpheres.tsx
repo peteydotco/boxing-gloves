@@ -693,7 +693,7 @@ function DraggableGloveWithRope({
       </group>
 
       {/* Rope visual - uses memoized geometry that's updated in place */}
-      <mesh ref={tubeRef} geometry={ropeGeometry} frustumCulled={false}>
+      <mesh ref={tubeRef} geometry={ropeGeometry} frustumCulled={false} castShadow>
         <meshStandardMaterial color="#2a2a2a" roughness={0.4} metalness={0.1} />
       </mesh>
     </group>
@@ -707,9 +707,10 @@ useGLTF.preload(rightGloveModelUrl, true)
 export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light' }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' }) {
   return (
     <group>
-      {/* Shadow plane behind gloves */}
-      <mesh position={[0, 0, -2]} receiveShadow>
-        <planeGeometry args={[40, 40]} />
+      {/* Shadow plane behind gloves — centered on rope midpoint (anchor y=3.2, gloves ~y=0)
+          Tall enough to catch rope shadows that extend above the viewport */}
+      <mesh position={[0, 2, -2]} receiveShadow>
+        <planeGeometry args={[20, 20]} />
         <shadowMaterial opacity={shadowOpacity} transparent />
       </mesh>
 

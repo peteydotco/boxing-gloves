@@ -1,24 +1,48 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, useSpring, useTransform } from 'framer-motion'
+import { motion, useSpring, useTransform, useMotionValueEvent, useScroll } from 'framer-motion'
 
 const YOUTUBE_VIDEO_ID = 'rJKduGHwvHk'
 
-// Spring config for the morph — snappy with visible bounce (low damping ratio for overshoot)
-const morphSpring = { stiffness: 340, damping: 35, mass: 1.1 }
+// Spring config for the morph — gradual scale-up with gentle settle
+const morphSpring = { stiffness: 180, damping: 38, mass: 1.6 }
 
 export function VideoMorphSection() {
   const [isPlaying, setIsPlaying] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
 
-  // Compute target pixel width once (and on resize)
+  // Grid-proportional video width: 8 of 12 columns (66.67% of content area)
+  // Content area = viewport - 2 × 25px margin = viewport - 50px
+  // Column width = (contentArea - 11 gutters × 20px) / 12
+  // 8 columns = 8 × colWidth + 7 × gutter
+  const GRID_MARGIN = 25
+  const GRID_GUTTER = 20
+  const GRID_COLS = 12
+  const VIDEO_COLS = 8
+
+  const computeGridWidth = (vw: number) => {
+    const contentArea = vw - 2 * GRID_MARGIN
+    const colWidth = (contentArea - (GRID_COLS - 1) * GRID_GUTTER) / GRID_COLS
+    return VIDEO_COLS * colWidth + (VIDEO_COLS - 1) * GRID_GUTTER
+  }
+
   const [targetWidth, setTargetWidth] = useState(() => {
     if (typeof window === 'undefined') return 900
-    return Math.min(window.innerWidth * 0.65, 900)
+    return computeGridWidth(window.innerWidth)
   })
+
+  // Track viewport width for responsive label layout
+  const [viewportWidth, setViewportWidth] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth : 1440
+  })
+
+  // Tablet/mobile breakpoint: stack labels vertically when viewport < 810px
+  const isNarrow = viewportWidth < 810
 
   useEffect(() => {
     const handleResize = () => {
-      setTargetWidth(Math.min(window.innerWidth * 0.65, 900))
+      const vw = window.innerWidth
+      setTargetWidth(computeGridWidth(vw))
+      setViewportWidth(vw)
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
@@ -34,17 +58,112 @@ export function VideoMorphSection() {
   const videoOpacity = useTransform(morphProgress, [0, 0.4, 0.6], [0, 0, 1])
   const loaderOpacity = useTransform(morphProgress, [0, 0.15], [1, 0])
   const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(14,14,14,0)', 'rgba(14,14,14,1)'])
-  const morphShadow = useTransform(
+
+  // Scroll-linked background fade — starts as the "Live from SQSP" label
+  // enters the viewport, fully dark by the time it's 25% up from the bottom.
+  //
+  // offset: ['start end', 'end start'] → progress 0 = section top at viewport bottom,
+  //   progress 1 = section bottom at viewport top.
+  // Total scroll travel = 250vh (section) + 100vh (viewport) = 350vh.
+  //
+  // The sticky label first enters viewport bottom at ~progress 0.14 (≈50vh / 350vh).
+  // 25% up from viewport bottom = 75vh from top. Label reaches that point at ~progress 0.21.
+  // Fade back to light near the end as section exits.
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start end', 'end start'] })
+  // Opacity for the dark overlay — 0 = transparent (body bg + grain visible), 1 = fully dark
+  const darkOverlayOpacity = useTransform(
+    scrollYProgress,
+    [0, 0.14, 0.21, 0.78, 0.88, 1],
+    [0, 0, 1, 1, 0, 0]
+  )
+  // Label + loader color inversion follows the same scroll curve
+  const labelColor = useTransform(
+    scrollYProgress,
+    [0, 0.14, 0.21, 0.78, 0.88, 1],
+    ['#0E0E0E', '#0E0E0E', '#FFFFFF', '#FFFFFF', '#0E0E0E', '#0E0E0E']
+  )
+  const loaderBg = useTransform(
+    scrollYProgress,
+    [0, 0.14, 0.21, 0.78, 0.88, 1],
+    ['#0E0E0E', '#0E0E0E', '#FFFFFF', '#FFFFFF', '#0E0E0E', '#0E0E0E']
+  )
+  const morphShadowBase = useTransform(
     morphProgress,
     [0, 0.3, 0.8],
-    [
-      '0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0)',
-      '0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0), 0 0 0 0 rgba(0,0,0,0)',
-      '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
-    ]
+    [0, 0, 1]
   )
   const [showCredits, setShowCredits] = useState(false)
   const creditsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Hover effects — gated behind morph completion
+  const [morphComplete, setMorphComplete] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
+  const morphWrapperRef = useRef<HTMLDivElement>(null)
+
+  // Track when the spring settles at 1 (fully expanded)
+  useMotionValueEvent(morphProgress, 'change', (v) => {
+    if (v >= 0.98) {
+      setMorphComplete(true)
+    } else if (v < 0.5) {
+      setMorphComplete(false)
+      setIsHovered(false)
+    }
+  })
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!morphWrapperRef.current) return
+    const rect = morphWrapperRef.current.getBoundingClientRect()
+    const xPercent = ((e.clientX - rect.left) / rect.width) * 100
+    const yPercent = ((e.clientY - rect.top) / rect.height) * 100
+    setMousePos({ x: xPercent, y: yPercent })
+  }, [])
+
+  const hoverActive = morphComplete && isHovered
+
+  const spotlightGradient = hoverActive
+    ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,1) 0%, rgba(200,210,230,0.8) 15%, rgba(120,120,130,0.35) 35%, rgba(140,140,150,0.3) 55%, rgba(120,120,130,0.35) 100%)`
+    : 'none'
+
+  // Shadow that repels from cursor — offsets shift opposite to mouse position
+  // Base shadow layers (from Figma): Y-offsets at 1070, 685, 385, 171, 43
+  // When hovered, we add an X offset and adjust Y based on cursor position
+  const [shadowIntensity, setShadowIntensity] = useState(0)
+  useMotionValueEvent(morphShadowBase, 'change', (v) => {
+    setShadowIntensity(v)
+  })
+
+  const computeShadow = useCallback(() => {
+    if (shadowIntensity <= 0) {
+      return '0 0 0 0 rgba(0,0,0,0)'
+    }
+    const s = shadowIntensity // 0→1
+
+    // Repel direction: opposite of cursor position relative to center
+    // mousePos is 0-100%, center is 50%
+    const repelX = hoverActive ? (50 - mousePos.x) * 0.8 : 0 // max ±40px offset
+    const repelY = hoverActive ? (50 - mousePos.y) * 0.5 : 0 // max ±25px offset
+
+    // 5-step shadow — matched to Figma node 4438:2935
+    const layers = [
+      { y: 549, blur: 154, spread: 0, a: 0.00 },
+      { y: 351, blur: 141, spread: 0, a: 0.01 },
+      { y: 197, blur: 118, spread: 0, a: 0.05 },
+      { y: 87,  blur: 87,  spread: 0, a: 0.09 },
+      { y: 21,  blur: 48,  spread: 0, a: 0.10 },
+    ]
+
+    return layers.map(l => {
+      const x = Math.round(repelX * (l.y / 549) * s) // deeper layers repel more
+      const y = Math.round((l.y + repelY * (l.y / 549)) * s)
+      const blur = Math.round(l.blur * s)
+      const spread = Math.round(l.spread * s)
+      const a = (l.a * s).toFixed(2)
+      return `${x}px ${y}px ${blur}px ${spread}px rgba(0,0,0,${a})`
+    }).join(', ')
+  }, [shadowIntensity, hoverActive, mousePos.x, mousePos.y])
+
+  const dynamicShadow = computeShadow()
 
   // Trigger / reverse the morph
   const handleMorph = useCallback((enter: boolean) => {
@@ -64,10 +183,12 @@ export function VideoMorphSection() {
     }
   }, [morphProgress])
 
-  // Use a native IntersectionObserver on the sentinel to trigger the morph
-  // when it crosses viewport center. rootMargin "-50% 0px -50% 0px" creates
-  // a 0-height trigger line at the vertical midpoint of the viewport.
+  // Use a native IntersectionObserver on the sentinel to trigger the morph.
+  // Opens when the sentinel crosses viewport center (scrolling down).
+  // Only closes when scrolling back UP past the sentinel — scrolling down
+  // past the section keeps the video open.
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const lastScrollY = useRef(0)
 
   useEffect(() => {
     const el = sentinelRef.current
@@ -75,7 +196,18 @@ export function VideoMorphSection() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        handleMorph(entry.isIntersecting)
+        const currentScrollY = window.scrollY
+        const scrollingDown = currentScrollY > lastScrollY.current
+        lastScrollY.current = currentScrollY
+
+        if (entry.isIntersecting) {
+          // Sentinel entered the center zone — always open
+          handleMorph(true)
+        } else if (!scrollingDown) {
+          // Sentinel left the center zone while scrolling UP — close
+          handleMorph(false)
+        }
+        // If scrolling down and sentinel leaves — stay open
       },
       { rootMargin: '-50% 0px -50% 0px', threshold: 0 }
     )
@@ -88,7 +220,6 @@ export function VideoMorphSection() {
     fontFamily: 'Inter',
     fontSize: 24,
     fontWeight: 600,
-    color: '#0E0E0E',
     letterSpacing: '-0.04em',
     whiteSpace: 'nowrap' as const,
     flexShrink: 0,
@@ -98,8 +229,21 @@ export function VideoMorphSection() {
     <section
       ref={sectionRef}
       className="relative w-full"
-      style={{ backgroundColor: '#FAFAF9', height: '200vh' }}
+      style={{ height: '250vh' }}
     >
+      {/* Full-viewport dark wash — position:fixed so it covers the entire screen
+          with no hard section edges. Grain overlay (also fixed) renders on top. */}
+      <motion.div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: '#0E0E0E',
+          opacity: darkOverlayOpacity,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      />
+
       {/* Sticky wrapper — pins content to viewport center */}
       <div
         className="sticky top-0 w-full flex items-center justify-center"
@@ -108,18 +252,39 @@ export function VideoMorphSection() {
         {/* Center anchor — only the content row participates in centering;
             credits are positioned absolutely below so they don't push the row up */}
         <div className="relative">
-        {/* Content row — flex keeps labels naturally flanking the morphing element */}
+        {/* Content row — flex layout: horizontal on desktop, vertical on narrow viewports */}
         <div
           className="flex items-center justify-center"
-          style={{ gap: 24 }}
+          style={{
+            gap: 24,
+            flexDirection: isNarrow ? 'column' : 'row',
+          }}
         >
-          {/* Left label */}
-          <span style={labelStyle}>
+          {/* Top/Left label */}
+          <motion.span style={{ ...labelStyle, color: labelColor }}>
             Live from SQSP
-          </span>
+          </motion.span>
 
           {/* Morph wrapper — contains the morphing element + the loader animation on top */}
-          <div className="relative" style={{ flexShrink: 0 }}>
+          <div
+            ref={morphWrapperRef}
+            className="relative"
+            style={{ flexShrink: 0 }}
+            onMouseEnter={() => morphComplete && setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onMouseMove={handleMouseMove}
+          >
+            {/* Hover scale + tilt wrapper — wraps entire container so scale/tilt applies to border-radius + shadow */}
+            <div
+              style={{
+                transform: hoverActive
+                  ? `perspective(1200px) rotateX(${(mousePos.y - 50) * -0.025}deg) rotateY(${(mousePos.x - 50) * 0.025}deg) scale(1.006)`
+                  : 'perspective(1200px) rotateX(0deg) rotateY(0deg) scale(1)',
+                transition: hoverActive
+                  ? 'transform 0.15s ease-out'
+                  : 'transform 0.45s cubic-bezier(0.33, 1, 0.68, 1)',
+              }}
+            >
             {/* The morphing element — starts as 22×22 square, becomes video container */}
             <motion.div
               className="relative"
@@ -128,8 +293,8 @@ export function VideoMorphSection() {
                 height: morphHeight,
                 borderRadius,
                 backgroundColor: morphBg,
-                boxShadow: morphShadow,
                 overflow: 'hidden',
+                boxShadow: dynamicShadow,
               }}
             >
               {/* Video content — hidden until morph, then fades in */}
@@ -185,7 +350,36 @@ export function VideoMorphSection() {
                   </button>
                 )}
               </motion.div>
+
+              {/* Cursor spotlight — radial gradient following mouse */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  borderRadius: 'inherit',
+                  background: hoverActive
+                    ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 45%, transparent 80%)`
+                    : 'none',
+                  opacity: hoverActive ? 1 : 0,
+                  transition: 'opacity 0.4s ease-out',
+                }}
+              />
+
+              {/* Border spotlight — CSS mask compositing for glowing border */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  borderRadius: 'inherit',
+                  background: spotlightGradient,
+                  mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+                  maskComposite: 'exclude',
+                  WebkitMaskComposite: 'xor',
+                  padding: '1px',
+                  opacity: hoverActive ? 0.6 : 0,
+                  transition: 'opacity 0.4s ease-out',
+                }}
+              />
             </motion.div>
+            </div>{/* end hover scale wrapper */}
 
             {/*
               Loader animation — rendered OUTSIDE the overflow:hidden morphing element
@@ -203,11 +397,11 @@ export function VideoMorphSection() {
                 pointerEvents: 'none',
               }}
             >
-              <div
+              <motion.div
                 style={{
                   width: 22,
                   height: 22,
-                  backgroundColor: '#0E0E0E',
+                  backgroundColor: loaderBg,
                   borderRadius: 2,
                   animation: 'loaderSkew 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite',
                 }}
@@ -216,9 +410,9 @@ export function VideoMorphSection() {
           </div>
 
           {/* Right label */}
-          <span style={labelStyle}>
+          <motion.span style={{ ...labelStyle, color: labelColor }}>
             Circle Day 2025
-          </span>
+          </motion.span>
         </div>
 
         {/* Attribution text — absolutely positioned below the content row
@@ -233,20 +427,20 @@ export function VideoMorphSection() {
             transform: 'translateX(-50%)',
             fontFamily: 'Inter',
             fontSize: 16,
-            fontWeight: 600,
+            fontWeight: 500,
             textAlign: 'center',
             lineHeight: '24px',
-            letterSpacing: '-0.04em',
+            letterSpacing: '-0.02em',
             marginTop: 44,
             whiteSpace: 'nowrap',
           }}
         >
           A special thank you to my partners{' '}
-          <a href="https://vanasaliu.com" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+          <a href="https://www.linkedin.com/in/vanasa-liu/" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
             Vanasa Liu
           </a>{' '}
           and{' '}
-          <a href="https://guillermo.dev" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+          <a href="https://www.linkedin.com/in/guillermo-su%C3%A1rez-ara-59720680" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
             Guillermo Suarez Ara
           </a>
           ,
@@ -258,7 +452,7 @@ export function VideoMorphSection() {
 
       {/*
         Scroll sentinel — lives in normal document flow (NOT inside sticky).
-        Section is 200vh → sticky travel is 100vh.
+        Section is 250vh → sticky travel is 150vh.
         Sentinel at 90vh → crosses viewport center at 40vh into travel,
         leaving 60vh of dwell with the expanded video before sticky ends.
       */}
