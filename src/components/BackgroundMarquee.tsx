@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { motion } from 'framer-motion'
 
 interface BackgroundMarqueeProps {
   marqueeFill?: string
@@ -253,45 +254,66 @@ export const BackgroundMarquee = memo(function BackgroundMarquee({ marqueeFill =
       className="absolute inset-0 overflow-hidden pointer-events-none select-none"
       style={{ zIndex: 1 }}
     >
-      {/* Container for 4-row marquee pattern - centered vertically */}
-      <div
+      {/* Container for 4-row marquee pattern - centered vertically
+          Each row staggers in with a slide-up + fade reveal */}
+      <motion.div
         className="absolute left-0 right-0 flex flex-col justify-center"
         style={{
           top: '50%',
           transform: 'translateY(-50%)',
         }}
+        variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.12 } } }}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.15 }}
       >
         {/* Row 1: Client icons */}
-        <MarqueeRow
-          content=""
-          direction="right"
-          isIcons
-          fillColor={marqueeFill}
-        />
+        <div style={{ overflow: 'hidden' }}>
+          <motion.div variants={{ hidden: { opacity: 0, y: 60 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }}>
+            <MarqueeRow
+              content=""
+              direction="right"
+              isIcons
+              fillColor={marqueeFill}
+            />
+          </motion.div>
+        </div>
         {/* Row 2: Locations */}
-        <MarqueeRow
-          content={locationsContent}
-          direction="left"
-          fontType="dotmatrix"
-          startOffset={0}
-          fillColor={marqueeFill}
-        />
+        <div style={{ overflow: 'hidden' }}>
+          <motion.div variants={{ hidden: { opacity: 0, y: 60 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }}>
+            <MarqueeRow
+              content={locationsContent}
+              direction="left"
+              fontType="dotmatrix"
+              startOffset={0}
+              fillColor={marqueeFill}
+            />
+          </motion.div>
+        </div>
         {/* Row 3: Agency icons */}
-        <MarqueeRow
-          content=""
-          direction="right"
-          isAgencies
-          fillColor={marqueeFill}
-        />
+        <div style={{ overflow: 'hidden' }}>
+          <motion.div variants={{ hidden: { opacity: 0, y: 60 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }}>
+            <MarqueeRow
+              content=""
+              direction="right"
+              isAgencies
+              fillColor={marqueeFill}
+            />
+          </motion.div>
+        </div>
         {/* Row 4: Locations */}
-        <MarqueeRow
-          content={locationsContent}
-          direction="left"
-          fontType="dotmatrix"
-          startOffset={30}
-          fillColor={marqueeFill}
-        />
-      </div>
+        <div style={{ overflow: 'hidden' }}>
+          <motion.div variants={{ hidden: { opacity: 0, y: 60 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }}>
+            <MarqueeRow
+              content={locationsContent}
+              direction="left"
+              fontType="dotmatrix"
+              startOffset={30}
+              fillColor={marqueeFill}
+            />
+          </motion.div>
+        </div>
+      </motion.div>
     </div>
   )
 })
