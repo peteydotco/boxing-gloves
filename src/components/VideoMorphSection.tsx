@@ -240,7 +240,7 @@ export function VideoMorphSection() {
           backgroundColor: '#0E0E0E',
           opacity: darkOverlayOpacity,
           pointerEvents: 'none',
-          zIndex: 0,
+          zIndex: -2,
         }}
       />
 
