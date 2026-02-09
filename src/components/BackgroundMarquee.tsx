@@ -265,7 +265,7 @@ export const BackgroundMarquee = memo(function BackgroundMarquee({ marqueeFill =
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.12 } } }}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.15 }}
+        viewport={{ once: true, amount: 0.35 }}
       >
         {/* Row 1: Client icons */}
         <div style={{ overflow: 'hidden' }}>
