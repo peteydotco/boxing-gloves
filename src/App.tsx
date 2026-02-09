@@ -1,204 +1,33 @@
 import { Scene, mousePositionRef } from './components/Scene'
 import { TopCards } from './components/TopCards'
-import { LeftBioSvg } from './components/LeftBioSvg'
-import { RightBioSvg } from './components/RightBioSvg'
-import { BackgroundMarquee } from './components/BackgroundMarquee'
+import { VideoMorphSection } from './components/VideoMorphSection'
+import { BioCopySection } from './components/BioCopySection'
+import { SelectedWorksHeader } from './components/SelectedWorksHeader'
+import { ProjectCardsGrid } from './components/ProjectCardsGrid'
+import { LogoMarqueeSection } from './components/LogoMarqueeSection'
+import { SmorePeteySection } from './components/SmorePeteySection'
+import { SiteFooter } from './components/SiteFooter'
 import { useState, useEffect, useRef } from 'react'
-
-// Hook to detect when a font is loaded
-function useFontReady(fontFamily: string) {
-  const [isReady, setIsReady] = useState(false)
-
-  useEffect(() => {
-    if (document.fonts) {
-      document.fonts.ready.then(() => {
-        const loaded = document.fonts.check(`16px "${fontFamily}"`)
-        setIsReady(loaded)
-        if (!loaded) {
-          document.fonts.load(`16px "${fontFamily}"`).then(() => setIsReady(true))
-        }
-      })
-    } else {
-      // Fallback for browsers without Font Loading API
-      const timeout = setTimeout(() => setIsReady(true), 100)
-      return () => clearTimeout(timeout)
-    }
-  }, [fontFamily])
-
-  return isReady
-}
-
-// Theme presets for quick toggling (cycles: light → inverted → dark → darkInverted)
-const themes = {
-  light: {
-    bgColor: '#FFFFFF',
-    spotlightOuter: 'rgba(224,224,224,0.65)',
-    spotlightInverted: false,
-    marqueeColor: '#E0E0E0',
-    textColor: 'rgba(0, 0, 0, 0.44)',
-    footerTextColor: 'rgba(0, 0, 0, 0.52)',
-    logoFill: '#1A1A2E',
-    bioFill: '#000000',
-    bioOpacity: 0.55,
-  },
-  inverted: {
-    bgColor: '#E0E0E0',
-    spotlightOuter: 'rgba(255,255,255,0.65)',
-    spotlightInverted: false,
-    marqueeColor: '#FFFFFF',
-    textColor: 'rgba(0, 0, 0, 0.5)',
-    footerTextColor: 'rgba(0, 0, 0, 0.58)',
-    logoFill: '#1A1A2E',
-    bioFill: '#000000',
-    bioOpacity: 0.55,
-  },
-  dark: {
-    bgColor: '#0E0E16', // ink-850 (cool-biased)
-    spotlightOuter: 'rgba(14,14,22,0.65)',
-    spotlightInverted: false,
-    marqueeColor: 'rgba(255,255,255,0.08)',
-    textColor: 'rgba(255, 255, 255, 0.6)',
-    footerTextColor: 'rgba(255, 255, 255, 0.68)',
-    logoFill: '#FFFFFF',
-    bioFill: '#FFFFFF',
-    bioOpacity: 0.55,
-  },
-  darkInverted: {
-    bgColor: '#0A0A10', // ink-900 (cool-biased)
-    spotlightOuter: 'rgba(10,10,16,0.65)', // Match bg color on periphery
-    spotlightInverted: true, // Darkest at edges, lighter at center
-    marqueeColor: '#1A1A2E', // ink-800 (cool-biased, visible on near-black)
-    textColor: 'rgba(255, 255, 255, 0.6)',
-    footerTextColor: 'rgba(255, 255, 255, 0.68)',
-    logoFill: '#FFFFFF',
-    bioFill: '#FFFFFF',
-    bioOpacity: 0.55,
-  },
-}
+import LocomotiveScroll from 'locomotive-scroll'
 
 function App() {
-  // Ref for the main container
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // mousePosition state is only for 2D UI elements (spotlight, marquee)
-  // Scene reads from mousePositionRef directly to avoid re-renders
-  const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 })
   const [isDesktop, setIsDesktop] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
   })
-  const [isMobile, setIsMobile] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth < 768 : false
-  })
-  const [logoHovered, setLogoHovered] = useState(false)
-  const [logoPressed, setLogoPressed] = useState(false)
-  const [nycTime, setNycTime] = useState(() => {
-    const now = new Date()
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    }).format(now)
-  })
-  const [colonVisible, setColonVisible] = useState(true)
-  const [themeMode, setThemeMode] = useState<'light' | 'inverted' | 'dark' | 'darkInverted'>('light')
-  const theme = themes[themeMode]
 
-  // Wait for fonts to load before showing text
-  const fontMonoReady = useFontReady('Inter')
-  const fontReady = useFontReady('Inter')
-
-  // Sync data-theme attribute on <html> for CSS mode overrides
-  useEffect(() => {
-    const root = document.documentElement
-    if (themeMode === 'dark') {
-      root.setAttribute('data-theme', 'dark')
-    } else if (themeMode === 'darkInverted') {
-      root.setAttribute('data-theme', 'darker')
-    } else {
-      root.removeAttribute('data-theme')
-    }
-  }, [themeMode])
-
-  // Cycle through themes: light → inverted → dark → darkInverted → light
-  const cycleTheme = () => {
-    setThemeMode(current => {
-      if (current === 'light') return 'inverted'
-      if (current === 'inverted') return 'dark'
-      if (current === 'dark') return 'darkInverted'
-      return 'light'
-    })
-  }
-
-  // Update NYC time every minute
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setNycTime(new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/New_York',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }).format(now))
-    }
-
-    const interval = setInterval(updateTime, 60000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Blink colon every second to simulate seconds counting
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setColonVisible(prev => !prev)
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // Get hour for NYC time to determine sun/moon (5AM-5:59PM = sun, 6PM-4:59AM = moon)
-  const nycHour = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false })
-  const hourNum = parseInt(nycHour, 10)
-  const isDaylight = hourNum >= 5 && hourNum <= 17 // 5:00 AM to 5:59 PM
-
-  // Format time with blinking colon
-  const formatTimeWithBlinkingColon = (time: string) => {
-    const colonIndex = time.indexOf(':')
-    if (colonIndex === -1) return time
-    const before = time.slice(0, colonIndex)
-    const after = time.slice(colonIndex + 1)
-    return (
-      <>
-        {before}
-        <span style={{ opacity: colonVisible ? 1 : 0 }}>:</span>
-        {after}
-      </>
-    )
-  }
+  const themeMode = 'light' as const
 
   useEffect(() => {
-    // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
-    let rafId: number | null = null
-    let pendingX = 0.5
-    let pendingY = 0.5
-
     const handleMouseMove = (e: MouseEvent) => {
-      // Normalize mouse position to 0-1 range
-      pendingX = e.clientX / window.innerWidth
-      pendingY = e.clientY / window.innerHeight
-      // Update ref for Scene immediately (no re-render)
-      mousePositionRef.current = { x: pendingX, y: pendingY }
-
-      // Batch state updates with RAF to prevent excessive re-renders
-      if (rafId === null) {
-        rafId = requestAnimationFrame(() => {
-          setMousePosition({ x: pendingX, y: pendingY })
-          rafId = null
-        })
-      }
+      const x = e.clientX / window.innerWidth
+      const y = e.clientY / window.innerHeight
+      mousePositionRef.current = { x, y }
     }
 
     const handleResize = () => {
       setIsDesktop(window.innerWidth >= 1024)
-      setIsMobile(window.innerWidth < 768)
     }
 
     window.addEventListener('mousemove', handleMouseMove)
@@ -206,10 +35,22 @@ function App() {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('resize', handleResize)
-      if (rafId !== null) cancelAnimationFrame(rafId)
     }
   }, [])
 
+  // Initialize Locomotive Scroll (smooth scrolling + data-scroll detection)
+  useEffect(() => {
+    const scroll = new LocomotiveScroll({
+      lenisOptions: {
+        lerp: 0.09,
+        duration: 1.3,
+        smoothWheel: true,
+        syncTouch: false,
+      },
+    })
+
+    return () => scroll.destroy()
+  }, [])
 
   // Hardcoded shadow settings
   const shadowSettings = {
@@ -226,22 +67,17 @@ function App() {
 
   // Boxing Gloves preset - hardcoded
   const settings = {
-    // Ball/Glove appearance
     color: '#8b0000',
     metalness: 0.1,
     roughness: 0.6,
     envMapIntensity: 0.4,
-    radius: 0.525, // Increased from 0.42 to 0.525 (1.25x larger)
-
-    // Physics - light to drag, bouncy plop when released, dangly, soft collisions
+    radius: 0.525,
     mass: 1.2,
     restitution: 0.02,
     friction: 0.8,
-    linearDamping: 1.0, // Reduced from 1.5 for more bounce oscillation
+    linearDamping: 1.0,
     gravity: -200,
     springStrength: 350,
-
-    // String
     stringLength: 2.5,
     stringThickness: 0.028,
     stringColor: '#d4a574',
@@ -251,187 +87,105 @@ function App() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full flex flex-col overflow-hidden"
-      style={{ backgroundColor: theme.bgColor }}
+      className="relative w-full min-h-screen flex flex-col"
+      style={{ backgroundColor: '#FFFFFF' }}
     >
-      {/* Desktop: 3D Scene */}
-      {isDesktop && (
+      {/* ===== Hero Section ===== */}
+      <section className="relative h-screen w-full flex-shrink-0 overflow-hidden">
+        {/* Graffiti tag background image */}
         <div
-          className="absolute inset-0"
-          style={{ zIndex: 10, pointerEvents: 'auto' }}
+          className="absolute inset-0 pointer-events-none"
+          style={{ opacity: 0.10, zIndex: 1 }}
         >
-          <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
-        </div>
-      )}
-
-      {/* Desktop: TopCards */}
-      {isDesktop && (
-        <div
-          className="absolute top-0 left-0 right-0"
-          style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 20 }}
-        >
-          <TopCards themeMode={themeMode} />
-        </div>
-      )}
-
-      {/* Hero View */}
-      <div className="absolute inset-0">
-        {/* Background Marquee - scrolling text revealed by cursor */}
-        <BackgroundMarquee marqueeFill={theme.marqueeColor} />
-
-        {/* Radial gradient spotlight overlay - covers marquee, reveals center (desktop only) */}
-        {!isMobile && (
-          <div
-            className="absolute inset-0 z-[5] pointer-events-none"
+          <img
+            src="/images/graffiti-tag.png"
+            alt=""
             style={{
-              background: theme.spotlightInverted
-                ? `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 15%, ${theme.spotlightOuter} 45%)`
-                : `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
-              transition: 'background 0.1s ease-out',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center 60%',
+              display: 'block',
             }}
           />
-        )}
-
-        {/* Mobile/Tablet only: Cards inside hero (desktop has them outside) */}
-        {!isDesktop && (
-          <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
-            <TopCards themeMode={themeMode} />
-          </div>
-        )}
-
-        {/* Mobile/Tablet only: 3D Scene (desktop has it outside) */}
-        {!isDesktop && (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: 'white', mixBlendMode: 'difference' }}
+          />
           <div
             className="absolute inset-0"
             style={{
-              zIndex: 10,
-              pointerEvents: 'auto',
+              background: 'linear-gradient(to bottom, transparent 67%, #E9E9E9 100%)',
             }}
+          />
+        </div>
+
+        {/* Desktop: 3D Scene */}
+        {isDesktop && (
+          <div
+            className="absolute inset-0"
+            style={{ zIndex: 10, pointerEvents: 'auto' }}
           >
             <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
           </div>
         )}
 
-        {/* Left biographical text - show on tablet and desktop (md+) */}
-        {/* Desktop (>=1024px): flanks gloves at vertical center */}
-        {/* Tablet (<1024px): positioned at bottom, offset +3px to center-align with taller Right Bio */}
-        <div
-          className="absolute z-20 pointer-events-none select-none hidden md:block"
-          style={{
-            left: '5%',
-            ...(isDesktop
-              ? { top: '50%', transform: 'translateY(-50%) scale(0.9)' }
-              : { bottom: '214px', transform: 'scale(0.9)' }
-            ),
-          }}
-        >
-          <LeftBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
-        </div>
-
-        {/* Right biographical text - show on tablet and desktop (md+) */}
-        {/* Desktop (>=1024px): flanks gloves at vertical center */}
-        {/* Tablet (<1024px): positioned at bottom, center-aligned with left bio */}
-        <div
-          className="absolute z-20 pointer-events-none select-none hidden md:block"
-          style={{
-            right: '5%',
-            maxWidth: '200px',
-            ...(isDesktop
-              ? { top: '50%', transform: 'translateY(-50%) scale(0.9)' }
-              : { bottom: '211px', transform: 'scale(0.9)' }
-            ),
-          }}
-        >
-          <RightBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
-        </div>
-
-        {/* Text lockup (time/location + coming soon) */}
-        {fontMonoReady && (
-          <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
-            <p style={{
-              color: theme.footerTextColor,
-              textAlign: 'center',
-              fontFamily: 'DotGothic16',
-              fontSize: '12px',
-              fontStyle: 'normal',
-              fontWeight: 400,
-              lineHeight: '19px',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-            }}>
-              {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
-            </p>
-            <p style={{
-              color: theme.footerTextColor,
-              textAlign: 'center',
-              fontFamily: 'DotGothic16',
-              fontSize: '12px',
-              fontStyle: 'normal',
-              fontWeight: 400,
-              lineHeight: '19px',
-              letterSpacing: '0.12em',
-              textTransform: 'uppercase',
-              marginTop: '4px'
-            }}>
-              《 Full site coming soon 》
-            </p>
+        {/* Desktop: TopCards */}
+        {isDesktop && (
+          <div
+            className="absolute top-0 left-0 right-0"
+            style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 20 }}
+          >
+            <TopCards themeMode={themeMode} />
           </div>
         )}
 
-        {/* Pete Logo - exact PersistentNav spec: text + separate border overlay */}
-        {fontReady && (
-          <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
-            <div
-              onClick={cycleTheme}
-              onMouseEnter={() => setLogoHovered(true)}
-              onMouseLeave={() => { setLogoHovered(false); setLogoPressed(false) }}
-              onMouseDown={() => setLogoPressed(true)}
-              onMouseUp={() => setLogoPressed(false)}
-              style={{
-                cursor: 'pointer',
-                position: 'relative',
-                userSelect: 'none',
-                transform: logoPressed ? 'scale(0.98)' : logoHovered ? 'scale(1.04)' : 'scale(1)',
-                transition: logoPressed
-                  ? 'transform 0.08s ease-in'
-                  : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              }}
-            >
-              {/* Content container — padding matches PersistentNav: 5px 8px 8px 8px */}
-              <div style={{ padding: '6px 11px 7px 12px', borderRadius: 9999 }}>
-                <span
-                  style={{
-                    fontFamily: 'Inter',
-                    fontSize: '22px',
-                    fontWeight: 600,
-                    letterSpacing: '-0.02em',
-                    lineHeight: '22px',
-                    color: theme.logoFill,
-                    display: 'block',
-                    transform: logoPressed ? `scale(${1 / 0.98})` : logoHovered ? `scale(${1 / 1.04})` : 'scale(1)',
-                    transition: logoPressed
-                      ? 'transform 0.08s ease-in'
-                      : 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  }}
-                >
-                  PETEY.CO
-                </span>
-              </div>
-              {/* Border overlay — separate element, flush with content edges */}
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  border: `3px solid ${theme.logoFill}`,
-                  borderRadius: 9999,
-                  pointerEvents: 'none',
-                }}
-              />
+        {/* Mobile/Tablet: TopCards + 3D Scene inside hero */}
+        {!isDesktop && (
+          <>
+            <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
+              <TopCards themeMode={themeMode} />
             </div>
-          </div>
+            <div
+              className="absolute inset-0"
+              style={{ zIndex: 10, pointerEvents: 'auto' }}
+            >
+              <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+            </div>
+          </>
         )}
-      </div>
 
+        {/* Bottom gradient scrim — sits under gloves, bleeds into bio section */}
+        <div
+          className="absolute bottom-0 left-0 right-0 pointer-events-none"
+          style={{
+            height: 444,
+            background: 'linear-gradient(to bottom, transparent 0%, #F9F9F9 100%)',
+            zIndex: 4,
+          }}
+        />
+      </section>
+
+      {/* ===== Bio Copy Section ===== */}
+      <BioCopySection />
+
+      {/* ===== Video Morph Section ===== */}
+      <VideoMorphSection />
+
+      {/* ===== Selected Works Header ===== */}
+      <SelectedWorksHeader />
+
+      {/* ===== Project Cards Grid ===== */}
+      <ProjectCardsGrid />
+
+      {/* ===== Logo Marquee + Quote ===== */}
+      <LogoMarqueeSection />
+
+      {/* ===== S'more Petey ===== */}
+      <SmorePeteySection />
+
+      {/* ===== Footer ===== */}
+      <SiteFooter />
     </div>
   )
 }
