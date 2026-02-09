@@ -164,7 +164,7 @@ function MarqueeRow({
 
     return (
       <div
-        className="relative w-full overflow-hidden flex items-center"
+        className="relative w-full overflow-x-hidden overflow-y-visible flex items-center"
         style={{ height: rowHeight, marginTop: rowMarginTop, marginBottom: rowMarginBottom }}
       >
         <div
