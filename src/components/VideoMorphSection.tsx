@@ -56,7 +56,7 @@ export function VideoMorphSection() {
   const morphHeight = useTransform(morphProgress, [0, 1], [22, targetWidth * (9 / 16)])
   const borderRadius = useTransform(morphProgress, [0, 1], [2, 16])
   const videoOpacity = useTransform(morphProgress, [0, 0.4, 0.6], [0, 0, 1])
-  const loaderOpacity = useTransform(morphProgress, [0, 0.15], [1, 0])
+  const loaderOpacity = useTransform(morphProgress, [0, 0.05], [1, 0])
   const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(14,14,14,0)', 'rgba(14,14,14,1)'])
 
   // Scroll-linked background fade — starts as the "Live from SQSP" label
@@ -390,10 +390,11 @@ export function VideoMorphSection() {
               style={{
                 opacity: loaderOpacity,
                 position: 'absolute',
-                top: 0,
-                left: 0,
+                top: '50%',
+                left: '50%',
                 width: 22,
                 height: 22,
+                transform: 'translate(-50%, -50%)',
                 pointerEvents: 'none',
               }}
             >
@@ -416,10 +417,15 @@ export function VideoMorphSection() {
         </div>
 
         {/* Attribution text — absolutely positioned below the content row
-            so it doesn't affect vertical centering of the video lockup */}
-        <motion.p
-          animate={{ color: showCredits ? '#8B8B8B' : 'rgba(139,139,139,0)' }}
-          transition={{ duration: showCredits ? 1 : 0.3, ease: [0.16, 1, 0.3, 1] }}
+            so it doesn't affect vertical centering of the video lockup.
+            Line-by-line staggered reveal triggered by showCredits. */}
+        <motion.div
+          animate={showCredits ? 'visible' : 'hidden'}
+          initial="hidden"
+          variants={{
+            hidden: {},
+            visible: { transition: { staggerChildren: 0.10 } },
+          }}
           style={{
             position: 'absolute',
             top: '100%',
@@ -435,18 +441,39 @@ export function VideoMorphSection() {
             whiteSpace: 'nowrap',
           }}
         >
-          A special thank you to my partners{' '}
-          <a href="https://www.linkedin.com/in/vanasa-liu/" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-            Vanasa Liu
-          </a>{' '}
-          and{' '}
-          <a href="https://www.linkedin.com/in/guillermo-su%C3%A1rez-ara-59720680" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-            Guillermo Suarez Ara
-          </a>
-          ,
-          <br />
-          and Websites engineering for making this live demo possible.
-        </motion.p>
+          {/* Line 1 */}
+          <div style={{ overflow: 'hidden' }}>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } },
+              }}
+              style={{ color: '#8B8B8B' }}
+            >
+              A special thank you to my partners{' '}
+              <a href="https://www.linkedin.com/in/vanasa-liu/" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                Vanasa Liu
+              </a>{' '}
+              and{' '}
+              <a href="https://www.linkedin.com/in/guillermo-su%C3%A1rez-ara-59720680" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                Guillermo Suarez Ara
+              </a>
+              ,
+            </motion.div>
+          </div>
+          {/* Line 2 */}
+          <div style={{ overflow: 'hidden' }}>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } },
+              }}
+              style={{ color: '#8B8B8B' }}
+            >
+              and Websites engineering for making this live demo possible.
+            </motion.div>
+          </div>
+        </motion.div>
         </div>
       </div>
 

@@ -4,9 +4,18 @@ import { motion } from 'framer-motion'
 const BIO_TEXT =
   'Peter Evan Rodriguez is a Nuyorican designer solving hard problems with soft product. He brings over a decade of insight, intuition and influence from his dome to your chrome. Nowadays he\u2019s shaping product design for Squarespace\u2019s flagship website builder with user-centered AI tools.'
 
+const FONT_STYLE: React.CSSProperties = {
+  fontFamily: 'Inter',
+  fontSize: 'clamp(48px, 3.33vw, 60px)',
+  fontWeight: 600,
+  lineHeight: 'clamp(60px, 4.17vw, 75px)',
+  letterSpacing: 'clamp(-1.65px, -0.092vw, -1.32px)',
+}
+
 /**
- * Measures how the browser naturally wraps `text` inside a hidden <p>
- * with the same font styles, then returns an array of line strings.
+ * Measures natural line breaks by rendering every word as an inline <span>
+ * inside a hidden container, then grouping words that share the same offsetTop.
+ * This approach is immune to font-loading timing and clamp() sizing.
  */
 function useLineBreaks(
   text: string,
@@ -16,50 +25,70 @@ function useLineBreaks(
 
   const measure = useCallback(() => {
     const container = containerRef.current
-    if (!container) return
+    if (!container || container.clientWidth === 0) return
 
-    // Create an off-screen probe <p> with identical styles
-    const probe = document.createElement('p')
-    const cs = getComputedStyle(container.querySelector('p.bio-measure') || container)
+    // Create a hidden probe div with the same width and font styles
+    const probe = document.createElement('div')
+    const measureEl = container.querySelector('.bio-measure') as HTMLElement | null
+    const cs = measureEl ? getComputedStyle(measureEl) : null
+
     probe.style.cssText = `
-      position:absolute;visibility:hidden;white-space:pre-wrap;
-      font-family:${cs.fontFamily};font-size:${cs.fontSize};
-      font-weight:${cs.fontWeight};line-height:${cs.lineHeight};
-      letter-spacing:${cs.letterSpacing};
-      width:${container.clientWidth}px;
-      margin:0;padding:0;
+      position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;
+      width:${container.clientWidth - 50}px;
+      font-family:${cs?.fontFamily || 'Inter'};
+      font-size:${cs?.fontSize || '48px'};
+      font-weight:${cs?.fontWeight || '600'};
+      line-height:${cs?.lineHeight || '60px'};
+      letter-spacing:${cs?.letterSpacing || '-1.65px'};
+      white-space:normal;word-wrap:break-word;
     `
-    document.body.appendChild(probe)
+    container.appendChild(probe)
 
-    // Build lines word-by-word
+    // Render each word as an inline span
     const words = text.split(' ')
+    const spans: HTMLSpanElement[] = []
+    words.forEach((word, i) => {
+      const span = document.createElement('span')
+      span.textContent = i < words.length - 1 ? word + ' ' : word
+      probe.appendChild(span)
+      spans.push(span)
+    })
+
+    // Group words by their vertical position (offsetTop)
     const result: string[] = []
     let currentLine = ''
+    let currentTop = spans[0]?.offsetTop ?? 0
 
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word
-      probe.textContent = testLine
-      const lineCount = probe.getClientRects().length || Math.round(probe.offsetHeight / parseFloat(cs.lineHeight))
-
-      if (lineCount > 1 && currentLine) {
-        // Word caused a wrap → push the previous line
-        result.push(currentLine)
-        currentLine = word
+    spans.forEach((span, i) => {
+      const top = span.offsetTop
+      if (Math.abs(top - currentTop) > 2) {
+        // New line
+        result.push(currentLine.trimEnd())
+        currentLine = words[i] + ' '
+        currentTop = top
       } else {
-        currentLine = testLine
+        currentLine += words[i] + ' '
       }
-    }
-    if (currentLine) result.push(currentLine)
-    document.body.removeChild(probe)
+    })
+    if (currentLine.trim()) result.push(currentLine.trimEnd())
 
+    container.removeChild(probe)
     setLines(result)
   }, [text, containerRef])
 
   useEffect(() => {
-    measure()
-    const ro = new ResizeObserver(measure)
+    // Wait a frame for fonts + layout to settle
+    const raf = requestAnimationFrame(() => measure())
+    const ro = new ResizeObserver(() => measure())
     if (containerRef.current) ro.observe(containerRef.current)
-    return () => ro.disconnect()
+
+    // Also re-measure when fonts finish loading
+    document.fonts?.ready?.then(() => measure())
+
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+    }
   }, [measure, containerRef])
 
   return lines
@@ -98,6 +127,7 @@ export function BioCopySection() {
       <div
         ref={containerRef}
         style={{
+          position: 'relative',
           /* Center within 12-col grid: 10 cols wide = calc(10 * colWidth + 9 * gutter) */
           maxWidth: 'calc(10 * ((100vw - 50px - 220px) / 12) + 9 * 20px)',
           margin: '0 auto',
@@ -107,18 +137,14 @@ export function BioCopySection() {
           paddingBottom: 120,
         }}
       >
-        {/* Hidden measurement <p> — keeps styles in sync for line-break detection */}
+        {/* Hidden measurement element — keeps computed styles in sync for line-break detection */}
         <p
           className="bio-measure"
           aria-hidden
           style={{
+            ...FONT_STYLE,
             position: 'absolute',
             visibility: 'hidden',
-            fontFamily: 'Inter',
-            fontSize: 'clamp(48px, 3.33vw, 60px)',
-            fontWeight: 600,
-            lineHeight: 'clamp(60px, 4.17vw, 75px)',
-            letterSpacing: 'clamp(-1.65px, -0.092vw, -1.32px)',
             whiteSpace: 'pre-wrap',
             margin: 0,
             padding: 0,
@@ -127,28 +153,29 @@ export function BioCopySection() {
           {BIO_TEXT}
         </p>
 
-        {/* Animated lines */}
+        {/* Animated lines — each line slides up from behind an overflow clip */}
         <motion.div
           variants={wrapperVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.15 }}
           style={{
-            fontFamily: 'Inter',
-            fontSize: 'clamp(48px, 3.33vw, 60px)',
-            fontWeight: 600,
-            lineHeight: 'clamp(60px, 4.17vw, 75px)',
-            letterSpacing: 'clamp(-1.65px, -0.092vw, -1.32px)',
+            ...FONT_STYLE,
             color: '#0E0E0E',
           }}
         >
-          {lines.map((line, i) => (
-            <div key={`${i}-${line.slice(0, 12)}`} style={{ overflow: 'hidden' }}>
-              <motion.div variants={lineVariants}>
-                {line}
-              </motion.div>
-            </div>
-          ))}
+          {lines.length > 0 ? (
+            lines.map((line, i) => (
+              <div key={`${i}-${line.slice(0, 16)}`} style={{ overflow: 'hidden' }}>
+                <motion.div variants={lineVariants}>
+                  {line}
+                </motion.div>
+              </div>
+            ))
+          ) : (
+            /* Fallback: show full text if line measurement hasn't run yet */
+            <div style={{ whiteSpace: 'pre-wrap' }}>{BIO_TEXT}</div>
+          )}
         </motion.div>
       </div>
     </section>
