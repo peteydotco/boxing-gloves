@@ -23,9 +23,11 @@ function createRopeGeometry(
   // Otherwise create a minimal geometry that will be updated on first frame
   const start = anchorPos || new THREE.Vector3(0, 3.2, 0)
   const end = glovePos || new THREE.Vector3(0, 0.7, 0)
+  // Extend rope above anchor so shadow casts all the way off viewport
+  const aboveAnchor = new THREE.Vector3(start.x, start.y + 4, start.z)
   const mid = new THREE.Vector3().lerpVectors(start, end, 0.5)
 
-  const curve = new THREE.CatmullRomCurve3([start, mid, end])
+  const curve = new THREE.CatmullRomCurve3([aboveAnchor, start, mid, end])
   return new THREE.TubeGeometry(curve, ROPE_SEGMENTS, thickness, ROPE_RADIAL_SEGMENTS, false)
 }
 
@@ -79,7 +81,7 @@ function updateRopeGeometry(
 }
 
 // Fixed configuration
-const ANCHOR_POSITION: [number, number, number] = [0, 3.2, 0] // Single shared origin - raised to extend ropes off viewport
+const ANCHOR_POSITION: [number, number, number] = [0, 3.2, 0] // Single shared origin
 
 
 // Draggable glove with soft string constraint
@@ -167,7 +169,9 @@ function DraggableGloveWithRope({
   )
 
   // Reusable array for rope curve points (avoid allocation in useFrame)
+  // 6 points: extension above anchor (off-screen) + anchor + quarter + mid + threeQuarter + gloveAttach
   const ropePoints = useRef<THREE.Vector3[]>([
+    new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
@@ -411,12 +415,14 @@ function DraggableGloveWithRope({
     t.threeQuarter.y -= sag * 0.5
 
     // Update rope points in place (no allocation)
+    // pts[0] extends straight up from anchor well off-screen so the rope shadow isn't clipped
     const pts = ropePoints.current
-    pts[0].copy(anchorPos)
-    pts[1].copy(t.quarter)
-    pts[2].copy(t.mid)
-    pts[3].copy(t.threeQuarter)
-    pts[4].copy(t.gloveAttach)
+    pts[0].set(anchorPos.x, anchorPos.y + 4, anchorPos.z)
+    pts[1].copy(anchorPos)
+    pts[2].copy(t.quarter)
+    pts[3].copy(t.mid)
+    pts[4].copy(t.threeQuarter)
+    pts[5].copy(t.gloveAttach)
 
     // Update geometry vertices in place (no new geometry allocation)
     updateRopeGeometry(ropeGeometry, pts, settings.stringThickness)
