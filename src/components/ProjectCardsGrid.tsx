@@ -73,14 +73,13 @@ export function ProjectCardsGrid() {
         <div
           className="scroll-fade-in"
           data-scroll
-          data-scroll-speed="-0.15"
           data-scroll-repeat
           style={{ position: 'absolute', top: 120, left: 'calc(58.33% + 8px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
-            height={877}
-            imageSrc="/images/proj-masterclass.png"
+            aspectRatio={568 / 877}
+            imageSrc="/images/proj-masterclass.webp"
             logoSrc="/images/logos/masterclass-pink.svg"
             logoBgColor="#EF4562"
             title="MasterClass MVP for iOS"
@@ -92,14 +91,13 @@ export function ProjectCardsGrid() {
         <div
           className="scroll-fade-in"
           data-scroll
-          data-scroll-speed="-0.2"
           data-scroll-repeat
           style={{ position: 'absolute', top: 1260, left: 25 }}
         >
           <ProjectCard
             width={colSpan(6)}
-            height={508}
-            imageSrc="/images/proj-squarespace.png"
+            aspectRatio={689 / 508}
+            imageSrc="/images/proj-squarespace.webp"
             logoSrc="/images/logos/squarespace-logo.svg"
             logoBgColor="#0E0E0E"
             title="Squarespace site builder"
@@ -113,14 +111,13 @@ export function ProjectCardsGrid() {
         <div
           className="scroll-fade-in"
           data-scroll
-          data-scroll-speed="-0.25"
           data-scroll-repeat
           style={{ position: 'absolute', top: 1920, left: 'calc(58.33% + 7px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
-            height={877}
-            imageSrc="/images/proj-masterclass.png"
+            aspectRatio={568 / 877}
+            imageSrc="/images/proj-masterclass.webp"
             logoSrc="/images/logos/masterclass-pink.svg"
             logoBgColor="#EF4562"
             title="MasterClass MVP for iOS"
@@ -132,14 +129,13 @@ export function ProjectCardsGrid() {
         <div
           className="scroll-fade-in"
           data-scroll
-          data-scroll-speed="-0.3"
           data-scroll-repeat
           style={{ position: 'absolute', top: 2380, left: 'calc(8.33% + 22px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
-            height={877}
-            imageSrc="/images/proj-masterclass.png"
+            aspectRatio={568 / 877}
+            imageSrc="/images/proj-masterclass.webp"
             logoSrc="/images/logos/masterclass-pink.svg"
             logoBgColor="#EF4562"
             title="MasterClass MVP for iOS"
@@ -151,14 +147,13 @@ export function ProjectCardsGrid() {
         <div
           className="scroll-fade-in"
           data-scroll
-          data-scroll-speed="-0.35"
           data-scroll-repeat
           style={{ position: 'absolute', top: 3780, left: 'calc(33.33% + 15px)' }}
         >
           <ProjectCard
             width={colSpan(7)}
-            height={621}
-            imageSrc="/images/proj-masterclass.png"
+            aspectRatio={689 / 508}
+            imageSrc="/images/proj-masterclass.webp"
             logoSrc="/images/logos/shiphero-logo.svg"
             logoBgColor="#F34242"
             title="ShipHero MVP for iPad"

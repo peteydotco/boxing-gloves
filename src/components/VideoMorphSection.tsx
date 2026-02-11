@@ -57,7 +57,12 @@ export function VideoMorphSection() {
   const borderRadius = useTransform(morphProgress, [0, 1], [2, 16])
   const videoOpacity = useTransform(morphProgress, [0, 0.4, 0.6], [0, 0, 1])
   const loaderOpacity = useTransform(morphProgress, [0, 0.05], [1, 0])
-  const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(14,14,14,0)', 'rgba(14,14,14,1)'])
+  const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(255,255,255,0)', 'rgba(255,255,255,1)'])
+  // Skew + rotation — captured from loader's live CSS animation on first morph only
+  const morphSkew = useSpring(0, morphSpring)
+  const morphRotate = useSpring(0, morphSpring)
+  const loaderInnerRef = useRef<HTMLDivElement>(null)
+  const hasPlayedSkew = useRef(false)
 
   // Scroll-linked background fade — starts as the "Live from SQSP" label
   // enters the viewport, fully dark by the time it's 25% up from the bottom.
@@ -168,20 +173,45 @@ export function VideoMorphSection() {
   // Trigger / reverse the morph
   const handleMorph = useCallback((enter: boolean) => {
     if (enter) {
+      // Only apply skew/rotation effect on the first morph trigger.
+      // Re-entering the section (scrolling back down) just does the scale morph.
+      if (!hasPlayedSkew.current && loaderInnerRef.current) {
+        hasPlayedSkew.current = true
+        const anims = loaderInnerRef.current.getAnimations()
+        const anim = anims.find(a => (a as CSSAnimation).animationName === 'loaderSkew') as CSSAnimation | undefined
+        if (anim && anim.currentTime != null) {
+          const duration = 2400 // 2.4s in ms
+          const rawT = ((anim.currentTime as number) % duration) / duration
+          const rotation = rawT * 360
+          let skewX = 0
+          if (rawT < 0.25) skewX = (rawT / 0.25) * 12
+          else if (rawT < 0.5) skewX = ((0.5 - rawT) / 0.25) * 12
+          else if (rawT < 0.75) skewX = -((rawT - 0.5) / 0.25) * 12
+          else skewX = -((1 - rawT) / 0.25) * 12
+          const normRotation = ((rotation + 180) % 360) - 180
+          morphSkew.jump(skewX)
+          morphRotate.jump(normRotation)
+          morphSkew.set(0)
+          morphRotate.set(0)
+        }
+      }
       setIsPlaying(false)
       morphProgress.set(1)
-      // Show credits 4s after morph triggers
+      // Show credits after morph triggers
       creditsTimerRef.current = setTimeout(() => setShowCredits(true), 250)
     } else {
       setIsPlaying(false)
       morphProgress.set(0)
+      morphSkew.set(0)
+      morphRotate.set(0)
+      hasPlayedSkew.current = false
       setShowCredits(false)
       if (creditsTimerRef.current) {
         clearTimeout(creditsTimerRef.current)
         creditsTimerRef.current = null
       }
     }
-  }, [morphProgress])
+  }, [morphProgress, morphSkew, morphRotate])
 
   // Use a native IntersectionObserver on the sentinel to trigger the morph.
   // Opens when the sentinel crosses viewport center (scrolling down).
@@ -219,15 +249,17 @@ export function VideoMorphSection() {
   const labelStyle = {
     fontFamily: 'Inter',
     fontSize: 24,
-    fontWeight: 600,
-    letterSpacing: '-0.04em',
+    fontWeight: 500,
+    letterSpacing: '-0.02em',
     whiteSpace: 'nowrap' as const,
-    flexShrink: 0,
+    flex: 1,
+    minWidth: 0,
   }
 
   return (
     <section
       ref={sectionRef}
+      data-section="video-morph"
       className="relative w-full"
       style={{ height: '250vh' }}
     >
@@ -237,7 +269,7 @@ export function VideoMorphSection() {
         style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: '#0E0E0E',
+          backgroundColor: '#3D1A2A',
           opacity: darkOverlayOpacity,
           pointerEvents: 'none',
           zIndex: -2,
@@ -258,10 +290,13 @@ export function VideoMorphSection() {
           style={{
             gap: 24,
             flexDirection: isNarrow ? 'column' : 'row',
+            width: '100vw',
+            padding: '0 25px',
+            boxSizing: 'border-box',
           }}
         >
           {/* Top/Left label */}
-          <motion.span style={{ ...labelStyle, color: labelColor }}>
+          <motion.span style={{ ...labelStyle, color: labelColor, textAlign: 'right' }}>
             Live from SQSP
           </motion.span>
 
@@ -295,6 +330,8 @@ export function VideoMorphSection() {
                 backgroundColor: morphBg,
                 overflow: 'hidden',
                 boxShadow: dynamicShadow,
+                skewX: morphSkew,
+                rotate: morphRotate,
               }}
             >
               {/* Video content — hidden until morph, then fades in */}
@@ -399,6 +436,7 @@ export function VideoMorphSection() {
               }}
             >
               <motion.div
+                ref={loaderInnerRef}
                 style={{
                   width: 22,
                   height: 22,
@@ -411,7 +449,7 @@ export function VideoMorphSection() {
           </div>
 
           {/* Right label */}
-          <motion.span style={{ ...labelStyle, color: labelColor }}>
+          <motion.span style={{ ...labelStyle, color: labelColor, textAlign: 'left' }}>
             Circle Day 2025
           </motion.span>
         </div>
@@ -439,6 +477,7 @@ export function VideoMorphSection() {
             letterSpacing: '-0.02em',
             marginTop: 44,
             whiteSpace: 'nowrap',
+            mixBlendMode: 'luminosity',
           }}
         >
           {/* Line 1 */}

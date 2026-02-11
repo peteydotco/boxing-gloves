@@ -40,6 +40,7 @@ export interface CardData {
   shortcut: string
   variant: 'blue' | 'white' | 'red' | 'cta'
   expandedContent: ExpandedContent
+  compactLabel?: string  // Text shown in sticky compact state
 }
 
 // Scene/3D types - from Scene.tsx

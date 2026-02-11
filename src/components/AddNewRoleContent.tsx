@@ -189,6 +189,8 @@ interface AddNewRoleContentProps {
   isFocused?: boolean
   styles?: VariantStyle
   emailCopied?: boolean
+  expandedFromCompact?: boolean
+  compactLabel?: string
 }
 
 // Default light CTA colors (fallback when no styles prop)
@@ -214,6 +216,8 @@ export function AddNewRoleContent({
   isFocused = true,
   styles,
   emailCopied: emailCopiedProp = false,
+  expandedFromCompact: _expandedFromCompact = false,
+  compactLabel: _compactLabel,
 }: AddNewRoleContentProps) {
   // Helper: scale a pixel value proportionally (mobile uses slightly smaller base sizes)
   const s = (px: number) => Math.round(px * contentScale)
@@ -241,7 +245,6 @@ export function AddNewRoleContent({
   // Input typed text color — slightly stronger than title
   const inputTypedColor = isDark ? (styles?.secondaryText ?? 'rgba(255,255,255,0.85)') : '#202020'
   // Ghosted text color — lighter than themeText for the expanded title/label hint
-  const themeGhostedText = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
   // Caret color
   const caretColor = isDark ? 'rgba(255,255,255,0.9)' : '#000000'
 
@@ -328,10 +331,16 @@ export function AddNewRoleContent({
       {/* TOP CLUSTER - matches collapsed card's flex-col gap-[5px] structure */}
       {/* Extra 4px left padding brings content to 28px from card edge (24px card padding + 4px) */}
       <motion.div
-        className="flex-shrink-0 flex flex-col gap-[5px]"
+        className="flex-shrink-0 flex flex-col"
+        style={{ gap: 5 }}
         initial={{ paddingLeft: '0px' }}
         animate={{ paddingLeft: '4px' }}
-        exit={{ paddingLeft: '0px', transition: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] } }}
+        exit={{
+          paddingLeft: '0px',
+          transition: {
+            type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1],
+          },
+        }}
         transition={contentSpring}
       >
         {/* Label row */}
@@ -346,18 +355,20 @@ export function AddNewRoleContent({
             letterSpacing: '0.01em',
             transformOrigin: 'top left',
             whiteSpace: 'nowrap',
+            overflow: 'hidden',
           }}
           initial={{ scale: 1, opacity: 0 }}
           animate={{ scale: 14 / 12, opacity: 1 }}
           exit={{
-            scale: 1, opacity: 1,
+            scale: 1,
+            opacity: 1,
             transition: {
               scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
             },
           }}
           transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
         >
-          Blank slot
+          Blank Slot
         </motion.div>
 
         {/* Title input row - morphs from collapsed to expanded */}
@@ -372,11 +383,16 @@ export function AddNewRoleContent({
             letterSpacing: '-0.01em',
             lineHeight: '24px',
             whiteSpace: 'nowrap',
+            position: 'relative',
           }}
           initial={{ scale: 1, marginTop: '-4px', marginLeft: '0px', color: themeTitle, opacity: 0 }}
-          animate={{ scale: isMobile ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 28 / 18 : 32 / 18, marginTop: '1px', marginLeft: '-1px', color: themeGhostedText, opacity: 1 }}
+          animate={{ scale: isMobile ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 28 / 18 : 32 / 18, marginTop: '1px', marginLeft: '-1px', color: themeTitle, opacity: 1 }}
           exit={{
-            scale: 1, marginTop: '-4px', marginLeft: '0px', color: themeTitle, opacity: 1,
+            scale: 1,
+            marginTop: '-4px',
+            marginLeft: '0px',
+            color: themeTitle,
+            opacity: 1,
             transition: {
               scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
               marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
@@ -385,7 +401,12 @@ export function AddNewRoleContent({
           }}
           transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
         >
-          <span className="flex items-center gap-3">
+          {/* Input row — fades out during compact exit */}
+          <motion.span
+            className="flex items-center gap-3"
+            style={{ display: 'flex' }}
+            exit={undefined}
+          >
             {/* Input field with custom placeholder overlay */}
             <span className="relative flex-1">
               {!inputValue && (
@@ -400,7 +421,7 @@ export function AddNewRoleContent({
                     lineHeight: 'inherit',
                   }}
                 >
-                  Add new role...
+                  Add a role...
                 </span>
               )}
               <input
@@ -428,7 +449,7 @@ export function AddNewRoleContent({
                 onClick={(e) => e.stopPropagation()}
               />
             </span>
-          </span>
+          </motion.span>
         </motion.div>
       </motion.div>
 

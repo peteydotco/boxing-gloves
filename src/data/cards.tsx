@@ -8,6 +8,7 @@ export const cards: CardData[] = [
     title: 'School of Visual Arts',
     shortcut: '1',
     variant: 'blue',
+    compactLabel: 'Adjunct Professor',
     expandedContent: {
       roleLabel: 'IxD Professor at',
       dateRange: '2021 → Present',
@@ -41,6 +42,7 @@ export const cards: CardData[] = [
     title: 'Squarespace',
     shortcut: '2',
     variant: 'white',
+    compactLabel: 'Sr Staff Product Designer',
     expandedContent: {
       roleLabel: 'Product Designer at',
       dateRange: '2019 → Present',
@@ -69,6 +71,7 @@ export const cards: CardData[] = [
     title: 'Rio Rui Rodriguez',
     shortcut: '3',
     variant: 'red',
+    compactLabel: 'Junior Dad',
     expandedContent: {
       roleLabel: 'New Dad to',
       dateRange: '2023 → Present',
@@ -93,12 +96,13 @@ export const cards: CardData[] = [
   },
   {
     id: 'cta',
-    label: 'Blank slot',
-    title: 'Add new role...',
+    label: 'Blank Slot',
+    title: 'Add a role...',
     shortcut: '⌘C',
     variant: 'cta',
+    compactLabel: 'hello@petey.co',
     expandedContent: {
-      roleLabel: 'Add new role...',
+      roleLabel: 'Add a role...',
       dateRange: '1989 → Infinity',
       description: [
         "One of the greatest privileges of working in this space has been the incredible talent and personalities I've gotten to meet and, if I'm lucky, collab with.",

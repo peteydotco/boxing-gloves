@@ -2,7 +2,7 @@ import * as React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MorphingCard } from './MorphingCard'
 import { createPortal } from 'react-dom'
-import { CAROUSEL_CONFIG, backdropColors } from '../constants'
+import { CAROUSEL_CONFIG, backdropColors, signatureSpring, getVariantStyles, hoverTransition } from '../constants'
 import { cards, stackedCardConfigs } from '../data/cards'
 
 // Canonical card dimensions - the "ideal" size we design for
@@ -89,6 +89,87 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   // Store scroll position when expanding to restore on collapse
   const savedScrollPosition = React.useRef<number>(0)
 
+  // Compact sticky state (desktop only) — pills that follow the user on scroll
+  const [isCompact, setIsCompact] = React.useState(false)
+  const [isOverDark, setIsOverDark] = React.useState(false)
+  const topCardsWrapperRef = React.useRef<HTMLDivElement>(null)
+  const compactCardRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map())
+  const expandedFromCompact = React.useRef(false)
+  const justClosedFromCompact = React.useRef(false)
+
+  React.useEffect(() => {
+    if (!isDesktop) {
+      setIsCompact(false)
+      setIsOverDark(false)
+      return
+    }
+    const BUFFER = 20
+    let currentCompact = false
+    let currentDark = false
+    const handleScroll = () => {
+      const wrapper = topCardsWrapperRef.current
+      if (!wrapper) return
+      const rect = wrapper.getBoundingClientRect()
+      if (!currentCompact && rect.bottom < -BUFFER) {
+        currentCompact = true
+        setIsCompact(true)
+      } else if (currentCompact && rect.bottom > BUFFER) {
+        currentCompact = false
+        setIsCompact(false)
+      }
+
+      // Detect dark video section overlap for CTA pill color swap
+      // VideoMorphSection is 250vh; dark wash is active between scroll progress 0.21–0.78
+      const videoSection = document.querySelector('[data-section="video-morph"]') as HTMLElement | null
+      if (videoSection) {
+        const vRect = videoSection.getBoundingClientRect()
+        const sectionH = videoSection.offsetHeight
+        // scrollYProgress: how far the section has scrolled through the viewport
+        // offset: ['start end', 'end start'] means progress 0 when section top hits viewport bottom,
+        // progress 1 when section bottom hits viewport top
+        const viewH = window.innerHeight
+        const progress = (-vRect.top + viewH) / (sectionH + viewH)
+        const nowDark = progress > 0.21 && progress < 0.78
+        if (nowDark !== currentDark) {
+          currentDark = nowDark
+          setIsOverDark(nowDark)
+        }
+      } else if (currentDark) {
+        currentDark = false
+        setIsOverDark(false)
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [isDesktop])
+
+  // Capture compact card positions and expand
+  const captureCompactPositionsAndExpand = (index: number) => {
+    const positions = new Map<string, DOMRect>()
+    compactCardRefs.current.forEach((el, id) => {
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        // getBoundingClientRect() includes CSS transforms (whileTap scale: 0.97),
+        // so captured width/height are ~3% too small during a click.
+        // Use offsetWidth/offsetHeight for true layout dimensions, then adjust
+        // left/top to undo the center-point scale offset.
+        const trueW = el.offsetWidth
+        const trueH = el.offsetHeight
+        const adjustedRect = {
+          ...rect.toJSON(),
+          width: trueW,
+          height: trueH,
+          left: rect.left - (trueW - rect.width) / 2,
+          top: rect.top - (trueH - rect.height) / 2,
+        } as DOMRect
+        positions.set(id, adjustedRect)
+      }
+    })
+    setCardPositions(positions)
+    expandedFromCompact.current = true
+    setExpandedIndex(index)
+  }
+
   // Capture all card positions before expanding
   const capturePositionsAndExpand = (index: number) => {
     // Save scroll position before expanding (for mobile)
@@ -102,6 +183,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       }
     })
     setCardPositions(positions)
+    expandedFromCompact.current = false
     setExpandedIndex(index)
   }
 
@@ -624,13 +706,18 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   // Lock all site scrolling when expanded
   // This prevents body scroll, wheel events, and touch scrolling
+  // When closing from compact, keep overflow hidden during the exit animation so the scrollbar
+  // doesn't reappear and shift the viewport (which would cause a width mismatch between the
+  // portal card's exit position and the real compact bar). onExitComplete restores overflow.
   React.useEffect(() => {
     if (expandedIndex !== null) {
       // Lock body scroll
       document.body.style.overflow = 'hidden'
       // Add data attribute so other components know TopCards are expanded
       document.documentElement.setAttribute('data-topcards-expanded', 'true')
-    } else {
+    } else if (!isClosing) {
+      // Only restore overflow if we're not in the middle of an exit animation
+      // (onExitComplete handles restoration for closing-from-compact case)
       document.body.style.overflow = ''
       document.documentElement.removeAttribute('data-topcards-expanded')
     }
@@ -638,7 +725,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       document.body.style.overflow = ''
       document.documentElement.removeAttribute('data-topcards-expanded')
     }
-  }, [expandedIndex])
+  }, [expandedIndex, isClosing])
 
   // Track a resize key to force re-render when viewport changes while expanded
   const [resizeKey, setResizeKey] = React.useState(0)
@@ -719,7 +806,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   return (
     <>
-      <div className={isSplitMode ? "top-padding-responsive" : "horizontal-padding-responsive top-padding-responsive"} style={{ overflow: 'visible' }}>
+      <div ref={topCardsWrapperRef} className={isSplitMode ? "top-padding-responsive" : "horizontal-padding-responsive top-padding-responsive"} style={{ overflow: 'visible' }}>
         <div className="mx-auto" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
           {/* Cards row */}
           <div
@@ -731,8 +818,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               justifyContent: isDesktop ? 'center' : 'flex-start',
               overflowX: isDesktop ? 'visible' : 'auto',
               overflowY: 'visible',
-              transition: 'gap 0.3s ease, justify-content 0.3s ease, margin 0.3s ease, padding 0.3s ease',
-              pointerEvents: 'auto',
+              transition: 'gap 0.3s ease, justify-content 0.3s ease, margin 0.3s ease, padding 0.3s ease, opacity 0.3s ease',
+              pointerEvents: (isCompact && isDesktop) ? 'none' : 'auto',
+              opacity: (isCompact && isDesktop) ? 0 : 1,
               // Mobile & Tablet: horizontal scroll with edge-to-edge margins
               ...(!isDesktop && {
                 marginLeft: '-0.75rem',
@@ -802,8 +890,21 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
             if (scrollContainerRef.current) {
               scrollContainerRef.current.scrollLeft = savedScrollPosition.current
             }
+            const wasFromCompact = expandedFromCompact.current
             closingCardIndex.current = null
             setIsClosing(false)
+            // When closing back to compact, skip the slide-in animation
+            if (wasFromCompact) {
+              justClosedFromCompact.current = true
+              // Delay overflow restoration: let compact bar mount and paint first (with scrollbar
+              // still hidden, matching the viewport width at position-capture time), then restore
+              // overflow so the scrollbar reappearing doesn't cause a visible jump.
+              requestAnimationFrame(() => {
+                justClosedFromCompact.current = false
+                document.body.style.overflow = ''
+                document.documentElement.removeAttribute('data-topcards-expanded')
+              })
+            }
           }}>
           {isExpanded && (
             <>
@@ -918,11 +1019,159 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                       zIndexOverride={zIndexOverride}
                       useBouncyTransition={useBouncyTransition}
                       isFocused={cardIndex === expandedIndex}
+                      initialBorderRadius={expandedFromCompact.current ? 44 : 16}
+                      expandedFromCompact={expandedFromCompact.current}
+                      isOverDark={isOverDark}
                     />
                   )
                 })}
               </div>
             </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* Compact sticky bar — portal to body, desktop only */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {isDesktop && isCompact && !isExpanded && !isClosing && (
+            <motion.div
+              key="compact-bar"
+              className="fixed top-0 left-0 right-0"
+              style={{ zIndex: 20, padding: '12px 24px' }}
+              initial={justClosedFromCompact.current ? { y: 0, opacity: 1 } : { y: -60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -60, opacity: 0 }}
+              transition={signatureSpring}
+            >
+              <div className="flex" style={{ gap: 18, justifyContent: 'center' }}>
+                {visibleCards.map((card) => {
+                  const cardIndex = cardsToShow.findIndex(c => c.id === card.id)
+                  const styles = getVariantStyles(themeMode)[card.variant]
+                  const isCta = card.variant === 'cta'
+                  // CTA colors adapt when scrolling over the dark video section
+                  const ctaTextColor = isOverDark ? 'rgba(255,255,255,0.7)' : '#8E8E8E'
+                  const ctaBorderColor = isOverDark ? 'rgba(255,255,255,0.4)' : styles.border
+                  const ctaBg = isOverDark ? 'rgba(255,255,255,0.08)' : styles.bg
+                  return (
+                    <motion.div
+                      key={card.id}
+                      ref={(el) => { compactCardRefs.current.set(card.id, el) }}
+                      className="flex items-center cursor-pointer relative"
+                      style={{
+                        height: 48,
+                        borderRadius: 44,
+                        backgroundColor: isCta ? ctaBg : styles.bg,
+                        border: isCta ? 'none' : `1px solid ${styles.border}`,
+                        paddingLeft: 25,
+                        paddingRight: 19,
+                        flex: '1 1 0%',
+                        minWidth: 0,
+                        backdropFilter: isCta ? 'blur(8px)' : undefined,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)',
+                        transition: 'background-color 0.4s ease',
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      transition={hoverTransition}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        captureCompactPositionsAndExpand(cardIndex)
+                      }}
+                    >
+                      {/* CTA dashed border — SVG for precise dash:12 gap:8 round caps */}
+                      {isCta && (
+                        <svg
+                          className="absolute pointer-events-none"
+                          style={{ inset: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'visible' }}
+                        >
+                          <rect
+                            x="0" y="0" width="100%" height="100%"
+                            rx="24" ry="24"
+                            fill="none"
+                            stroke={ctaBorderColor}
+                            strokeWidth="2.5"
+                            strokeDasharray="12 8"
+                            strokeLinecap="round"
+                            style={{ transition: 'stroke 0.4s ease' }}
+                          />
+                        </svg>
+                      )}
+                      <span
+                        className="flex-1 truncate"
+                        style={{
+                          fontFamily: 'Inter',
+                          fontWeight: 500,
+                          fontSize: '18px',
+                          letterSpacing: '-0.01em',
+                          lineHeight: '24px',
+                          color: isCta ? ctaTextColor : '#FFFFFF',
+                          transition: isCta ? 'color 0.4s ease' : undefined,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {card.compactLabel || card.label}
+                      </span>
+                      {isCta ? (
+                        <motion.div
+                          className="flex items-center justify-center shrink-0 rounded-full overflow-hidden"
+                          style={{
+                            backgroundColor: isOverDark ? 'rgba(255,255,255,0.15)' : '#DDDDDD',
+                            transition: 'background-color 0.4s ease',
+                            padding: '4px 6px 4px 8px',
+                            height: 18.66,
+                          }}
+                          initial={false}
+                          animate={{ width: emailCopied ? 108 : 46 }}
+                          transition={signatureSpring}
+                        >
+                          <div
+                            className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
+                            style={{
+                              fontFamily: 'DotGothic16',
+                              fontWeight: 400,
+                              letterSpacing: '0.08em',
+                              position: 'relative',
+                              top: '-0.5px',
+                              color: ctaTextColor,
+                              transition: 'color 0.4s ease',
+                            }}
+                          >
+                            {emailCopied ? 'Email Copied' : card.shortcut}
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <div
+                          className="flex items-center justify-center shrink-0"
+                          style={{
+                            backgroundColor: 'rgba(0,0,0,0.2)',
+                            borderRadius: 20,
+                            padding: '4px 8px',
+                            minWidth: 18.66,
+                            height: 18.66,
+                          }}
+                        >
+                          <span
+                            className="text-[12px] uppercase leading-[100%]"
+                            style={{
+                              fontFamily: 'DotGothic16',
+                              fontWeight: 400,
+                              letterSpacing: '0.08em',
+                              position: 'relative',
+                              top: '-0.5px',
+                              color: styles.textColor,
+                            }}
+                          >
+                            {card.shortcut}
+                          </span>
+                        </div>
+                      )}
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>,
         document.body

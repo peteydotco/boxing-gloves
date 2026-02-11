@@ -5,7 +5,6 @@ import { BioCopySection } from './components/BioCopySection'
 import { SelectedWorksHeader } from './components/SelectedWorksHeader'
 import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
-import { SmorePeteySection } from './components/SmorePeteySection'
 import { SiteFooter } from './components/SiteFooter'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import LocomotiveScroll from 'locomotive-scroll'
@@ -49,6 +48,9 @@ function App() {
   }, [handleKeyDown])
 
   // Initialize Locomotive Scroll (smooth scrolling + data-scroll detection)
+  // Store instance so we can stop/start it when TopCards modal is active
+  const scrollRef = useRef<LocomotiveScroll | null>(null)
+
   useEffect(() => {
     const scroll = new LocomotiveScroll({
       lenisOptions: {
@@ -58,8 +60,24 @@ function App() {
         syncTouch: false,
       },
     })
+    scrollRef.current = scroll
 
-    return () => scroll.destroy()
+    // Watch for TopCards expanded state to freeze/resume page scroll
+    const observer = new MutationObserver(() => {
+      const expanded = document.documentElement.hasAttribute('data-topcards-expanded')
+      if (expanded) {
+        scroll.stop()
+      } else {
+        scroll.start()
+      }
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-topcards-expanded'] })
+
+    return () => {
+      observer.disconnect()
+      scroll.destroy()
+      scrollRef.current = null
+    }
   }, [])
 
   // Hardcoded shadow settings
@@ -103,24 +121,35 @@ function App() {
       <div className="grain-overlay" />
 
       {/* ===== Hero Section ===== */}
-      <section className="relative h-screen w-full flex-shrink-0">
-        {/* Graffiti tag background image */}
+      <section className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
+        {/* Graffiti tag background image — centered on PETEY text to align with boxing gloves.
+             Uses max(vw, vh) sizing so the image always covers the viewport while keeping
+             the text centered regardless of aspect ratio. The slight upward nudge (-4%)
+             accounts for the PETEY text sitting above the image's geometric center. */}
         <div
           className="absolute pointer-events-none"
-          style={{ top: '-15%', bottom: '-15%', left: '-7.5%', right: '-7.5%', opacity: 0.10, zIndex: 1, transform: 'scale(1.2)', transformOrigin: 'center bottom' }}
+          style={{
+            inset: 0,
+            opacity: 0.10,
+            zIndex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+          }}
         >
           <img
-            src="/images/graffiti-tag.png"
+            src="/images/graffiti-tag.webp"
             alt=""
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              objectPosition: 'center -50%',
+              width: 'max(150vw, 180vh)',
+              maxWidth: 'none',
+              height: 'auto',
               display: 'block',
+              flexShrink: 0,
+              transform: 'translate(-2%, 2%)',
             }}
           />
-{/* mix-blend-difference overlay removed — was causing hero/bio seam */}
         </div>
 
         {/* Desktop: 3D Scene */}
@@ -174,9 +203,6 @@ function App() {
 
       {/* ===== Logo Marquee + Quote ===== */}
       <LogoMarqueeSection />
-
-      {/* ===== S'more Petey ===== */}
-      <SmorePeteySection />
 
       {/* ===== Footer ===== */}
       <SiteFooter />

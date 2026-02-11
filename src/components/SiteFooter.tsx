@@ -112,7 +112,7 @@ export function SiteFooter() {
 
         {/* ===== Petey graffiti logo ===== */}
         <img
-          src="/images/petey-graffiti.png"
+          src="/images/petey-graffiti.webp"
           alt="Petey"
           style={{
             height: 52,
@@ -127,7 +127,7 @@ export function SiteFooter() {
 
         {/* ===== Made in NY badge ===== */}
         <img
-          src="/images/made-in-ny-badge.png"
+          src="/images/made-in-ny-badge.webp"
           alt="Made in NY"
           style={{
             width: 56,
