@@ -114,6 +114,7 @@ export function SiteFooter() {
         <img
           src="/images/petey-graffiti.webp"
           alt="Petey"
+          loading="lazy"
           style={{
             height: 52,
             width: 'auto',
@@ -129,6 +130,7 @@ export function SiteFooter() {
         <img
           src="/images/made-in-ny-badge.webp"
           alt="Made in NY"
+          loading="lazy"
           style={{
             width: 56,
             height: 56,

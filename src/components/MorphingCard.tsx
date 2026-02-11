@@ -80,6 +80,8 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
 
   return (
     <button
+      data-cursor="morph"
+      data-cursor-radius={isMobile ? '24' : `${Math.round(34 * contentScale)}`}
       onClick={(e) => {
         e.stopPropagation()
         if (highlight.href) {
@@ -257,6 +259,8 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
 
   return (
     <button
+      data-cursor={previewVideo ? 'play' : 'morph'}
+      {...(!previewVideo && { 'data-cursor-radius': '10' })}
       onClick={(e) => {
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
@@ -448,6 +452,8 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
 
   return (
     <motion.button
+      data-cursor="morph"
+      data-cursor-radius="10"
       onClick={(e) => {
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
@@ -475,6 +481,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
 
       {/* Content area - match Highlights container height */}
       <div
+        data-cursor-parallax=""
         className="relative flex items-center gap-3"
         style={{
           paddingLeft: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
@@ -1140,6 +1147,8 @@ export function MorphingCard({
           {/* Shortcut badge - absolutely positioned at top right, animates position with padding */}
           {/* Separate from the text cluster to match collapsed card structure */}
           <motion.div
+            data-cursor="morph"
+            data-cursor-radius="20"
             onClick={(e) => {
               e.stopPropagation()
               onClose()
@@ -1405,6 +1414,8 @@ export function MorphingCard({
                             return (
                               <button
                                 key={i}
+                                data-cursor="morph"
+                                data-cursor-radius="5"
                                 onClick={(e) => e.stopPropagation()}
                                 className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
                                 style={{
@@ -1416,7 +1427,7 @@ export function MorphingCard({
                                 }}
                               >
                                 {Icon && <Icon className="w-5 h-5" />}
-                                <span className="text-[18px] uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '-0.01em' }}>
+                                <span data-cursor-parallax="" className="text-[18px] uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                   {action.label}
                                 </span>
                               </button>
@@ -1618,6 +1629,8 @@ export function MorphingCard({
                       return (
                         <button
                           key={i}
+                          data-cursor="morph"
+                          data-cursor-radius="5"
                           onClick={(e) => e.stopPropagation()}
                           className="flex items-center justify-center rounded-[5px] relative overflow-hidden"
                           style={{
@@ -1630,7 +1643,7 @@ export function MorphingCard({
                           }}
                         >
                           {Icon && <Icon style={{ width: `${iconSize}px`, height: `${iconSize}px` }} />}
-                          <span className="uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '-0.01em', fontSize: `${fontSize}px` }}>
+                          <span data-cursor-parallax="" className="uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '-0.01em', fontSize: `${fontSize}px` }}>
                             {action.label}
                           </span>
                         </button>

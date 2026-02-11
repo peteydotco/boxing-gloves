@@ -136,6 +136,9 @@ export function useCursorMorph(): CursorMorphValues {
   const iframeFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Track the last mouse position for magnetic displacement calc in rAF
   const lastMouseRef = useRef({ x: 0, y: 0 })
+  // Flag set on scroll — avoids calling elementFromPoint every frame in the rAF tick.
+  // Only needs re-check when the page has scrolled (element may have moved under cursor).
+  const scrollDirtyRef = useRef(false)
 
   useEffect(() => {
     if (!enabled) return
@@ -525,20 +528,22 @@ export function useCursorMorph(): CursorMorphValues {
       isMorphed.set(0)
     }
 
-    // rAF loop: while morphed, re-read target rect to track scroll + magnetic + parallax
+    // rAF loop: while morphed, re-read target rect to track scroll + magnetic + parallax.
+    // Also re-checks non-default cursor modes (play, drag, grab, grow, text) on scroll —
+    // if the element scrolls out from under a stationary cursor, reset to default.
     const tick = () => {
-      const mode = modeRef.current
-      if (morphTargetRef.current && (mode === 'morph' || mode === 'morph-only')) {
+      const m = modeRef.current
+      if (morphTargetRef.current && (m === 'morph' || m === 'morph-only')) {
         const el = morphTargetRef.current
-        const selector = mode === 'morph' ? '[data-cursor="morph"]' : '[data-cursor="morph-only"]'
+        const selector = m === 'morph' ? '[data-cursor="morph"]' : '[data-cursor="morph-only"]'
         if (!el.isConnected || !el.closest(selector)) {
           clearLiftProps(el)
-          if (mode === 'morph') releaseMagnetic(el)
+          if (m === 'morph') releaseMagnetic(el)
           morphTargetRef.current = null
           updateMode('default')
           isMorphed.set(0)
         } else {
-          if (mode === 'morph') {
+          if (m === 'morph') {
             // Full morph: re-apply magnetic + lift and read displaced rect
             applyMagnetic(el, lastMouseRef.current.x, lastMouseRef.current.y)
           }
@@ -551,8 +556,38 @@ export function useCursorMorph(): CursorMorphValues {
 
           // Update parallax + soft magnetic for morph-only
           setParallax(el, lastMouseRef.current.x, lastMouseRef.current.y)
-          if (mode === 'morph-only') {
+          if (m === 'morph-only') {
             setSoftMagnetic(el, lastMouseRef.current.x, lastMouseRef.current.y)
+          }
+        }
+      } else if (m !== 'default' && scrollDirtyRef.current) {
+        // Non-default, non-morph modes (play, drag, grab, grow, text):
+        // Only re-check on scroll — avoids calling elementFromPoint every frame.
+        scrollDirtyRef.current = false
+        const { x: mx, y: my } = lastMouseRef.current
+        const target = document.elementFromPoint(mx, my)
+
+        // Map each mode to the data-cursor attribute it requires
+        const attrMap: Record<string, string | null> = {
+          play: 'play',
+          drag: 'drag',
+          grab: 'grab',
+          grow: 'grow',
+          text: null, // text mode is detected by caret position, not attribute
+        }
+
+        const requiredAttr = attrMap[m]
+        if (requiredAttr !== undefined) {
+          if (requiredAttr === null) {
+            // Text mode — re-check if cursor is still over selectable text
+            if (!target || getTextBeamHeight(mx, my, target) <= 0) {
+              setDefault(mx, my)
+            }
+          } else {
+            // Attribute-based modes — check if element with the attribute is still under cursor
+            if (!target?.closest(`[data-cursor="${requiredAttr}"]`)) {
+              setDefault(mx, my)
+            }
           }
         }
       }
@@ -560,8 +595,12 @@ export function useCursorMorph(): CursorMorphValues {
     }
     rafRef.current = requestAnimationFrame(tick)
 
+    // Mark scroll-dirty so the rAF tick re-checks elementFromPoint only after scroll
+    const handleScroll = () => { scrollDirtyRef.current = true }
+
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mousedown', handleMouseDown)
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true })
     document.documentElement.addEventListener('mouseenter', handleMouseEnter)
     document.documentElement.addEventListener('mouseleave', handleMouseLeave)
 
@@ -575,6 +614,7 @@ export function useCursorMorph(): CursorMorphValues {
       document.removeEventListener('mouseover', handleMouseOver, true)
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mousedown', handleMouseDown)
+      window.removeEventListener('scroll', handleScroll, true)
       document.documentElement.removeEventListener('mouseenter', handleMouseEnter)
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave)
       cancelAnimationFrame(rafRef.current)

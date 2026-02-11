@@ -5,10 +5,10 @@ const DARK_COLOR = 'rgba(0, 0, 0, 0.18)'
 const LIGHT_COLOR = 'rgba(255, 255, 255, 0.5)'
 
 // Max parallax displacement for inner icons (px)
-const ICON_PARALLAX = 4
+const ICON_PARALLAX = 6
 
 // Max joystick nub offset during drag (px)
-const NUB_OFFSET = 8
+const NUB_OFFSET = 10
 
 export function CustomCursor() {
   const { x, y, rawX, rawY, width, height, borderRadius, opacity, isMorphed, isInverted, mode, isEnabled } = useCursorMorph()
@@ -34,14 +34,14 @@ export function CustomCursor() {
     [rawX, x],
     ([raw, spring]: number[]) => {
       const delta = raw - spring
-      return Math.max(-ICON_PARALLAX, Math.min(ICON_PARALLAX, delta * 0.5))
+      return Math.max(-ICON_PARALLAX, Math.min(ICON_PARALLAX, delta * 0.65))
     }
   )
   const parallaxY = useTransform(
     [rawY, y],
     ([raw, spring]: number[]) => {
       const delta = raw - spring
-      return Math.max(-ICON_PARALLAX, Math.min(ICON_PARALLAX, delta * 0.5))
+      return Math.max(-ICON_PARALLAX, Math.min(ICON_PARALLAX, delta * 0.65))
     }
   )
 
@@ -50,14 +50,14 @@ export function CustomCursor() {
     [rawX, x, mode] as any,
     ([raw, spring, m]: [number, number, string]) => {
       if (m !== 'drag') return 0
-      return Math.max(-NUB_OFFSET, Math.min(NUB_OFFSET, (raw - spring) * 0.6))
+      return Math.max(-NUB_OFFSET, Math.min(NUB_OFFSET, (raw - spring) * 0.75))
     }
   ) as any
   const nubY = useTransform(
     [rawY, y, mode] as any,
     ([raw, spring, m]: [number, number, string]) => {
       if (m !== 'drag') return 0
-      return Math.max(-NUB_OFFSET, Math.min(NUB_OFFSET, (raw - spring) * 0.6))
+      return Math.max(-NUB_OFFSET, Math.min(NUB_OFFSET, (raw - spring) * 0.75))
     }
   ) as any
 

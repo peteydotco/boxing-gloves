@@ -174,6 +174,7 @@ function App() {
           <motion.img
             src="/images/graffiti-tag.webp"
             alt=""
+            loading="lazy"
             style={{
               width: 'max(150vw, 180vh)',
               maxWidth: 'none',

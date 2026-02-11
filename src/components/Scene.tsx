@@ -292,9 +292,9 @@ export function Scene({ settings, shadowSettings, themeMode = 'light' }: { setti
       <Canvas
         camera={{ position: [0, 0, 7], fov: 45 }}
         shadows
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         frameloop="always"
-        gl={{ antialias: true, alpha: true, preserveDrawingBuffer: true }}
+        gl={{ antialias: true, alpha: true }}
         onCreated={({ gl }) => {
           gl.shadowMap.type = THREE.PCFSoftShadowMap
           gl.shadowMap.autoUpdate = true
