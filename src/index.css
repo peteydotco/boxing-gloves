@@ -9,7 +9,7 @@
   --font-share-tech-mono: 'Share Tech Mono', ui-monospace, monospace;
   --font-dotgothic: 'DotGothic16', ui-monospace, monospace;
 
-  --breakpoint-tablet: 810px;
+  --breakpoint-tablet: 1024px;
 }
 
 /* =============================================================================
@@ -292,38 +292,39 @@ canvas {
 }
 
 /* Responsive padding classes */
-/* Mobile/Tablet (<1024px): 12px padding on all sides */
-/* Desktop (≥1024px): 24px padding on all sides */
+/* Narrow (<1128px): 12px padding on all sides */
+/* Wide (≥1128px): 24px padding on all sides */
+/* 1128px = BREAKPOINTS.tabletWide — coincides with TopCards overflow threshold */
 
 .padding-responsive {
-  padding: 0.75rem; /* Mobile/Tablet default: 12px all sides */
+  padding: 0.75rem; /* Narrow default: 12px all sides */
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1128px) {
   .padding-responsive {
-    padding: 1.5rem; /* Desktop: 24px all sides */
+    padding: 1.5rem; /* Wide: 24px all sides */
   }
 }
 
 /* Legacy classes for backward compatibility */
 .top-padding-responsive {
-  padding-top: 0.75rem; /* Mobile/Tablet default: 12px */
+  padding-top: 0.75rem; /* Narrow default: 12px */
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1128px) {
   .top-padding-responsive {
-    padding-top: 1.5rem; /* Desktop: 24px */
+    padding-top: 1.5rem; /* Wide: 24px */
   }
 }
 
 .horizontal-padding-responsive {
-  padding-left: 0.75rem; /* Mobile/Tablet default: 12px */
+  padding-left: 0.75rem; /* Narrow default: 12px */
   padding-right: 0.75rem;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1128px) {
   .horizontal-padding-responsive {
-    padding-left: 1.5rem; /* Desktop: 24px */
+    padding-left: 1.5rem; /* Wide: 24px */
     padding-right: 1.5rem;
   }
 }

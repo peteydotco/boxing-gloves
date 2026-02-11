@@ -8,6 +8,7 @@ import { IoMdArrowForward } from 'react-icons/io'
 import React from 'react'
 import type { CardData, VariantStyle, ThemeMode } from '../types'
 import { variantStylesLight, getVariantStyles } from '../constants/themes'
+import { BREAKPOINTS } from '../constants/breakpoints'
 import { AddNewRoleContent } from './AddNewRoleContent'
 import {
   signatureSpring,
@@ -929,7 +930,7 @@ export function MorphingCard({
           // Match compact pill boxShadow for seamless handoff
           boxShadow: expandedFromCompact
             ? '0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)'
-            : (typeof window !== 'undefined' && window.innerWidth < 768)
+            : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop)
               ? '0 12px 24px 0 rgba(0,0,0,0.04), 0 4px 12px 0 rgba(0,0,0,0.08)'
               : '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
           // Transition bg to match collapsed/compact pill appearance on unmount.
@@ -1048,14 +1049,14 @@ export function MorphingCard({
         {/* On mobile, this becomes a scrollable container for all content */}
         {/* On desktop/tablet, uses flexbox with space-between for auto-spacing between clusters (toggleable via Leva) */}
         <motion.div
-          className={`absolute inset-0 flex flex-col ${(typeof window !== 'undefined' && window.innerWidth < 768) ? 'mobile-card-scroll' : 'justify-between'}`}
+          className={`absolute inset-0 flex flex-col ${(typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 'mobile-card-scroll' : 'justify-between'}`}
           style={{
-            overflowY: (typeof window !== 'undefined' && window.innerWidth < 768) ? 'auto' : 'hidden',
+            overflowY: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 'auto' : 'hidden',
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch',
           }}
           initial={{ padding: compactCta ? '18px 10px 19px 12px' : '18px 10px 19px 20px' }}
-          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '24px 14px 16px 16px' : (typeof window !== 'undefined' && window.innerWidth < 1024) ? '24px 24px 18px 24px' : '24px 22px 24px 24px' }}
+          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? '24px 14px 16px 16px' : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? '24px 24px 18px 24px' : '24px 22px 24px 24px' }}
           exit={{
             ...(expandedFromCompact
               ? { opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeOut' } } }
@@ -1075,7 +1076,7 @@ export function MorphingCard({
           onTouchMove={(e) => {
             // On mobile, detect swipe direction to decide whether to allow vertical scroll
             // or let horizontal swipe propagate to parent for card navigation
-            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            if (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) {
               const target = e.currentTarget as HTMLElement
               const startX = parseFloat(target.dataset.touchStartX || '0')
               const startY = parseFloat(target.dataset.touchStartY || '0')
@@ -1109,8 +1110,8 @@ export function MorphingCard({
             }
           }}
           onTouchEnd={(e) => {
-            // On mobile, check for swipe-down-to-dismiss
-            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            // On mobile & tablet, check for swipe-down-to-dismiss
+            if (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) {
               const target = e.currentTarget as HTMLElement
               const startY = parseFloat(target.dataset.touchStartY || '0')
               const scrollTopAtStart = parseFloat(target.dataset.scrollTopAtStart || '0')
@@ -1132,7 +1133,7 @@ export function MorphingCard({
           {card.variant === 'cta' ? (
             <AddNewRoleContent
               onClose={onClose}
-              isMobile={compactCta || (typeof window !== 'undefined' && window.innerWidth < 768)}
+              isMobile={compactCta || (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile)}
               hideShortcut={hideShortcut}
               shortcut={card.shortcut}
               contentScale={contentScale}
@@ -1156,7 +1157,7 @@ export function MorphingCard({
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
             style={{ backgroundColor: styles.badgeBg }}
             initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: hideShortcut ? 0 : 1 }}
-            animate={{ right: (typeof window !== 'undefined' && window.innerWidth < 768) ? 14 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 16 : 22, top: (typeof window !== 'undefined' && window.innerWidth < 768) ? 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 16 : 22, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: hideShortcut ? 0 : 1 }}
+            animate={{ right: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 14 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, top: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: hideShortcut ? 0 : 1 }}
             exit={{
               right: 10,
               top: 10,
@@ -1230,7 +1231,7 @@ export function MorphingCard({
               className="text-left w-full"
               style={{ fontFamily: 'Inter', color: styles.textColor, transformOrigin: 'top left', fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative' }}
               initial={{ scale: 1, marginTop: '-4px', marginLeft: '0px', opacity: 1 }}
-              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 28 / 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 30 / 18 : 34 / 18, marginTop: '1px', marginLeft: '-1px', opacity: 1 }}
+              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 28 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 30 / 18 : 34 / 18, marginTop: '1px', marginLeft: '-1px', opacity: 1 }}
               exit={{
                 scale: 1,
                 marginTop: '-4px',
@@ -1250,8 +1251,8 @@ export function MorphingCard({
 
             {/* Date Range - part of top cluster */}
             {(() => {
-              const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768
-              const isTabletViewport = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024
+              const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile
+              const isTabletViewport = typeof window !== 'undefined' && window.innerWidth >= BREAKPOINTS.mobile && window.innerWidth < BREAKPOINTS.desktop
               return expandedContent.dateRange && (
                 <motion.p
                   style={{
@@ -1285,7 +1286,7 @@ export function MorphingCard({
           {/* MOBILE ONLY: Description + Bottom content in a separate structure */}
           {/* Date Range + Description + Bottom Content - fades in */}
           {(() => {
-            const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768
+            const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile
 
             // Mobile layout uses different structure
             if (!isMobileViewport) return null
@@ -1445,7 +1446,7 @@ export function MorphingCard({
           {/* DESKTOP/TABLET: Middle cluster (description) + Bottom cluster (pinned content) */}
           {/* Uses flexbox space-between layout for auto-spacing between top/middle/bottom */}
           {/* Content scales proportionally with card dimensions via contentScale */}
-          {typeof window !== 'undefined' && window.innerWidth >= 768 && (() => {
+          {typeof window !== 'undefined' && window.innerWidth >= BREAKPOINTS.mobile && (() => {
             return (
             <>
               {/* MIDDLE CLUSTER: Description - takes remaining space, vertically centered */}
@@ -1679,8 +1680,8 @@ export function MorphingCard({
             transition={{ opacity: { duration: 0.15, ease: 'easeIn', delay: 0.05 } }}
           >
             <span className="flex-1 truncate" style={{
-              fontFamily: 'Inter', fontWeight: 500, fontSize: '18px',
-              letterSpacing: '-0.01em', lineHeight: '24px',
+              fontFamily: 'Inter', fontWeight: 500, fontSize: '16px',
+              letterSpacing: '-0.01em', lineHeight: '22px',
               color: '#FFFFFF', whiteSpace: 'nowrap',
             }}>
               {card.compactLabel || card.label}
@@ -1739,8 +1740,8 @@ export function MorphingCard({
               />
             </svg>
             <span className="flex-1 truncate" style={{
-              fontFamily: 'Inter', fontWeight: 500, fontSize: '18px',
-              letterSpacing: '-0.01em', lineHeight: '24px',
+              fontFamily: 'Inter', fontWeight: 500, fontSize: '16px',
+              letterSpacing: '-0.01em', lineHeight: '22px',
               color: ghostTextColor,
               whiteSpace: 'nowrap',
             }}>
@@ -1779,7 +1780,7 @@ export function MorphingCard({
         width: '100%',
         height: 'auto',
         ...(card.variant === 'cta' ? { backdropFilter: 'blur(8px)', overflow: 'visible' as const } : {}),
-        boxShadow: (typeof window !== 'undefined' && window.innerWidth < 768)
+        boxShadow: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop)
           ? '0 12px 24px 0 rgba(0,0,0,0.04), 0 4px 12px 0 rgba(0,0,0,0.08)'
           : '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
       }}
@@ -1789,14 +1790,14 @@ export function MorphingCard({
       transition={hoverTransition}
       onClick={() => {
         // On mobile, clear hover state when clicking to expand
-        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        if (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) {
           setIsHovered(false)
         }
         onClick()
       }}
       onMouseEnter={() => {
         // Only enable hover on desktop
-        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        if (typeof window !== 'undefined' && window.innerWidth >= BREAKPOINTS.mobile) {
           setIsHovered(true)
         }
       }}

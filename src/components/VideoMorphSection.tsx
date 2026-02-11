@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, useSpring, useTransform, useMotionValueEvent, useScroll } from 'framer-motion'
+import { BREAKPOINTS } from '../constants/breakpoints'
 
 const YOUTUBE_VIDEO_ID = 'rJKduGHwvHk'
 
@@ -35,8 +36,8 @@ export function VideoMorphSection() {
     return typeof window !== 'undefined' ? window.innerWidth : 1440
   })
 
-  // Tablet/mobile breakpoint: stack labels vertically when viewport < 810px
-  const isNarrow = viewportWidth < 810
+  // Tablet/mobile breakpoint: stack labels vertically when viewport < tablet breakpoint
+  const isNarrow = viewportWidth < BREAKPOINTS.tablet
 
   useEffect(() => {
     const handleResize = () => {

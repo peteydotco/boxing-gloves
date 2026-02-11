@@ -119,10 +119,50 @@ export function BioCopySection() {
   const lines = useLineBreaks(BIO_TEXT, containerRef)
   const [isOverDark, setIsOverDark] = useState(false)
 
+  // Track reveal state ourselves instead of relying on whileInView + once:true.
+  // The problem: whileInView fires based on IntersectionObserver, but lines are
+  // measured asynchronously (RAF + ResizeObserver + font loading). If the observer
+  // fires before lines are populated, the animation triggers on empty content.
+  // When lines later populate, new motion.div children mount in the parent's
+  // already-completed "visible" state — but inherit initial="hidden" from their
+  // variants, staying invisible forever.
+  //
+  // Fix: defer whileInView until lines are ready. Use a manual IO so once:true
+  // semantics only apply after lines exist.
+  const [revealed, setRevealed] = useState(false)
+  const linesReady = lines.length > 0
+
+  useEffect(() => {
+    if (!linesReady || revealed) return
+    const el = containerRef.current
+    if (!el) return
+
+    // If already scrolled past (refresh below bio), reveal immediately
+    const rect = el.getBoundingClientRect()
+    if (rect.bottom < 0) {
+      setRevealed(true)
+      return
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setRevealed(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.15 },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [linesReady, revealed])
+
   // Detect dark overlay from VideoMorphSection — uses the exact same
-  // scrollYProgress formula and thresholds as VideoMorphSection's darkOverlayOpacity.
+  // scrollYProgress formula as VideoMorphSection's darkOverlayOpacity.
   // offset: ['start end', 'end start'] → progress = (scrollY - (sectionTop - viewH)) / (sectionH + viewH)
-  // Dark at progress ∈ [0.21, 0.78] (matches darkOverlayOpacity opacity=1 range)
+  // Dark overlay fades in at [0.14, 0.21] and out at [0.78, 0.88].
+  // Flip text color early (at 0.16) so it transitions alongside the fade-in,
+  // and flip back late (at 0.84) so it holds through the fade-out.
   useEffect(() => {
     let currentDark = false
     const handleScroll = () => {
@@ -134,7 +174,7 @@ export function BioCopySection() {
         // Replicate Framer Motion useScroll with offset=['start end','end start']:
         // progress 0 = section top at viewport bottom, progress 1 = section bottom at viewport top
         const progress = (viewH - rect.top) / (sectionH + viewH)
-        const nowDark = progress > 0.21 && progress < 0.78
+        const nowDark = progress > 0.16 && progress < 0.84
         if (nowDark !== currentDark) {
           currentDark = nowDark
           setIsOverDark(nowDark)
@@ -145,6 +185,7 @@ export function BioCopySection() {
       }
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll() // Check on mount in case page loaded mid-scroll
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -187,8 +228,7 @@ export function BioCopySection() {
         <motion.div
           variants={wrapperVariants}
           initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.15 }}
+          animate={revealed ? 'visible' : 'hidden'}
           style={{
             ...FONT_STYLE,
             color: isOverDark ? '#FFFFFF' : '#0E0E0E',

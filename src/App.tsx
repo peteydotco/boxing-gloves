@@ -8,14 +8,39 @@ import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, useMotionValue, useSpring } from 'framer-motion'
+import { BREAKPOINTS } from './constants'
+import { motion, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion'
 import LocomotiveScroll from 'locomotive-scroll'
 
 function App() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const [isDesktop, setIsDesktop] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
+  })
+
+  const [showCursor, setShowCursor] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.mobile : true
+  })
+
+  // Below mobile breakpoint (768px) we swap to a taller portrait graffiti asset
+  // that fills the vertical space better on phone-sized viewports.
+  const [isMobile, setIsMobile] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.mobile : false
+  })
+
+  // Graffiti scale factor — scales continuously below tabletWide (1128px) to prevent
+  // harsh left/right cropping while keeping PETEY centered and legible.
+  // Above 1128: 1.0 (full size: 150vw / 180vh).
+  // Below 1128→768: linearly interpolates from 1.0 → 0.667 (100vw / 120vh).
+  // Both vw and vh terms scale in lockstep to keep the image proportional.
+  const computeGraffitiScale = (w: number) => {
+    if (w >= BREAKPOINTS.tabletWide) return 1
+    if (w <= BREAKPOINTS.mobile) return 2 / 3
+    return 2 / 3 + (1 / 3) * (w - BREAKPOINTS.mobile) / (BREAKPOINTS.tabletWide - BREAKPOINTS.mobile)
+  }
+  const [graffitiScale, setGraffitiScale] = useState(() => {
+    return typeof window !== 'undefined' ? computeGraffitiScale(window.innerWidth) : 1
   })
 
   const themeMode = 'light' as const
@@ -36,7 +61,11 @@ function App() {
     }
 
     const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024)
+      const w = window.innerWidth
+      setIsDesktop(w >= BREAKPOINTS.desktop)
+      setShowCursor(w >= BREAKPOINTS.mobile)
+      setIsMobile(w < BREAKPOINTS.mobile)
+      setGraffitiScale(computeGraffitiScale(w))
     }
 
     window.addEventListener('mousemove', handleMouseMove)
@@ -48,6 +77,20 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [handleKeyDown])
+
+  // Hero section ref — used for scroll-driven graffiti fade
+  const heroRef = useRef<HTMLElement>(null)
+
+  // Scroll-driven graffiti fade: 10% opacity at top → 0% by the time hero is ~40% scrolled out.
+  // This ensures the bio section text reads against a clean solid background.
+  const { scrollYProgress: heroScrollProgress } = useScroll({
+    target: heroRef,
+    // "start start" = element top meets viewport top (scrollY=0)
+    // "end start" = element bottom meets viewport top (hero fully scrolled past)
+    offset: ['start start', 'end start'],
+  })
+  // Map scroll progress [0, 0.4] → opacity [0.10, 0] — fully faded before hero is halfway gone
+  const graffitiOpacity = useTransform(heroScrollProgress, [0, 0.4], [0.10, 0])
 
   // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
   const GRAFFITI_TILT = 3    // max degrees of rotation
@@ -153,32 +196,42 @@ function App() {
       <div className="grain-overlay" />
 
       {/* ===== Hero Section ===== */}
-      <section className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
+      <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
         {/* Graffiti tag background image — centered on PETEY text to align with boxing gloves.
              Uses max(vw, vh) sizing so the image always covers the viewport while keeping
              the text centered regardless of aspect ratio. The slight upward nudge (-4%)
              accounts for the PETEY text sitting above the image's geometric center. */}
-        <div
+        <motion.div
           className="absolute pointer-events-none"
           style={{
             inset: 0,
-            opacity: 0.10,
+            opacity: graffitiOpacity,
             zIndex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
             perspective: 1200,
+            // Feather the bottom edge so the graffiti dissolves naturally
+            // before the hero/bio boundary — avoids a hard color break and
+            // doesn't interfere with the grain overlay above.
+            maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
           }}
         >
           <motion.img
-            src="/images/graffiti-tag.webp"
+            src={isMobile ? '/images/graffiti-tag-tall.webp' : '/images/graffiti-tag.webp'}
             alt=""
             loading="lazy"
             style={{
-              width: 'max(150vw, 180vh)',
+              // Landscape asset: oversized width covers viewport, height follows.
+              // Portrait asset (mobile): sized by height to fill the full-screen hero,
+              // width follows the taller aspect ratio.
+              ...(isMobile
+                ? { height: '120vh', width: 'auto' }
+                : { width: `max(${(150 * graffitiScale).toFixed(1)}vw, ${(180 * graffitiScale).toFixed(1)}vh)`, height: 'auto' }
+              ),
               maxWidth: 'none',
-              height: 'auto',
               display: 'block',
               flexShrink: 0,
               rotateX: graffitiRotateX,
@@ -189,7 +242,7 @@ function App() {
               translateY: '2%',
             }}
           />
-        </div>
+        </motion.div>
 
         {/* Desktop: 3D Scene */}
         {isDesktop && (
@@ -228,6 +281,7 @@ function App() {
 
       </section>
 
+
       {/* ===== Bio Copy Section ===== */}
       <BioCopySection />
 
@@ -246,8 +300,8 @@ function App() {
       {/* ===== Footer ===== */}
       <SiteFooter />
 
-      {/* Custom cursor (desktop only) */}
-      {isDesktop && <CustomCursor />}
+      {/* Custom cursor (tablet + desktop — useCursorMorph self-disables on pure touch devices) */}
+      {showCursor && <CustomCursor />}
 
       {/* Debug grid overlay — toggled with G key (Figma: 12 cols, 25px margin, 20px gutter) */}
       {showGrid && (

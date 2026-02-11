@@ -2,7 +2,7 @@ import * as React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MorphingCard } from './MorphingCard'
 import { createPortal } from 'react-dom'
-import { CAROUSEL_CONFIG, backdropColors, signatureSpring, getVariantStyles, hoverTransition } from '../constants'
+import { BREAKPOINTS, CAROUSEL_CONFIG, backdropColors, signatureSpring, getVariantStyles, hoverTransition } from '../constants'
 import { cards, stackedCardConfigs } from '../data/cards'
 
 // Canonical card dimensions - the "ideal" size we design for
@@ -32,7 +32,7 @@ const getExpandedCardDimensions = () => {
 
   // Tablet and Desktop: scale proportionally to fit viewport
   const verticalPadding = 48 // 24px top + 24px bottom
-  const horizontalPadding = viewportWidth < 1024 ? 48 : 64
+  const horizontalPadding = viewportWidth < BREAKPOINTS.desktop ? 48 : 64
   const maxAvailableHeight = viewportHeight - verticalPadding
   const maxAvailableWidth = viewportWidth - horizontalPadding
 
@@ -54,11 +54,15 @@ const getExpandedCardDimensions = () => {
 
 export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: number[], themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' } = {}) {
   const [isDesktop, setIsDesktop] = React.useState<boolean>(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
   })
 
   const [isMobile, setIsMobile] = React.useState<boolean>(() => {
-    return typeof window !== 'undefined' ? window.innerWidth < 768 : false
+    return typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.mobile : false
+  })
+
+  const [isTablet, setIsTablet] = React.useState<boolean>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.mobile && window.innerWidth < BREAKPOINTS.desktop : false
   })
 
   // Compute which cards to show based on cardIndices prop
@@ -89,20 +93,20 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   // Store scroll position when expanding to restore on collapse
   const savedScrollPosition = React.useRef<number>(0)
 
-  // Compact sticky state (desktop only) — pills that follow the user on scroll
+  // Compact sticky state — pills that follow the user on scroll
   const [isCompact, setIsCompact] = React.useState(false)
   const [isOverDark, setIsOverDark] = React.useState(false)
   const topCardsWrapperRef = React.useRef<HTMLDivElement>(null)
   const compactCardRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map())
+  const compactScrollRef = React.useRef<HTMLDivElement | null>(null)
+  const savedCompactScrollPosition = React.useRef<number>(0)
+  // Shared horizontal scroll position — kept in sync between the default card row
+  // and the compact bar so that switching between states preserves x-scroll alignment.
+  const sharedScrollLeft = React.useRef<number>(0)
   const expandedFromCompact = React.useRef(false)
   const justClosedFromCompact = React.useRef(false)
 
   React.useEffect(() => {
-    if (!isDesktop) {
-      setIsCompact(false)
-      setIsOverDark(false)
-      return
-    }
     const BUFFER = 20
     let currentCompact = false
     let currentDark = false
@@ -112,9 +116,17 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       const rect = wrapper.getBoundingClientRect()
       if (!currentCompact && rect.bottom < -BUFFER) {
         currentCompact = true
+        // Capture default row scroll before it hides, so compact bar can pick it up
+        if (scrollContainerRef.current) {
+          sharedScrollLeft.current = scrollContainerRef.current.scrollLeft
+        }
         setIsCompact(true)
       } else if (currentCompact && rect.bottom > BUFFER) {
         currentCompact = false
+        // Sync default row scroll from shared position (set by compact bar) before it reappears
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollLeft = sharedScrollLeft.current
+        }
         setIsCompact(false)
       }
 
@@ -145,28 +157,37 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [isDesktop])
+  }, [])
 
   // Capture compact card positions and expand
   const captureCompactPositionsAndExpand = (index: number) => {
+    // Save compact bar scroll position to restore on close
+    if (compactScrollRef.current) {
+      savedCompactScrollPosition.current = compactScrollRef.current.scrollLeft
+    }
     const positions = new Map<string, DOMRect>()
+
+    // getBoundingClientRect() includes in-flight CSS transforms (whileTap scale
+    // spring still releasing when onClick fires) AND CSS `translate` from the
+    // soft-magnetic cursor effect. Use the BRCT center (transform-invariant for
+    // center-origin scales) with offsetWidth/offsetHeight (layout dimensions,
+    // immune to transforms), then subtract any active magnetic displacement.
     compactCardRefs.current.forEach((el, id) => {
       if (el) {
+        const width = el.offsetWidth
+        const height = el.offsetHeight
         const rect = el.getBoundingClientRect()
-        // getBoundingClientRect() includes CSS transforms (whileTap scale: 0.97),
-        // so captured width/height are ~3% too small during a click.
-        // Use offsetWidth/offsetHeight for true layout dimensions, then adjust
-        // left/top to undo the center-point scale offset.
-        const trueW = el.offsetWidth
-        const trueH = el.offsetHeight
-        const adjustedRect = {
-          ...rect.toJSON(),
-          width: trueW,
-          height: trueH,
-          left: rect.left - (trueW - rect.width) / 2,
-          top: rect.top - (trueH - rect.height) / 2,
-        } as DOMRect
-        positions.set(id, adjustedRect)
+        const centerX = rect.left + rect.width / 2
+        const centerY = rect.top + rect.height / 2
+        // Subtract soft-magnetic CSS translate displacement (--magnetic-x/y on
+        // [data-cursor-morphed] elements). BRCT includes this shift but the rest
+        // position doesn't — failing to subtract causes 1-3px landing mismatch.
+        const style = getComputedStyle(el)
+        const magneticX = parseFloat(style.getPropertyValue('--magnetic-x')) || 0
+        const magneticY = parseFloat(style.getPropertyValue('--magnetic-y')) || 0
+        const left = centerX - width / 2 - magneticX
+        const top = centerY - height / 2 - magneticY
+        positions.set(id, { left, top, width, height, right: left + width, bottom: top + height, x: left, y: top, toJSON: () => ({}) } as DOMRect)
       }
     })
     setCardPositions(positions)
@@ -196,71 +217,126 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   const handleCloseExpanded = () => {
     closingCardIndex.current = expandedIndex
+    if (expandedIndex === null) return
 
-    // Update saved scroll position to the current expanded card's position (for mobile & tablet)
-    // so that when we collapse, we scroll to where the user navigated to
-    if (!isDesktop && expandedIndex !== null) {
-      const regularCardWidth = 243
-      const ctaCardWidth = 115
-      const gap = 8
-      const containerPadding = 12
-      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 375
-
-      // Calculate the scroll position that will be restored
-      // For CTA card (index 3), we need to scroll so it's visible at the right edge
-      // For regular cards, scroll to show them at the left
-      let targetScrollPosition: number
-      if (expandedIndex === 3) {
-        // CTA card: scroll so it's visible at the right side of viewport
-        // CTA absolute position = containerPadding + (3 * (regularCardWidth + gap))
-        // We want: ctaAbsoluteLeft - scrollPosition + ctaCardWidth = viewportWidth - containerPadding
-        // So: scrollPosition = ctaAbsoluteLeft + ctaCardWidth - viewportWidth + containerPadding
-        const ctaAbsoluteLeft = containerPadding + (3 * (regularCardWidth + gap))
-        targetScrollPosition = ctaAbsoluteLeft + ctaCardWidth - viewportWidth + containerPadding
-      } else {
-        targetScrollPosition = expandedIndex * (regularCardWidth + gap)
-      }
-      savedScrollPosition.current = targetScrollPosition
-
-      // Pre-calculate exit positions for all cards BEFORE clearing expandedIndex
-      // Use the actual DOM positions captured at expand time, adjusted for scroll delta
-      // This avoids pixel mismatches from mathematical calculations vs DOM layout
+    // ── Closing back to compact pills ──
+    // Compact bar is unmounted during expansion, so we can't read DOM.
+    // Use the positions captured at expand time. On non-desktop the compact bar
+    // scrolls, so if the user navigated to a different card we need to compute
+    // a new compact scroll position and shift all pill positions accordingly.
+    if (expandedFromCompact.current) {
       const newExitPositions = new Map<string, { top: number; left: number; width: number; height: number }>()
-      const currentScrollPosition = scrollContainerRef.current?.scrollLeft ?? 0
-      const scrollDelta = currentScrollPosition - targetScrollPosition
+      const closingCard = visibleCards[expandedIndex]
+      const closingPos = closingCard ? cardPositions.get(closingCard.id) : null
+
+      // On desktop the compact bar doesn't scroll — positions are correct as-is.
+      // On tablet/mobile the compact bar scrolls: we need to ensure the closing
+      // card's pill is visible when the compact bar remounts.
+      let scrollDelta = 0
+      if (!isDesktop && closingPos) {
+        const viewportWidth = window.innerWidth
+        const bleedPadding = 12 // 0.75rem
+        // The captured pill left is viewport-relative at the captured scroll state.
+        // Check if the closing pill would be visible. If not, compute a new
+        // scroll state that shows it and apply the delta to all positions.
+        const pillLeft = closingPos.left
+        const pillRight = pillLeft + closingPos.width
+        // Pill is "visible" if it's fully within the viewport (with small margin)
+        const isVisible = pillLeft >= bleedPadding && pillRight <= viewportWidth - bleedPadding
+        if (!isVisible) {
+          // Pill is off-screen. Compute how far to scroll to bring it on-screen.
+          // We want the pill near the left edge (or right edge for the last card).
+          if (expandedIndex === visibleCards.length - 1) {
+            // Last pill: align to right edge
+            scrollDelta = pillRight - (viewportWidth - bleedPadding)
+          } else {
+            // Other pills: align to left edge
+            scrollDelta = pillLeft - bleedPadding
+          }
+          savedCompactScrollPosition.current += scrollDelta
+        }
+      }
 
       visibleCards.forEach((card) => {
-        const cardIdx = cardsToShow.findIndex((c) => c.id === card.id)
-        const isCtaCard = card.variant === 'cta'
-        const collapsedPos = cardPositions.get(card.id)
-
-        // Use actual captured DOM positions, adjusted for scroll change
-        // The captured left was relative to viewport at capture time (with currentScrollPosition)
-        // We need the position relative to viewport at targetScrollPosition
-        const fallbackLeft = isCtaCard
-          ? containerPadding + (3 * (regularCardWidth + gap))
-          : containerPadding + (cardIdx * (regularCardWidth + gap))
-        const fallbackWidth = isCtaCard ? ctaCardWidth : regularCardWidth
-
-        // exitLeft = where the card should appear on screen after scroll restoration
-        const exitLeft = (collapsedPos?.left ?? fallbackLeft) + scrollDelta
-        const exitWidth = collapsedPos?.width ?? fallbackWidth
-        const exitHeight = collapsedPos?.height ?? 91
-
-        newExitPositions.set(card.id, {
-          top: Math.round(collapsedPos?.top ?? 0),
-          left: Math.round(exitLeft),
-          width: Math.round(exitWidth),
-          height: Math.round(exitHeight),
-        })
+        const capturedPos = cardPositions.get(card.id)
+        if (capturedPos) {
+          newExitPositions.set(card.id, {
+            top: capturedPos.top,
+            left: capturedPos.left - scrollDelta,
+            width: capturedPos.width,
+            height: capturedPos.height,
+          })
+        }
       })
       setMobileExitPositions(newExitPositions)
-      // Trigger close sequence - useEffect will clear expandedIndex after render
+      setCloseTriggered(true)
+      return
+    }
+
+    // ── Closing back to default card row ──
+    // Read actual DOM positions from the hidden-but-laid-out card elements.
+    // Cards have `visibility: hidden` but are still in flow, so
+    // getBoundingClientRect() returns correct layout positions.
+
+    const container = scrollContainerRef.current
+    const hasOverflow = container ? container.scrollWidth > container.clientWidth : false
+
+    if (hasOverflow && container) {
+      // Mobile & narrow tablet: cards overflow and scroll.
+      // Compute a target scroll position that shows the closing card,
+      // then adjust all exit positions for that scroll state.
+      const containerRect = container.getBoundingClientRect()
+      const currentScrollLeft = container.scrollLeft
+
+      const closingCard = visibleCards[expandedIndex]
+      const closingCardEl = closingCard ? cardRefs.current.get(closingCard.id) : null
+
+      if (closingCardEl) {
+        const cardRect = closingCardEl.getBoundingClientRect()
+        // Card's left edge relative to the scroll content (not viewport)
+        const cardContentLeft = cardRect.left - containerRect.left + currentScrollLeft
+        const cardWidth = cardRect.width
+        const containerVisibleWidth = container.clientWidth
+        const bleedPadding = 12 // 0.75rem
+
+        let targetScrollPosition: number
+        if (expandedIndex === visibleCards.length - 1) {
+          // Last card: align to right edge
+          targetScrollPosition = cardContentLeft + cardWidth - containerVisibleWidth + bleedPadding
+        } else {
+          // Other cards: align to left edge
+          targetScrollPosition = Math.max(0, cardContentLeft - bleedPadding)
+        }
+        // Clamp to valid scroll range
+        const maxScroll = container.scrollWidth - container.clientWidth
+        savedScrollPosition.current = Math.max(0, Math.min(targetScrollPosition, maxScroll))
+      }
+
+      // Compute exit positions adjusted for the scroll delta
+      const scrollDelta = currentScrollLeft - savedScrollPosition.current
+
+      const newExitPositions = new Map<string, { top: number; left: number; width: number; height: number }>()
+      visibleCards.forEach((card) => {
+        const el = cardRefs.current.get(card.id)
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          newExitPositions.set(card.id, {
+            top: rect.top,
+            left: rect.left + scrollDelta,
+            width: rect.width,
+            height: rect.height,
+          })
+        }
+      })
+      setMobileExitPositions(newExitPositions)
       setCloseTriggered(true)
     } else {
-      // Desktop: just close immediately
-      setIsClosing(true)
-      setExpandedIndex(null)
+      // Desktop & wide tablet: cards don't scroll (no overflow).
+      // Clear stale exit positions and use the two-phase close (closeTriggered → useEffect)
+      // so the empty map renders before AnimatePresence captures exit props.
+      // Without this, stale compact pill positions from a previous close cycle leak through.
+      setMobileExitPositions(new Map())
+      setCloseTriggered(true)
     }
   }
 
@@ -668,9 +744,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       state.isDragging = false
       const totalDragX = state.totalDragDistance
 
-      // Check for swipe-down-to-dismiss on mobile
+      // Check for swipe-down-to-dismiss on mobile & tablet
       // Only dismiss if: downward movement, Y dominates X, and past threshold
-      if (isMobile && totalDragY > SWIPE_DOWN_THRESHOLD && totalDragY > Math.abs(totalDragX)) {
+      if (!isDesktop && totalDragY > SWIPE_DOWN_THRESHOLD && totalDragY > Math.abs(totalDragX)) {
         handleCloseExpanded()
         return
       }
@@ -706,7 +782,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       container.removeEventListener('touchend', handleTouchEnd)
       container.removeEventListener('touchcancel', handleTouchEnd)
     }
-  }, [expandedIndex, cardsToShow.length, dragContainer, isMobile, handleCloseExpanded])
+  }, [expandedIndex, cardsToShow.length, dragContainer, isDesktop, handleCloseExpanded])
 
   // Lock all site scrolling when expanded
   // This prevents body scroll, wheel events, and touch scrolling
@@ -736,8 +812,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   React.useEffect(() => {
     const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024)
-      setIsMobile(window.innerWidth < 768)
+      const w = window.innerWidth
+      setIsDesktop(w >= BREAKPOINTS.desktop)
+      setIsMobile(w < BREAKPOINTS.mobile)
+      setIsTablet(w >= BREAKPOINTS.mobile && w < BREAKPOINTS.desktop)
       // Force re-render to recalculate expanded positions if a card is expanded
       if (expandedIndex !== null) {
         setResizeKey(prev => prev + 1)
@@ -815,17 +893,24 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
           {/* Cards row */}
           <div
             ref={scrollContainerRef}
+            onScroll={(e) => {
+              // Keep shared scroll position in sync when user scrolls the default card row
+              if (!isCompact && !isExpanded) {
+                sharedScrollLeft.current = (e.target as HTMLDivElement).scrollLeft
+              }
+            }}
             className="flex scrollbar-hide"
             style={{
               perspective: '1000px',
-              gap: isDesktop ? '1rem' : '0.5rem',
+              gap: isMobile ? '0.5rem' : '1rem',
               justifyContent: isDesktop ? 'center' : 'flex-start',
-              overflowX: isDesktop ? 'visible' : 'auto',
+              overflowX: isMobile ? 'auto' : isTablet ? 'auto' : 'visible',
               overflowY: 'visible',
               transition: 'gap 0.3s ease, justify-content 0.3s ease, margin 0.3s ease, padding 0.3s ease, opacity 0.3s ease',
-              pointerEvents: (isCompact && isDesktop) ? 'none' : 'auto',
-              opacity: (isCompact && isDesktop) ? 0 : 1,
-              // Mobile & Tablet: horizontal scroll with edge-to-edge margins
+              pointerEvents: isCompact ? 'none' : 'auto',
+              opacity: isCompact ? 0 : 1,
+              // Mobile & Tablet: bleed scroll container to viewport edges so
+              // first/last cards aren't clipped when overflowing
               ...(!isDesktop && {
                 marginLeft: '-0.75rem',
                 marginRight: '-0.75rem',
@@ -849,12 +934,17 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                   key={card.id}
                   ref={(el) => { cardRefs.current.set(card.id, el) }}
                   style={{
-                    // Desktop: flex cards that share space
-                    // Mobile & Tablet: fixed-width cards in horizontal scroll
+                    // Desktop: flex cards that share space equally
+                    // Tablet: flex cards that grow to fill but never shrink below 260px (scrolls when they can't fit)
+                    // Mobile: fixed-width cards in horizontal scroll
                     ...(isDesktop
                       ? {
                           flex: '1 1 0%',
                           minWidth: 0,
+                        }
+                      : isTablet
+                      ? {
+                          flex: '1 0 260px',
                         }
                       : {
                           flex: '0 0 auto',
@@ -895,6 +985,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               scrollContainerRef.current.scrollLeft = savedScrollPosition.current
             }
             const wasFromCompact = expandedFromCompact.current
+            expandedFromCompact.current = false
             closingCardIndex.current = null
             setIsClosing(false)
             // When closing back to compact, skip the slide-in animation
@@ -950,9 +1041,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                   const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
                   const collapsedPos = getCollapsedPosition(card.id)
 
-                  // Get mobile exit position from pre-calculated values (stored in handleCloseExpanded)
+                  // Get exit position from pre-calculated values (stored in handleCloseExpanded)
                   // This ensures stable exit positions that don't change during the animation
-                  const mobileExitPos = isMobile ? mobileExitPositions.get(card.id) : undefined
+                  // Used for mobile, tablet, and compact-close on all breakpoints
+                  const mobileExitPos = mobileExitPositions.get(card.id)
                   // For stacking logic, use the closing card index during exit animation
                   const focusIndex = expandedIndex ?? closingCardIndex.current
                   const isCtaFocused = focusIndex === cardsToShow.length - 1
@@ -1036,20 +1128,55 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         document.body
       )}
 
-      {/* Compact sticky bar — portal to body, desktop only */}
+      {/* Compact sticky bar — portal to body, all breakpoints */}
       {typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
-          {isDesktop && isCompact && !isExpanded && !isClosing && (
+          {isCompact && !isExpanded && !isClosing && (
             <motion.div
               key="compact-bar"
-              className="fixed top-0 left-0 right-0"
-              style={{ zIndex: 20, padding: '12px 24px' }}
+              className="fixed top-0 left-0 right-0 horizontal-padding-responsive top-padding-responsive"
+              style={{ zIndex: 20, paddingBottom: 20, overflow: 'visible' }}
               initial={justClosedFromCompact.current ? { y: 0, opacity: 1 } : { y: -60, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -60, opacity: 0 }}
-              transition={signatureSpring}
+              exit={expandedFromCompact.current ? { opacity: 0 } : { y: -60, opacity: 0 }}
+              transition={expandedFromCompact.current
+                ? { opacity: { duration: 0.15, ease: 'easeOut' } }
+                : signatureSpring
+              }
             >
-              <div className="flex" style={{ gap: 18, justifyContent: 'center' }}>
+              <div
+                ref={(el) => {
+                  compactScrollRef.current = el
+                  if (el) {
+                    // Restore scroll: prefer savedCompactScrollPosition after closing from compact,
+                    // otherwise sync from the shared position (matches default card row).
+                    if (justClosedFromCompact.current) {
+                      el.scrollLeft = savedCompactScrollPosition.current
+                    } else {
+                      el.scrollLeft = sharedScrollLeft.current
+                    }
+                  }
+                }}
+                onScroll={(e) => {
+                  // Keep shared scroll position in sync when user scrolls the compact bar
+                  sharedScrollLeft.current = (e.target as HTMLDivElement).scrollLeft
+                }}
+                className="flex scrollbar-hide"
+                style={{
+                  gap: isMobile ? '0.5rem' : '1rem',
+                  justifyContent: isDesktop ? 'center' : 'flex-start',
+                  overflowX: isDesktop ? 'visible' : 'auto',
+                  overflowY: 'visible',
+                  ...(!isDesktop && {
+                    marginLeft: '-0.75rem',
+                    marginRight: '-0.75rem',
+                    paddingLeft: '0.75rem',
+                    paddingRight: '0.75rem',
+                    paddingTop: 4,
+                    paddingBottom: 8,
+                  }),
+                }}
+              >
                 {visibleCards.map((card) => {
                   const cardIndex = cardsToShow.findIndex(c => c.id === card.id)
                   const styles = getVariantStyles(themeMode)[card.variant]
@@ -1072,10 +1199,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                         border: isCta ? 'none' : `1px solid ${styles.border}`,
                         paddingLeft: 25,
                         paddingRight: 19,
-                        flex: '1 1 0%',
-                        minWidth: 0,
+                        flex: isDesktop ? '1 1 0%' : '1 0 260px',
+                        minWidth: isDesktop ? 0 : undefined,
                         backdropFilter: isCta ? 'blur(8px)' : undefined,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)',
                         transition: 'background-color 0.4s ease',
                       }}
                       whileHover={{ scale: 1.02 }}
@@ -1125,9 +1251,9 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                           zIndex: 1,
                           fontFamily: 'Inter',
                           fontWeight: 500,
-                          fontSize: '18px',
+                          fontSize: '16px',
                           letterSpacing: '-0.01em',
-                          lineHeight: '24px',
+                          lineHeight: '22px',
                           color: isCta ? ctaTextColor : '#FFFFFF',
                           transition: isCta ? 'color 0.4s ease' : undefined,
                           whiteSpace: 'nowrap',

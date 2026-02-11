@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import { IoMdArrowForward, IoMdCheckmark } from 'react-icons/io'
 import { contentSpring } from '../constants/animation'
+import { BREAKPOINTS } from '../constants/breakpoints'
 import type { VariantStyle } from '../types'
 
 const STROKE_WIDTH = 2.5
@@ -269,8 +270,8 @@ export function AddNewRoleContent({
   }
 
   // Responsive position values for badges
-  const badgeRight = isMobile ? 14 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 16 : 22
-  const badgeTop = isMobile ? 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 16 : 22
+  const badgeRight = isMobile ? 14 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22
+  const badgeTop = isMobile ? 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -386,7 +387,7 @@ export function AddNewRoleContent({
             position: 'relative',
           }}
           initial={{ scale: 1, marginTop: '-4px', marginLeft: '0px', color: themeTitle, opacity: 0 }}
-          animate={{ scale: isMobile ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 28 / 18 : 32 / 18, marginTop: '1px', marginLeft: '-1px', color: themeTitle, opacity: 1 }}
+          animate={{ scale: isMobile ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 28 / 18 : 32 / 18, marginTop: '1px', marginLeft: '-1px', color: themeTitle, opacity: 1 }}
           exit={{
             scale: 1,
             marginTop: '-4px',

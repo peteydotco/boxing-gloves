@@ -189,9 +189,12 @@ function MarqueeRow({
     )
   }
 
-  // Text rows - 38vh height (slightly larger than before)
-  const rowHeight = '38vh'
-  const rowMargin = '-6vh'
+  // Text rows — height must accommodate font descenders (g, y, etc.)
+  // Font size is 34vh with lineHeight:1, so the text box is 34vh.
+  // Descenders extend ~15% below the baseline, needing ~5vh extra.
+  // 42vh total ensures no clipping; negative margins collapse the visual gap.
+  const rowHeight = '42vh'
+  const rowMargin = '-8vh'
 
   const fontStyles = fontType === 'dotmatrix'
     ? {
@@ -267,52 +270,90 @@ export const BackgroundMarquee = memo(function BackgroundMarquee({ marqueeFill =
         whileInView="visible"
         viewport={{ once: true, amount: 0.35 }}
       >
-        {/* Row 1: Client icons */}
-        <div style={{ overflow: 'hidden' }}>
-          <motion.div variants={{ hidden: { opacity: 0, y: 60 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }}>
-            <MarqueeRow
-              content=""
-              direction="right"
-              isIcons
-              fillColor={marqueeFill}
-            />
-          </motion.div>
-        </div>
+        {/* Row 1: Client icons
+             overflow:hidden clips the slide-up entrance, then reverts to visible
+             so row content (descenders, tall icons) isn't permanently clipped */}
+        <motion.div
+          style={{ overflow: 'hidden' }}
+          variants={{
+            hidden: { opacity: 0, y: 60 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              overflow: 'visible',
+              transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+            },
+          }}
+        >
+          <MarqueeRow
+            content=""
+            direction="right"
+            isIcons
+            fillColor={marqueeFill}
+          />
+        </motion.div>
         {/* Row 2: Locations */}
-        <div style={{ overflow: 'hidden' }}>
-          <motion.div variants={{ hidden: { opacity: 0, y: 60 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }}>
-            <MarqueeRow
-              content={locationsContent}
-              direction="left"
-              fontType="dotmatrix"
-              startOffset={0}
-              fillColor={marqueeFill}
-            />
-          </motion.div>
-        </div>
+        <motion.div
+          style={{ overflow: 'hidden' }}
+          variants={{
+            hidden: { opacity: 0, y: 60 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              overflow: 'visible',
+              transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+            },
+          }}
+        >
+          <MarqueeRow
+            content={locationsContent}
+            direction="left"
+            fontType="dotmatrix"
+            startOffset={0}
+            fillColor={marqueeFill}
+          />
+        </motion.div>
         {/* Row 3: Agency icons */}
-        <div style={{ overflow: 'hidden' }}>
-          <motion.div variants={{ hidden: { opacity: 0, y: 60 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }}>
-            <MarqueeRow
-              content=""
-              direction="right"
-              isAgencies
-              fillColor={marqueeFill}
-            />
-          </motion.div>
-        </div>
+        <motion.div
+          style={{ overflow: 'hidden' }}
+          variants={{
+            hidden: { opacity: 0, y: 60 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              overflow: 'visible',
+              transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+            },
+          }}
+        >
+          <MarqueeRow
+            content=""
+            direction="right"
+            isAgencies
+            fillColor={marqueeFill}
+          />
+        </motion.div>
         {/* Row 4: Locations */}
-        <div style={{ overflow: 'hidden' }}>
-          <motion.div variants={{ hidden: { opacity: 0, y: 60 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }}>
-            <MarqueeRow
-              content={locationsContent}
-              direction="left"
-              fontType="dotmatrix"
-              startOffset={30}
-              fillColor={marqueeFill}
-            />
-          </motion.div>
-        </div>
+        <motion.div
+          style={{ overflow: 'hidden' }}
+          variants={{
+            hidden: { opacity: 0, y: 60 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              overflow: 'visible',
+              transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+            },
+          }}
+        >
+          <MarqueeRow
+            content={locationsContent}
+            direction="left"
+            fontType="dotmatrix"
+            startOffset={30}
+            fillColor={marqueeFill}
+          />
+        </motion.div>
       </motion.div>
     </div>
   )
