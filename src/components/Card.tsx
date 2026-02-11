@@ -143,16 +143,17 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
 
   const defaultBorderColor = borderColors[variant]
 
-  // Spotlight border gradient - light near cursor, subtle dark far from cursor
-  // CTA card uses softer darker tones since it sits on a light background
+  // Spotlight border gradient - bright near cursor, fading outward
+  // Matched to compact pill border spotlight for consistent richness
   const spotlightGradient = isHovered
     ? variant === 'cta'
       ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, ${defaultBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
-      : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(200, 210, 230, 0.8) 15%, ${defaultBorderColor} 35%, rgba(140, 140, 150, 0.3) 55%, rgba(120, 120, 130, 0.35) 100%)`
+      : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.9) 0%, rgba(200, 210, 230, 0.5) 20%, rgba(140, 140, 150, 0.2) 50%, transparent 70%)`
     : 'none'
 
-  // Border width for the inner stroke effect
-  const borderWidth = 1
+  // Border width for the spotlight ring mask (slightly thicker than the 1px
+  // inset box-shadow border so the glow visually "pops" on larger card surfaces)
+  const borderWidth = 1.5
 
   // Use signature spring for card interactions
   const springTransition = signatureSpring
@@ -200,7 +201,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
           <>
             {/* Fill spotlight - subtle light following cursor */}
             <div
-              className="absolute inset-0 rounded-[14px] pointer-events-none"
+              className="absolute inset-0 rounded-[inherit] pointer-events-none"
               style={{
                 background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%)`,
               }}
@@ -214,32 +215,6 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
                 maskComposite: 'exclude',
                 WebkitMaskComposite: 'xor',
                 padding: `${borderWidth}px`,
-              }}
-            />
-            {/* Darken layer for depth */}
-            <div
-              className="absolute inset-0 rounded-[14px] pointer-events-none"
-              style={{
-                background: spotlightGradient,
-                mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
-                maskComposite: 'exclude',
-                WebkitMaskComposite: 'xor',
-                padding: `${borderWidth}px`,
-                mixBlendMode: 'darken',
-                opacity: 0.48,
-              }}
-            />
-            {/* Multiply layer for depth */}
-            <div
-              className="absolute inset-0 rounded-[14px] pointer-events-none"
-              style={{
-                background: spotlightGradient,
-                mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
-                maskComposite: 'exclude',
-                WebkitMaskComposite: 'xor',
-                padding: `${borderWidth}px`,
-                mixBlendMode: 'multiply',
-                opacity: 0.48,
               }}
             />
           </>

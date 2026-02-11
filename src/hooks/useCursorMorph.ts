@@ -126,6 +126,21 @@ export function useCursorMorph(): CursorMorphValues {
       el.style.setProperty('--parallax-y', `${py.toFixed(2)}px`)
     }
 
+    // Soft magnetic via CSS custom properties — safe for Framer Motion elements
+    // Uses the CSS `translate` property (separate from `transform`) so it doesn't
+    // clobber Framer Motion's managed transform (scale, rotate, etc.)
+    const setSoftMagnetic = (el: HTMLElement, mouseX: number, mouseY: number) => {
+      const rect = el.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+      const dx = mouseX - centerX
+      const dy = mouseY - centerY
+      const tx = clamp(dx * MAGNETIC_STRENGTH, -MAGNETIC_MAX, MAGNETIC_MAX)
+      const ty = clamp(dy * MAGNETIC_STRENGTH, -MAGNETIC_MAX, MAGNETIC_MAX)
+      el.style.setProperty('--magnetic-x', `${tx.toFixed(2)}px`)
+      el.style.setProperty('--magnetic-y', `${ty.toFixed(2)}px`)
+    }
+
     const clearLiftProps = (el: HTMLElement) => {
       // Cancel any pending leave timer for this element
       const existingTimer = liftTimers.get(el)
@@ -134,15 +149,19 @@ export function useCursorMorph(): CursorMorphValues {
         liftTimers.delete(el)
       }
 
-      // Reset parallax to center
+      // Reset parallax and magnetic to center
       el.style.setProperty('--parallax-x', '0px')
       el.style.setProperty('--parallax-y', '0px')
+      el.style.setProperty('--magnetic-x', '0px')
+      el.style.setProperty('--magnetic-y', '0px')
 
       // After transition, clean up attributes and properties
       const timer = setTimeout(() => {
         el.removeAttribute('data-cursor-morphed')
         el.style.removeProperty('--parallax-x')
         el.style.removeProperty('--parallax-y')
+        el.style.removeProperty('--magnetic-x')
+        el.style.removeProperty('--magnetic-y')
         liftTimers.delete(el)
       }, 300)
 
@@ -232,11 +251,12 @@ export function useCursorMorph(): CursorMorphValues {
       modeRef.current = 'morph-only'
       isMorphed.set(1)
 
-      // Activate parallax on element (no magnetic/lift — just the attribute)
+      // Activate parallax + soft magnetic on element (no direct transform — just CSS props)
       el.setAttribute('data-cursor-morphed', '')
 
-      // Set parallax (shifts children, not the element itself)
+      // Set parallax (shifts children) and soft magnetic (shifts element via CSS translate)
       setParallax(el, mouseX, mouseY)
+      setSoftMagnetic(el, mouseX, mouseY)
 
       // Read natural rect (no displacement) for cursor positioning
       const rect = el.getBoundingClientRect()
@@ -348,8 +368,11 @@ export function useCursorMorph(): CursorMorphValues {
           width.set(rect.width + MORPH_PADDING * 2)
           height.set(rect.height + MORPH_PADDING * 2)
 
-          // Update parallax
+          // Update parallax + soft magnetic for morph-only
           setParallax(el, lastMouseRef.current.x, lastMouseRef.current.y)
+          if (mode === 'morph-only') {
+            setSoftMagnetic(el, lastMouseRef.current.x, lastMouseRef.current.y)
+          }
         }
       }
       rafRef.current = requestAnimationFrame(tick)

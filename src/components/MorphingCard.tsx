@@ -851,8 +851,8 @@ export function MorphingCard({
   const expandedStyles = card.variant === 'cta' ? {
     ...styles,
     bg: '#FFFFFF',
-    textColor: 'rgba(0,0,0,0.55)',
-    ctaTitleColor: 'rgba(0,0,0,0.55)',
+    textColor: '#8E8E8E',
+    ctaTitleColor: '#8E8E8E',
     border: 'rgba(0,0,0,0.05)',
     badgeBg: 'rgba(0,0,0,0.08)',
   } : styles
@@ -1823,18 +1823,25 @@ export function MorphingCard({
           transition: 'opacity 0.4s ease-out',
         }}
       />
-      <div
-        className="absolute inset-0 rounded-[16px] pointer-events-none"
-        style={{
-          background: spotlightGradient,
-          mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
-          maskComposite: 'exclude',
-          WebkitMaskComposite: 'xor',
-          padding: '1px',
-          opacity: isHovered ? 1 : 0,
-          transition: 'opacity 0.4s ease-out',
-        }}
-      />
+      {/* Border spotlight — skip for CTA (clashes with dotted SVG border) */}
+      {card.variant !== 'cta' && (
+        <div
+          className="absolute rounded-[15px] pointer-events-none"
+          style={{
+            top: '1px',
+            left: '1px',
+            right: '1px',
+            bottom: '1px',
+            background: spotlightGradient,
+            mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+            maskComposite: 'exclude',
+            WebkitMaskComposite: 'xor',
+            padding: '1px',
+            opacity: isHovered ? 1 : 0,
+            transition: 'opacity 0.4s ease-out',
+          }}
+        />
+      )}
 
       {/* Badge - positioned absolutely in top right, OUTSIDE the padded container */}
       {!compactCta && !hideShortcut && (

@@ -119,7 +119,11 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       }
 
       // Detect dark video section overlap for CTA pill color swap
-      // VideoMorphSection is 250vh; dark wash is active between scroll progress 0.21–0.78
+      // Thresholds aligned with VideoMorphSection labelColor useTransform:
+      //   entry: label transitions 0.14→0.21, midpoint ≈ 0.175
+      //   exit:  label transitions 0.78→0.88, midpoint ≈ 0.83
+      // CTA pill has a 0.4s CSS ease transition, so triggering at the midpoint
+      // makes both elements appear to flip at the same time.
       const videoSection = document.querySelector('[data-section="video-morph"]') as HTMLElement | null
       if (videoSection) {
         const vRect = videoSection.getBoundingClientRect()
@@ -129,7 +133,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         // progress 1 when section bottom hits viewport top
         const viewH = window.innerHeight
         const progress = (-vRect.top + viewH) / (sectionH + viewH)
-        const nowDark = progress > 0.21 && progress < 0.78
+        const nowDark = progress > 0.175 && progress < 0.83
         if (nowDark !== currentDark) {
           currentDark = nowDark
           setIsOverDark(nowDark)
@@ -1058,7 +1062,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     <motion.div
                       key={card.id}
                       ref={(el) => { compactCardRefs.current.set(card.id, el) }}
-                      data-cursor="morph"
+                      data-cursor="morph-only"
+                      data-cursor-radius="44"
                       className="flex items-center cursor-pointer relative"
                       style={{
                         height: 48,
@@ -1076,11 +1081,24 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
                       transition={hoverTransition}
+                      onMouseMove={(e) => {
+                        const el = e.currentTarget
+                        const rect = el.getBoundingClientRect()
+                        el.style.setProperty('--spot-x', `${((e.clientX - rect.left) / rect.width * 100).toFixed(1)}%`)
+                        el.style.setProperty('--spot-y', `${((e.clientY - rect.top) / rect.height * 100).toFixed(1)}%`)
+                        el.style.setProperty('--spot-opacity', '1')
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.setProperty('--spot-opacity', '0')
+                      }}
                       onClick={(e) => {
                         e.stopPropagation()
                         captureCompactPositionsAndExpand(cardIndex)
                       }}
                     >
+                      {/* Spotlight hover effects — border spot skipped for CTA (dotted border) */}
+                      <div className="compact-pill-spot" />
+                      {!isCta && <div className="compact-pill-border-spot" />}
                       {/* CTA dashed border — SVG for precise dash:12 gap:8 round caps */}
                       {isCta && (
                         <svg
@@ -1103,6 +1121,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                         data-cursor-parallax=""
                         className="flex-1 truncate"
                         style={{
+                          position: 'relative',
+                          zIndex: 1,
                           fontFamily: 'Inter',
                           fontWeight: 500,
                           fontSize: '18px',
@@ -1119,6 +1139,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                         <motion.div
                           className="flex items-center justify-center shrink-0 rounded-full overflow-hidden"
                           style={{
+                            position: 'relative',
+                            zIndex: 1,
                             backgroundColor: isOverDark ? 'rgba(255,255,255,0.15)' : '#DDDDDD',
                             transition: 'background-color 0.4s ease',
                             padding: '4px 6px 4px 8px',
@@ -1147,6 +1169,8 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                         <div
                           className="flex items-center justify-center shrink-0"
                           style={{
+                            position: 'relative',
+                            zIndex: 1,
                             backgroundColor: 'rgba(0,0,0,0.2)',
                             borderRadius: 20,
                             padding: '4px 8px',

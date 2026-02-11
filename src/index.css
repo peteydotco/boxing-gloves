@@ -368,11 +368,51 @@ canvas {
 /* ===== iPadOS Pointer Lift Effect =====
    Magnetic pull, lift scale, foreground parallax — no visible cursor overlay */
 
+/* Soft magnetic — element itself shifts toward cursor via CSS translate (not transform,
+   so it doesn't clobber Framer Motion's managed transform: scale/rotate) */
+[data-cursor-morphed] {
+  translate: var(--magnetic-x, 0px) var(--magnetic-y, 0px);
+  transition: translate 0.08s ease-out;
+}
+
 /* Parallax — any descendant with data-cursor-parallax shifts relative to background */
 [data-cursor-morphed] [data-cursor-parallax] {
   transform: translate(var(--parallax-x, 0px), var(--parallax-y, 0px));
   transition: transform 0.08s ease-out;
   will-change: transform;
+}
+
+/* Compact pill spotlight — fill + border, driven by --spot-x/y/opacity custom props */
+.compact-pill-spot,
+.compact-pill-border-spot {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--spot-opacity, 0);
+  transition: opacity 0.2s ease;
+}
+.compact-pill-spot {
+  background: radial-gradient(
+    circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.06) 35%,
+    transparent 65%
+  );
+}
+.compact-pill-border-spot {
+  background: radial-gradient(
+    circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(200, 210, 230, 0.5) 20%,
+    rgba(140, 140, 150, 0.2) 50%,
+    transparent 70%
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 0.5px;
 }
 
 @keyframes grainShift {
