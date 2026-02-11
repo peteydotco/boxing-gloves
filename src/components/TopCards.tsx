@@ -1058,6 +1058,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     <motion.div
                       key={card.id}
                       ref={(el) => { compactCardRefs.current.set(card.id, el) }}
+                      data-cursor="morph"
                       className="flex items-center cursor-pointer relative"
                       style={{
                         height: 48,
@@ -1099,6 +1100,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                         </svg>
                       )}
                       <span
+                        data-cursor-parallax=""
                         className="flex-1 truncate"
                         style={{
                           fontFamily: 'Inter',

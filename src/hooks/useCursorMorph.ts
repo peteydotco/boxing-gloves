@@ -1,0 +1,380 @@
+import { useEffect, useRef } from 'react'
+import { useMotionValue, useSpring, type MotionValue } from 'framer-motion'
+import { cursorFollowSpring, cursorMorphSpring, POINTER_LIFT } from '../constants/animation'
+
+const DEFAULT_SIZE = 22
+const GROW_SIZE = 48
+const MORPH_PADDING = 4
+const IFRAME_TIMEOUT = 150
+
+// Magnetic pull: element shifts toward cursor by this fraction of the offset
+const MAGNETIC_STRENGTH = 0.08
+// Max pixels the element can be displaced
+const MAGNETIC_MAX = 3
+
+export interface CursorMorphValues {
+  x: MotionValue<number>
+  y: MotionValue<number>
+  width: MotionValue<number>
+  height: MotionValue<number>
+  borderRadius: MotionValue<number>
+  opacity: MotionValue<number>
+  isMorphed: MotionValue<number>
+  isEnabled: boolean
+}
+
+function isTouchDevice(): boolean {
+  if (typeof window === 'undefined') return true
+  return navigator.maxTouchPoints > 0 && !window.matchMedia('(pointer: fine)').matches
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value))
+}
+
+// Track leave-animation timers per element to handle re-entrance
+const liftTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>()
+
+export function useCursorMorph(): CursorMorphValues {
+  const enabled = typeof window !== 'undefined' && !isTouchDevice()
+
+  // Raw mouse position (unsprung)
+  const rawX = useMotionValue(0)
+  const rawY = useMotionValue(0)
+
+  // Spring-driven cursor position
+  const x = useSpring(rawX, cursorFollowSpring)
+  const y = useSpring(rawY, cursorFollowSpring)
+
+  // Spring-driven size and shape
+  const width = useSpring(DEFAULT_SIZE, cursorMorphSpring)
+  const height = useSpring(DEFAULT_SIZE, cursorMorphSpring)
+  const borderRadius = useSpring(DEFAULT_SIZE / 2, cursorMorphSpring)
+  const opacity = useSpring(0, { stiffness: 300, damping: 30 })
+
+  // 0 = not morphed (cursor visible as circle), 1 = morphed (cursor visible as spotlight)
+  const isMorphed = useMotionValue(0)
+
+  // Track morph state without re-renders
+  const morphTargetRef = useRef<HTMLElement | null>(null)
+  const modeRef = useRef<'default' | 'morph' | 'morph-only' | 'grow'>('default')
+  const rafRef = useRef<number>(0)
+  const iframeFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Track the last mouse position for magnetic displacement calc in rAF
+  const lastMouseRef = useRef({ x: 0, y: 0 })
+
+  useEffect(() => {
+    if (!enabled) return
+
+    // Inject <style> to hide native cursor — sits outside Tailwind's @layer
+    const style = document.createElement('style')
+    style.setAttribute('data-custom-cursor', '')
+    style.textContent = '*, *::before, *::after { cursor: none !important; }'
+    document.head.appendChild(style)
+
+    // Strip inline cursor styles that components set via JS
+    const handleMouseOver = (e: MouseEvent) => {
+      let el = e.target as HTMLElement | null
+      while (el) {
+        if (el.style?.cursor) el.style.removeProperty('cursor')
+        el = el.parentElement
+      }
+    }
+    document.addEventListener('mouseover', handleMouseOver, true)
+
+    // ── Magnetic displacement helpers ──
+
+    // Apply magnetic pull + lift scale: shift element toward cursor
+    const applyMagnetic = (el: HTMLElement, mouseX: number, mouseY: number) => {
+      // Get element center WITHOUT any existing transform displacement
+      const existingTransform = el.style.transform
+      el.style.transform = ''
+      const naturalRect = el.getBoundingClientRect()
+      el.style.transform = existingTransform
+
+      const centerX = naturalRect.left + naturalRect.width / 2
+      const centerY = naturalRect.top + naturalRect.height / 2
+
+      // Vector from element center to cursor
+      const dx = mouseX - centerX
+      const dy = mouseY - centerY
+
+      // Apply fraction as displacement, clamped
+      const tx = clamp(dx * MAGNETIC_STRENGTH, -MAGNETIC_MAX, MAGNETIC_MAX)
+      const ty = clamp(dy * MAGNETIC_STRENGTH, -MAGNETIC_MAX, MAGNETIC_MAX)
+
+      el.style.transform = `translate(${tx}px, ${ty}px) scale(${POINTER_LIFT.liftScale})`
+      el.style.transition = 'none' // Immediate tracking while hovering
+    }
+
+    // Release: spring element back to natural position and scale
+    const releaseMagnetic = (el: HTMLElement) => {
+      el.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)'
+      el.style.transform = ''
+    }
+
+    // ── Parallax via CSS custom properties ──
+
+    const setParallax = (el: HTMLElement, mouseX: number, mouseY: number) => {
+      const rect = el.getBoundingClientRect()
+      const relX = clamp((mouseX - rect.left) / rect.width, 0, 1)
+      const relY = clamp((mouseY - rect.top) / rect.height, 0, 1)
+
+      const px = (relX - 0.5) * 2 * POINTER_LIFT.parallaxMax
+      const py = (relY - 0.5) * 2 * POINTER_LIFT.parallaxMax
+      el.style.setProperty('--parallax-x', `${px.toFixed(2)}px`)
+      el.style.setProperty('--parallax-y', `${py.toFixed(2)}px`)
+    }
+
+    const clearLiftProps = (el: HTMLElement) => {
+      // Cancel any pending leave timer for this element
+      const existingTimer = liftTimers.get(el)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
+        liftTimers.delete(el)
+      }
+
+      // Reset parallax to center
+      el.style.setProperty('--parallax-x', '0px')
+      el.style.setProperty('--parallax-y', '0px')
+
+      // After transition, clean up attributes and properties
+      const timer = setTimeout(() => {
+        el.removeAttribute('data-cursor-morphed')
+        el.style.removeProperty('--parallax-x')
+        el.style.removeProperty('--parallax-y')
+        liftTimers.delete(el)
+      }, 300)
+
+      liftTimers.set(el, timer)
+    }
+
+    const setDefault = (clientX: number, clientY: number) => {
+      // Release any previously morphed element
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      modeRef.current = 'default'
+      isMorphed.set(0)
+      rawX.set(clientX)
+      rawY.set(clientY)
+      width.set(DEFAULT_SIZE)
+      height.set(DEFAULT_SIZE)
+      borderRadius.set(DEFAULT_SIZE / 2)
+    }
+
+    const setMorph = (el: HTMLElement, mouseX: number, mouseY: number) => {
+      // Release previous target if switching elements
+      if (morphTargetRef.current && morphTargetRef.current !== el) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+
+      // Cancel any pending leave timer on this element (re-entrance)
+      const existingTimer = liftTimers.get(el)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
+        liftTimers.delete(el)
+      }
+
+      morphTargetRef.current = el
+      modeRef.current = 'morph'
+      isMorphed.set(1)
+
+      // Activate lift effect on element
+      el.setAttribute('data-cursor-morphed', '')
+
+      // Apply magnetic pull + lift scale to the element
+      applyMagnetic(el, mouseX, mouseY)
+
+      // Set parallax
+      setParallax(el, mouseX, mouseY)
+
+      // Read displaced rect (after transform) for cursor positioning
+      const rect = el.getBoundingClientRect()
+
+      // Resolve target border-radius
+      const rawRadius = el.dataset.cursorRadius
+        || getComputedStyle(el).borderRadius
+        || '0'
+      const targetRadius = parseFloat(rawRadius) || 0
+
+      // Cursor snaps to the displaced element center
+      rawX.set(rect.left + rect.width / 2)
+      rawY.set(rect.top + rect.height / 2)
+
+      // Become the element shape + small padding
+      width.set(rect.width + MORPH_PADDING * 2)
+      height.set(rect.height + MORPH_PADDING * 2)
+      borderRadius.set(targetRadius + MORPH_PADDING)
+    }
+
+    // Shape-only morph: cursor snaps to element shape + parallax on children,
+    // but NO magnetic displacement or lift scale on the element itself.
+    // Safe for Framer Motion–animated elements whose transforms we must not touch.
+    const setMorphOnly = (el: HTMLElement, mouseX: number, mouseY: number) => {
+      // Release previous target if switching elements
+      if (morphTargetRef.current && morphTargetRef.current !== el) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+
+      // Cancel any pending leave timer on this element (re-entrance)
+      const existingTimer = liftTimers.get(el)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
+        liftTimers.delete(el)
+      }
+
+      morphTargetRef.current = el
+      modeRef.current = 'morph-only'
+      isMorphed.set(1)
+
+      // Activate parallax on element (no magnetic/lift — just the attribute)
+      el.setAttribute('data-cursor-morphed', '')
+
+      // Set parallax (shifts children, not the element itself)
+      setParallax(el, mouseX, mouseY)
+
+      // Read natural rect (no displacement) for cursor positioning
+      const rect = el.getBoundingClientRect()
+
+      // Resolve target border-radius
+      const rawRadius = el.dataset.cursorRadius
+        || getComputedStyle(el).borderRadius
+        || '0'
+      const targetRadius = parseFloat(rawRadius) || 0
+
+      // Cursor snaps to element center
+      rawX.set(rect.left + rect.width / 2)
+      rawY.set(rect.top + rect.height / 2)
+
+      // Become the element shape + small padding
+      width.set(rect.width + MORPH_PADDING * 2)
+      height.set(rect.height + MORPH_PADDING * 2)
+      borderRadius.set(targetRadius + MORPH_PADDING)
+    }
+
+    const setGrow = (clientX: number, clientY: number) => {
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      modeRef.current = 'grow'
+      isMorphed.set(0)
+      rawX.set(clientX)
+      rawY.set(clientY)
+      width.set(GROW_SIZE)
+      height.set(GROW_SIZE)
+      borderRadius.set(GROW_SIZE / 2)
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (iframeFadeTimerRef.current) {
+        clearTimeout(iframeFadeTimerRef.current)
+        iframeFadeTimerRef.current = null
+      }
+      opacity.set(1)
+      lastMouseRef.current = { x: e.clientX, y: e.clientY }
+
+      const target = document.elementFromPoint(e.clientX, e.clientY)
+
+      // Check for morph target first (magnetic snap)
+      const morphEl = target?.closest('[data-cursor="morph"]') as HTMLElement | null
+      if (morphEl) {
+        setMorph(morphEl, e.clientX, e.clientY)
+        return
+      }
+
+      // Check for shape-only morph (cursor snaps to shape, no magnetic/lift on element)
+      const morphOnlyEl = target?.closest('[data-cursor="morph-only"]') as HTMLElement | null
+      if (morphOnlyEl) {
+        setMorphOnly(morphOnlyEl, e.clientX, e.clientY)
+        return
+      }
+
+      // Check for grow target (just enlarge circle)
+      const growEl = target?.closest('[data-cursor="grow"]') as HTMLElement | null
+      if (growEl) {
+        setGrow(e.clientX, e.clientY)
+      } else {
+        setDefault(e.clientX, e.clientY)
+      }
+
+      // Iframe fade
+      if (target?.tagName === 'IFRAME') {
+        iframeFadeTimerRef.current = setTimeout(() => {
+          opacity.set(0)
+        }, IFRAME_TIMEOUT)
+      }
+    }
+
+    const handleMouseEnter = () => { opacity.set(1) }
+    const handleMouseLeave = () => {
+      opacity.set(0)
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      modeRef.current = 'default'
+      isMorphed.set(0)
+    }
+
+    // rAF loop: while morphed, re-read target rect to track scroll + magnetic + parallax
+    const tick = () => {
+      const mode = modeRef.current
+      if (morphTargetRef.current && (mode === 'morph' || mode === 'morph-only')) {
+        const el = morphTargetRef.current
+        const selector = mode === 'morph' ? '[data-cursor="morph"]' : '[data-cursor="morph-only"]'
+        if (!el.isConnected || !el.closest(selector)) {
+          clearLiftProps(el)
+          if (mode === 'morph') releaseMagnetic(el)
+          morphTargetRef.current = null
+          modeRef.current = 'default'
+          isMorphed.set(0)
+        } else {
+          if (mode === 'morph') {
+            // Full morph: re-apply magnetic + lift and read displaced rect
+            applyMagnetic(el, lastMouseRef.current.x, lastMouseRef.current.y)
+          }
+          // Read rect (displaced for morph, natural for morph-only)
+          const rect = el.getBoundingClientRect()
+          rawX.set(rect.left + rect.width / 2)
+          rawY.set(rect.top + rect.height / 2)
+          width.set(rect.width + MORPH_PADDING * 2)
+          height.set(rect.height + MORPH_PADDING * 2)
+
+          // Update parallax
+          setParallax(el, lastMouseRef.current.x, lastMouseRef.current.y)
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick)
+    }
+    rafRef.current = requestAnimationFrame(tick)
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.documentElement.addEventListener('mouseenter', handleMouseEnter)
+    document.documentElement.addEventListener('mouseleave', handleMouseLeave)
+
+    return () => {
+      style.remove()
+      // Release any morphed element on cleanup
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      document.removeEventListener('mouseover', handleMouseOver, true)
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.documentElement.removeEventListener('mouseenter', handleMouseEnter)
+      document.documentElement.removeEventListener('mouseleave', handleMouseLeave)
+      cancelAnimationFrame(rafRef.current)
+      if (iframeFadeTimerRef.current) clearTimeout(iframeFadeTimerRef.current)
+    }
+  }, [enabled, rawX, rawY, width, height, borderRadius, opacity, isMorphed, x, y])
+
+  return { x, y, width, height, borderRadius, opacity, isMorphed, isEnabled: enabled }
+}

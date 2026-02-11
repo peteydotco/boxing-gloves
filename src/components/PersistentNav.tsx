@@ -400,7 +400,9 @@ export function PersistentNav({
         {/* Container with invisible border for spacing (real border is the sliding one) */}
         <motion.div
           ref={selectedWorksRef}
+          data-cursor="morph"
           style={{
+            position: 'relative',
             borderRadius: 14,
             padding: '5px 8px 8px 8px',
             backdropFilter: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 'blur(12px)' : 'none',
@@ -419,6 +421,7 @@ export function PersistentNav({
           onMouseLeave={() => handleNavItemHover(null)}
         >
           <motion.span
+            data-cursor-parallax=""
             style={{ ...linkTextStyle, display: 'block', lineHeight: 1 }}
             animate={{
               scale: (hoveredItem === 'selectedWorks' && activeNavItem !== 'selectedWorks') ? 1 / 1.04 : 1,
@@ -458,7 +461,9 @@ export function PersistentNav({
         {/* Container measured for sliding border dimensions */}
         <motion.div
           ref={logoRef}
+          data-cursor="morph"
           style={{
+            position: 'relative',
             borderRadius: 14,
             padding: '5px 8px 8px 8px',
             backdropFilter: (hoveredItem === 'logo' && activeNavItem !== 'logo') ? 'blur(12px)' : 'none',
@@ -477,6 +482,7 @@ export function PersistentNav({
           onMouseLeave={() => handleNavItemHover(null)}
         >
           <motion.span
+            data-cursor-parallax=""
             style={{
               ...linkTextStyle,
               fontSize: '26px',
@@ -527,7 +533,9 @@ export function PersistentNav({
         {/* Container with invisible border for spacing (sliding border will target this when About is active) */}
         <motion.div
           ref={aboutRef}
+          data-cursor="morph"
           style={{
+            position: 'relative',
             borderRadius: 14,
             padding: '5px 8px 8px 8px',
           }}
@@ -543,6 +551,7 @@ export function PersistentNav({
           onMouseLeave={() => handleNavItemHover(null)}
         >
           <motion.span
+            data-cursor-parallax=""
             style={{ ...linkTextStyle, display: 'block', lineHeight: 1 }}
             animate={{
               scale: (hoveredItem === 'about') ? 1 / 1.04 : 1,

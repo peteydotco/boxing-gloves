@@ -873,13 +873,14 @@ export function MorphingCard({
           // Swipe-down offset for dismiss gesture feedback
           y: swipeDownOffset,
           transformOrigin: 'center center',
-          // CTA compact: overflow visible so the SVG dashed border stroke isn't clipped.
-          // Blur is handled by the ghost overlay (not the portal) so it's pill-shaped.
+          // CTA: overflow visible so the SVG dashed border stroke isn't clipped.
+          // From compact: blur is handled by the ghost overlay (not the portal).
+          // From default: portal provides its own backdropFilter blur.
           // (non-CTA cards need overflow:hidden for content clipping during expand/collapse)
           ...(card.variant === 'cta' && expandedFromCompact
             ? { overflow: 'visible' as const }
             : card.variant === 'cta'
-              ? { backdropFilter: 'blur(8px)' }
+              ? { backdropFilter: 'blur(8px)', overflow: 'visible' as const }
               : {}),
         }}
         initial={{
@@ -1756,6 +1757,8 @@ export function MorphingCard({
   return (
     <motion.div
       ref={cardRef}
+      data-cursor="morph-only"
+      data-cursor-radius="16"
       className="rounded-[16px] overflow-hidden cursor-pointer relative"
       style={{
         backgroundColor: styles.bg,
@@ -1886,7 +1889,7 @@ export function MorphingCard({
         style={{ padding: compactCta ? '18px 10px 19px 12px' : '18px 10px 19px 20px' }}
       >
         {compactCta ? (
-          <div className="flex flex-col items-center justify-center w-full h-full">
+          <div data-cursor-parallax="" className="flex flex-col items-center justify-center w-full h-full">
             <AnimatePresence mode="wait">
               <motion.div
                 key={emailCopied ? 'copied' : 'add'}
@@ -1904,7 +1907,7 @@ export function MorphingCard({
         ) : (
           <>
             {/* Role + Title cluster - top aligned to match expanded card exit state */}
-            <div className="flex flex-col gap-[5px] w-full relative">
+            <div data-cursor-parallax="" className="flex flex-col gap-[5px] w-full relative">
               {/* Label - slides up and fades on hover */}
               <div
                 className="text-[12px] text-left"

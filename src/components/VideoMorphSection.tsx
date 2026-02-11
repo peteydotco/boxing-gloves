@@ -351,6 +351,7 @@ export function VideoMorphSection() {
                   <button
                     onClick={() => setIsPlaying(true)}
                     className="relative w-full h-full"
+                    data-cursor="grow"
                     style={{ cursor: 'pointer', border: 'none', padding: 0, background: 'none' }}
                   >
                     <img

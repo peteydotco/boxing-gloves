@@ -148,13 +148,14 @@ export function ProjectCard({
           >
             {/* Logo pill */}
             <div
+              data-cursor="morph"
               style={{
+                position: 'relative',
                 width: 100,
                 height: 100,
                 borderRadius: 22,
                 backgroundColor: logoBgColor,
                 border: '1px solid rgba(255,255,255,0.24)',
-                overflow: 'hidden',
                 flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
@@ -162,6 +163,7 @@ export function ProjectCard({
               }}
             >
               <img
+                data-cursor-parallax=""
                 src={logoSrc}
                 alt=""
                 style={{ maxWidth: '60%', maxHeight: '60%', width: 'auto', height: 'auto', objectFit: 'contain' }}
@@ -170,12 +172,13 @@ export function ProjectCard({
 
             {/* Description pill */}
             <div
+              data-cursor="morph"
               style={{
+                position: 'relative',
                 flex: 1,
                 borderRadius: 22,
                 backgroundColor: descriptionBg,
                 border: '1px solid rgba(255,255,255,0.24)',
-                overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'center',
@@ -185,10 +188,10 @@ export function ProjectCard({
                 color: '#000',
               }}
             >
-              <p style={{ fontSize: 24, letterSpacing: '-0.48px', lineHeight: 'normal' }}>
+              <p data-cursor-parallax="" style={{ fontSize: 24, letterSpacing: '-0.48px', lineHeight: 'normal' }}>
                 {title}
               </p>
-              <p style={{ fontSize: 16, letterSpacing: '-0.32px', lineHeight: 'normal', marginTop: 4 }}>
+              <p data-cursor-parallax="" style={{ fontSize: 16, letterSpacing: '-0.32px', lineHeight: 'normal', marginTop: 4 }}>
                 {role}
               </p>
             </div>

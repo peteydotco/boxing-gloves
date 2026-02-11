@@ -67,6 +67,26 @@ export const tugTrackingSpring = {
   mass: 0.5,
 }
 
+// Custom cursor — stiff position tracking (glued to pointer, minimal lag)
+export const cursorFollowSpring = {
+  stiffness: 800,
+  damping: 60,
+  mass: 0.3,
+}
+
+// Custom cursor — morph snap (satisfying organic snap onto target elements)
+export const cursorMorphSpring = {
+  stiffness: 400,
+  damping: 35,
+  mass: 0.8,
+}
+
+// iPadOS-style pointer lift effect configuration
+export const POINTER_LIFT = {
+  parallaxMax: 2.5,   // max px foreground children shift
+  liftScale: 1.005,   // scale factor when morphed onto element
+}
+
 // Carousel tuning configuration
 export const CAROUSEL_CONFIG = {
   dragThreshold: 50,

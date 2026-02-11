@@ -184,6 +184,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
         onMouseEnter={() => setIsHovered(true)}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        data-cursor="morph"
         className="flex items-start w-full rounded-[14px] relative cursor-pointer"
         style={{
           padding: compactCta ? '12px 12px 20px 12px' : '12px 12px 20px 20px',
@@ -247,7 +248,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
       {/* Content wrapper - vertical stack */}
       {compactCta ? (
         /* Compact CTA layout for mobile: stacked label + icon, centered */
-        <div className="flex flex-col items-center justify-center gap-1 w-full relative z-10">
+        <div data-cursor-parallax="" className="flex flex-col items-center justify-center gap-1 w-full relative z-10">
           <div className="text-[12px] leading-normal text-center uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '0.01em' }}>
             {label}
           </div>
@@ -255,7 +256,7 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
         </div>
       ) : (
         /* Standard layout */
-        <div className="flex flex-col gap-[0px] relative z-10 w-full">
+        <div data-cursor-parallax="" className="flex flex-col gap-[0px] relative z-10 w-full">
           {/* First row: Label and Shortcut badge */}
           <div className="flex items-start justify-between relative w-full">
             {/* Label */}

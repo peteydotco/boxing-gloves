@@ -1,4 +1,5 @@
 import { Scene, mousePositionRef } from './components/Scene'
+import { CustomCursor } from './components/CustomCursor'
 import { TopCards } from './components/TopCards'
 import { VideoMorphSection } from './components/VideoMorphSection'
 import { BioCopySection } from './components/BioCopySection'
@@ -206,6 +207,9 @@ function App() {
 
       {/* ===== Footer ===== */}
       <SiteFooter />
+
+      {/* Custom cursor (desktop only) */}
+      {isDesktop && <CustomCursor />}
 
       {/* Debug grid overlay — toggled with G key (Figma: 12 cols, 25px margin, 20px gutter) */}
       {showGrid && (
