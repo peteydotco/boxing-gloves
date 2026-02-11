@@ -7,19 +7,35 @@ const GROW_SIZE = 48
 const MORPH_PADDING = 4
 const IFRAME_TIMEOUT = 150
 
+// I-beam text cursor dimensions (iPadOS-style)
+const TEXT_BEAM_WIDTH = 4
+const TEXT_BEAM_HEIGHT = 26
+const TEXT_BEAM_RADIUS = 2
+
+// Play cursor dimensions — rectangular like the YouTube play button
+const PLAY_WIDTH = 78
+const PLAY_HEIGHT = 54
+const PLAY_RADIUS = 16
+
 // Magnetic pull: element shifts toward cursor by this fraction of the offset
 const MAGNETIC_STRENGTH = 0.08
 // Max pixels the element can be displaced
 const MAGNETIC_MAX = 3
 
+export type CursorMode = 'default' | 'morph' | 'morph-only' | 'grow' | 'text' | 'play'
+
 export interface CursorMorphValues {
   x: MotionValue<number>
   y: MotionValue<number>
+  rawX: MotionValue<number>
+  rawY: MotionValue<number>
   width: MotionValue<number>
   height: MotionValue<number>
   borderRadius: MotionValue<number>
   opacity: MotionValue<number>
   isMorphed: MotionValue<number>
+  isInverted: MotionValue<number>
+  mode: MotionValue<string>
   isEnabled: boolean
 }
 
@@ -30,6 +46,49 @@ function isTouchDevice(): boolean {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
+}
+
+/**
+ * Detect if the cursor is over selectable text using the browser's native
+ * caret positioning API. Returns the text line-height in px, or 0 if not over text.
+ */
+function getTextBeamHeight(clientX: number, clientY: number, target: Element): number {
+  try {
+    let caretNode: Node | null = null
+    if (document.caretRangeFromPoint) {
+      const range = document.caretRangeFromPoint(clientX, clientY)
+      caretNode = range?.startContainer ?? null
+    } else if ((document as unknown as { caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node } | null }).caretPositionFromPoint) {
+      const pos = (document as unknown as { caretPositionFromPoint: (x: number, y: number) => { offsetNode: Node } | null }).caretPositionFromPoint(clientX, clientY)
+      caretNode = pos?.offsetNode ?? null
+    }
+
+    if (!caretNode || caretNode.nodeType !== Node.TEXT_NODE) return 0
+    if (!target.contains(caretNode)) return 0
+
+    const text = caretNode.textContent
+    if (!text || !text.trim()) return 0
+
+    // caretRangeFromPoint projects to the nearest text even when the cursor
+    // is far away. Verify the cursor is actually within the text's line box.
+    const textEl = caretNode.parentElement
+    if (!textEl) return 0
+    const rect = textEl.getBoundingClientRect()
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return 0
+
+    // Exclude text inside interactive elements — those use morph/grow, not i-beam
+    if (target.closest('button, a, [role="button"], summary')) return 0
+
+    // Return the computed line-height (or font-size as fallback) to size the beam
+    const style = getComputedStyle(textEl)
+    const lh = parseFloat(style.lineHeight)
+    if (lh && lh > 0) return lh
+    // "normal" line-height — approximate as 1.2 × font-size
+    const fs = parseFloat(style.fontSize)
+    return fs ? fs * 1.2 : TEXT_BEAM_HEIGHT
+  } catch {
+    return 0
+  }
 }
 
 // Track leave-animation timers per element to handle re-entrance
@@ -55,9 +114,16 @@ export function useCursorMorph(): CursorMorphValues {
   // 0 = not morphed (cursor visible as circle), 1 = morphed (cursor visible as spotlight)
   const isMorphed = useMotionValue(0)
 
+  // Current cursor mode — exposed so CustomCursor can render mode-specific content
+  const mode = useMotionValue<string>('default')
+
+  // 0 = dark cursor (light bg), 1 = light cursor (dark bg)
+  const isInverted = useMotionValue(0)
+
   // Track morph state without re-renders
   const morphTargetRef = useRef<HTMLElement | null>(null)
-  const modeRef = useRef<'default' | 'morph' | 'morph-only' | 'grow'>('default')
+  const modeRef = useRef<CursorMode>('default')
+  const updateMode = (m: CursorMode) => { modeRef.current = m; mode.set(m) }
   const rafRef = useRef<number>(0)
   const iframeFadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Track the last mouse position for magnetic displacement calc in rAF
@@ -175,7 +241,7 @@ export function useCursorMorph(): CursorMorphValues {
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
       }
       morphTargetRef.current = null
-      modeRef.current = 'default'
+      updateMode('default')
       isMorphed.set(0)
       rawX.set(clientX)
       rawY.set(clientY)
@@ -199,7 +265,7 @@ export function useCursorMorph(): CursorMorphValues {
       }
 
       morphTargetRef.current = el
-      modeRef.current = 'morph'
+      updateMode('morph')
       isMorphed.set(1)
 
       // Activate lift effect on element
@@ -248,7 +314,7 @@ export function useCursorMorph(): CursorMorphValues {
       }
 
       morphTargetRef.current = el
-      modeRef.current = 'morph-only'
+      updateMode('morph-only')
       isMorphed.set(1)
 
       // Activate parallax + soft magnetic on element (no direct transform — just CSS props)
@@ -283,13 +349,43 @@ export function useCursorMorph(): CursorMorphValues {
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
       }
       morphTargetRef.current = null
-      modeRef.current = 'grow'
+      updateMode('grow')
       isMorphed.set(0)
       rawX.set(clientX)
       rawY.set(clientY)
       width.set(GROW_SIZE)
       height.set(GROW_SIZE)
       borderRadius.set(GROW_SIZE / 2)
+    }
+
+    const setPlay = (clientX: number, clientY: number) => {
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      updateMode('play')
+      isMorphed.set(0)
+      rawX.set(clientX)
+      rawY.set(clientY)
+      width.set(PLAY_WIDTH)
+      height.set(PLAY_HEIGHT)
+      borderRadius.set(PLAY_RADIUS)
+    }
+
+    const setTextBeam = (clientX: number, clientY: number, beamH: number) => {
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      updateMode('text')
+      isMorphed.set(0)
+      rawX.set(clientX)
+      rawY.set(clientY)
+      width.set(TEXT_BEAM_WIDTH)
+      height.set(beamH)
+      borderRadius.set(TEXT_BEAM_RADIUS)
     }
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -301,6 +397,9 @@ export function useCursorMorph(): CursorMorphValues {
       lastMouseRef.current = { x: e.clientX, y: e.clientY }
 
       const target = document.elementFromPoint(e.clientX, e.clientY)
+
+      // Detect dark-background sections for cursor color inversion
+      isInverted.set(target?.closest('[data-cursor-invert]') ? 1 : 0)
 
       // Check for morph target first (magnetic snap)
       const morphEl = target?.closest('[data-cursor="morph"]') as HTMLElement | null
@@ -316,10 +415,24 @@ export function useCursorMorph(): CursorMorphValues {
         return
       }
 
+      // Check for play target (cursor becomes play button)
+      const playEl = target?.closest('[data-cursor="play"]') as HTMLElement | null
+      if (playEl) {
+        setPlay(e.clientX, e.clientY)
+        return
+      }
+
       // Check for grow target (just enlarge circle)
       const growEl = target?.closest('[data-cursor="grow"]') as HTMLElement | null
       if (growEl) {
         setGrow(e.clientX, e.clientY)
+      } else if (target) {
+        const beamH = getTextBeamHeight(e.clientX, e.clientY, target)
+        if (beamH > 0) {
+          setTextBeam(e.clientX, e.clientY, beamH)
+        } else {
+          setDefault(e.clientX, e.clientY)
+        }
       } else {
         setDefault(e.clientX, e.clientY)
       }
@@ -340,7 +453,7 @@ export function useCursorMorph(): CursorMorphValues {
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
       }
       morphTargetRef.current = null
-      modeRef.current = 'default'
+      updateMode('default')
       isMorphed.set(0)
     }
 
@@ -354,7 +467,7 @@ export function useCursorMorph(): CursorMorphValues {
           clearLiftProps(el)
           if (mode === 'morph') releaseMagnetic(el)
           morphTargetRef.current = null
-          modeRef.current = 'default'
+          updateMode('default')
           isMorphed.set(0)
         } else {
           if (mode === 'morph') {
@@ -397,7 +510,7 @@ export function useCursorMorph(): CursorMorphValues {
       cancelAnimationFrame(rafRef.current)
       if (iframeFadeTimerRef.current) clearTimeout(iframeFadeTimerRef.current)
     }
-  }, [enabled, rawX, rawY, width, height, borderRadius, opacity, isMorphed, x, y])
+  }, [enabled, rawX, rawY, width, height, borderRadius, opacity, isMorphed, isInverted, mode, x, y])
 
-  return { x, y, width, height, borderRadius, opacity, isMorphed, isEnabled: enabled }
+  return { x, y, rawX, rawY, width, height, borderRadius, opacity, isMorphed, isInverted, mode, isEnabled: enabled }
 }

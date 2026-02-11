@@ -117,6 +117,31 @@ const lineVariants = {
 export function BioCopySection() {
   const containerRef = useRef<HTMLDivElement>(null)
   const lines = useLineBreaks(BIO_TEXT, containerRef)
+  const [isOverDark, setIsOverDark] = useState(false)
+
+  // Detect dark overlay from VideoMorphSection — same thresholds as TopCards CTA pill
+  useEffect(() => {
+    let currentDark = false
+    const handleScroll = () => {
+      const videoSection = document.querySelector('[data-section="video-morph"]') as HTMLElement | null
+      if (videoSection) {
+        const vRect = videoSection.getBoundingClientRect()
+        const sectionH = videoSection.offsetHeight
+        const viewH = window.innerHeight
+        const progress = (-vRect.top + viewH) / (sectionH + viewH)
+        const nowDark = progress > 0.175 && progress < 0.83
+        if (nowDark !== currentDark) {
+          currentDark = nowDark
+          setIsOverDark(nowDark)
+        }
+      } else if (currentDark) {
+        currentDark = false
+        setIsOverDark(false)
+      }
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   return (
     <section
@@ -161,7 +186,8 @@ export function BioCopySection() {
           viewport={{ once: true, amount: 0.15 }}
           style={{
             ...FONT_STYLE,
-            color: '#0E0E0E',
+            color: isOverDark ? '#FFFFFF' : '#0E0E0E',
+            transition: 'color 0.4s ease',
           }}
         >
           {lines.length > 0 ? (

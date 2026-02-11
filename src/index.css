@@ -338,9 +338,9 @@ canvas {
 /* Loader square — idle skew/rotation animation for VideoMorphSection */
 @keyframes loaderSkew {
   0% { transform: rotate(0deg) skewX(0deg); }
-  25% { transform: rotate(90deg) skewX(12deg); }
+  25% { transform: rotate(90deg) skewX(18deg); }
   50% { transform: rotate(180deg) skewX(0deg); }
-  75% { transform: rotate(270deg) skewX(-12deg); }
+  75% { transform: rotate(270deg) skewX(-18deg); }
   100% { transform: rotate(360deg) skewX(0deg); }
 }
 

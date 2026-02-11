@@ -448,7 +448,8 @@ function DraggableGloveWithRope({
     offset.current.subVectors(glovePos, intersection.current)
 
     gloveRef.current.setBodyType(2, true)
-    ;(gl.domElement as HTMLElement).style.cursor = 'grabbing'
+    ;(gl.domElement as HTMLElement).style.cursor = 'none'
+    gl.domElement.setAttribute('data-cursor', 'drag')
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
   }, [camera, gl])
 
@@ -485,7 +486,8 @@ function DraggableGloveWithRope({
     if (!isDragging.current || !gloveRef.current) return
 
     isDragging.current = false
-    ;(gl.domElement as HTMLElement).style.cursor = 'grab'
+    ;(gl.domElement as HTMLElement).style.cursor = 'none'
+    gl.domElement.setAttribute('data-cursor', 'grab')
     ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
 
     const avgVelocity = new THREE.Vector3()
@@ -565,12 +567,14 @@ function DraggableGloveWithRope({
           onPointerUp={handlePointerUp}
           onPointerOver={() => {
             if (!isDragging.current) {
-              ;(gl.domElement as HTMLElement).style.cursor = 'grab'
+              ;(gl.domElement as HTMLElement).style.cursor = 'none'
+              gl.domElement.setAttribute('data-cursor', 'grab')
             }
           }}
           onPointerOut={() => {
             if (!isDragging.current) {
               ;(gl.domElement as HTMLElement).style.cursor = 'default'
+              gl.domElement.removeAttribute('data-cursor')
             }
           }}
         >

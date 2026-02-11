@@ -8,6 +8,7 @@ import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, useMotionValue, useSpring } from 'framer-motion'
 import LocomotiveScroll from 'locomotive-scroll'
 
 function App() {
@@ -47,6 +48,36 @@ function App() {
       window.removeEventListener('keydown', handleKeyDown)
     }
   }, [handleKeyDown])
+
+  // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
+  const GRAFFITI_TILT = 3    // max degrees of rotation
+  const GRAFFITI_SHIFT = 8   // max px translate (small, just enough to feel physical)
+  const graffitiSpring = { stiffness: 50, damping: 20, mass: 1 }
+  const graffitiTiltTargetX = useMotionValue(0)
+  const graffitiTiltTargetY = useMotionValue(0)
+  const graffitiShiftTargetX = useMotionValue(0)
+  const graffitiShiftTargetY = useMotionValue(0)
+  const graffitiRotateX = useSpring(graffitiTiltTargetX, graffitiSpring)
+  const graffitiRotateY = useSpring(graffitiTiltTargetY, graffitiSpring)
+  const graffitiX = useSpring(graffitiShiftTargetX, graffitiSpring)
+  const graffitiY = useSpring(graffitiShiftTargetY, graffitiSpring)
+
+  useEffect(() => {
+    let raf = 0
+    const tick = () => {
+      const { x, y } = mousePositionRef.current
+      // Tilt: cursor right → rotateY positive (surface turns toward cursor)
+      graffitiTiltTargetY.set((x - 0.5) * GRAFFITI_TILT * 2)
+      // Tilt: cursor down → rotateX negative (top tilts away)
+      graffitiTiltTargetX.set((y - 0.5) * -GRAFFITI_TILT * 2)
+      // Subtle translate opposite to cursor for parallax depth
+      graffitiShiftTargetX.set((x - 0.5) * -GRAFFITI_SHIFT * 2)
+      graffitiShiftTargetY.set((y - 0.5) * -GRAFFITI_SHIFT * 2)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [graffitiTiltTargetX, graffitiTiltTargetY, graffitiShiftTargetX, graffitiShiftTargetY])
 
   // Initialize Locomotive Scroll (smooth scrolling + data-scroll detection)
   // Store instance so we can stop/start it when TopCards modal is active
@@ -137,9 +168,10 @@ function App() {
             alignItems: 'center',
             justifyContent: 'center',
             overflow: 'hidden',
+            perspective: 1200,
           }}
         >
-          <img
+          <motion.img
             src="/images/graffiti-tag.webp"
             alt=""
             style={{
@@ -148,7 +180,12 @@ function App() {
               height: 'auto',
               display: 'block',
               flexShrink: 0,
-              transform: 'translate(-2%, 2%)',
+              rotateX: graffitiRotateX,
+              rotateY: graffitiRotateY,
+              x: graffitiX,
+              y: graffitiY,
+              translateX: '-2%',
+              translateY: '2%',
             }}
           />
         </div>

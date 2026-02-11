@@ -58,9 +58,8 @@ export function VideoMorphSection() {
   const videoOpacity = useTransform(morphProgress, [0, 0.4, 0.6], [0, 0, 1])
   const loaderOpacity = useTransform(morphProgress, [0, 0.05], [1, 0])
   const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(255,255,255,0)', 'rgba(255,255,255,1)'])
-  // Skew + rotation — captured from loader's live CSS animation on first morph only
+  // Skew — captured from loader's live CSS animation on first morph only
   const morphSkew = useSpring(0, morphSpring)
-  const morphRotate = useSpring(0, morphSpring)
   const loaderInnerRef = useRef<HTMLDivElement>(null)
   const hasPlayedSkew = useRef(false)
 
@@ -182,17 +181,15 @@ export function VideoMorphSection() {
         if (anim && anim.currentTime != null) {
           const duration = 2400 // 2.4s in ms
           const rawT = ((anim.currentTime as number) % duration) / duration
-          const rotation = rawT * 360
+          // Only capture skew — ignore rotation so the video doesn't spin.
+          // The loader's current rotational position is treated as "upright".
           let skewX = 0
-          if (rawT < 0.25) skewX = (rawT / 0.25) * 12
-          else if (rawT < 0.5) skewX = ((0.5 - rawT) / 0.25) * 12
-          else if (rawT < 0.75) skewX = -((rawT - 0.5) / 0.25) * 12
-          else skewX = -((1 - rawT) / 0.25) * 12
-          const normRotation = ((rotation + 180) % 360) - 180
+          if (rawT < 0.25) skewX = (rawT / 0.25) * 18
+          else if (rawT < 0.5) skewX = ((0.5 - rawT) / 0.25) * 18
+          else if (rawT < 0.75) skewX = -((rawT - 0.5) / 0.25) * 18
+          else skewX = -((1 - rawT) / 0.25) * 18
           morphSkew.jump(skewX)
-          morphRotate.jump(normRotation)
           morphSkew.set(0)
-          morphRotate.set(0)
         }
       }
       setIsPlaying(false)
@@ -203,7 +200,6 @@ export function VideoMorphSection() {
       setIsPlaying(false)
       morphProgress.set(0)
       morphSkew.set(0)
-      morphRotate.set(0)
       hasPlayedSkew.current = false
       setShowCredits(false)
       if (creditsTimerRef.current) {
@@ -211,7 +207,7 @@ export function VideoMorphSection() {
         creditsTimerRef.current = null
       }
     }
-  }, [morphProgress, morphSkew, morphRotate])
+  }, [morphProgress, morphSkew])
 
   // Use a native IntersectionObserver on the sentinel to trigger the morph.
   // Opens when the sentinel crosses viewport center (scrolling down).
@@ -260,6 +256,7 @@ export function VideoMorphSection() {
     <section
       ref={sectionRef}
       data-section="video-morph"
+      data-cursor-invert=""
       className="relative w-full"
       style={{ height: '250vh' }}
     >
@@ -331,7 +328,6 @@ export function VideoMorphSection() {
                 overflow: 'hidden',
                 boxShadow: dynamicShadow,
                 skewX: morphSkew,
-                rotate: morphRotate,
               }}
             >
               {/* Video content — hidden until morph, then fades in */}
@@ -351,40 +347,19 @@ export function VideoMorphSection() {
                   <button
                     onClick={() => setIsPlaying(true)}
                     className="relative w-full h-full"
-                    data-cursor="grow"
+                    data-cursor="play"
                     style={{ cursor: 'pointer', border: 'none', padding: 0, background: 'none' }}
                   >
-                    <img
-                      src={`https://img.youtube.com/vi/${YOUTUBE_VIDEO_ID}/maxresdefault.jpg`}
-                      alt="Circle Day 2025 — Live from Squarespace"
+                    <video
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      poster={`https://img.youtube.com/vi/${YOUTUBE_VIDEO_ID}/maxresdefault.jpg`}
                       className="w-full h-full"
                       style={{ objectFit: 'cover', display: 'block' }}
+                      src="/images/vid-sqsp-thumb.webm"
                     />
-                    {/* Play button */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div
-                        style={{
-                          width: 68,
-                          height: 48,
-                          backgroundColor: 'rgba(255, 0, 0, 0.85)',
-                          borderRadius: 12,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 0,
-                            height: 0,
-                            borderLeft: '18px solid white',
-                            borderTop: '11px solid transparent',
-                            borderBottom: '11px solid transparent',
-                            marginLeft: 3,
-                          }}
-                        />
-                      </div>
-                    </div>
                   </button>
                 )}
               </motion.div>
