@@ -1172,7 +1172,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     marginRight: '-0.75rem',
                     paddingLeft: '0.75rem',
                     paddingRight: '0.75rem',
-                    paddingTop: 4,
                     paddingBottom: 8,
                   }),
                 }}

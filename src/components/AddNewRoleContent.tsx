@@ -409,7 +409,7 @@ export function AddNewRoleContent({
             exit={undefined}
           >
             {/* Input field with custom placeholder overlay */}
-            <span className="relative flex-1">
+            <span className="relative flex-1" data-cursor-text="">
               {!inputValue && (
                 <span
                   className="absolute inset-0 pointer-events-none"
@@ -704,6 +704,8 @@ export function AddNewRoleContent({
         transition={{ duration: 0.25, delay: 0.3 }}
       >
         <motion.button
+          data-cursor="morph"
+          data-cursor-radius="5"
           onClick={(e) => {
             e.stopPropagation()
             handleLinkedIn()
@@ -737,6 +739,8 @@ export function AddNewRoleContent({
           </span>
         </motion.button>
         <motion.button
+          data-cursor="morph"
+          data-cursor-radius="5"
           onClick={(e) => {
             e.stopPropagation()
             handleCopyEmail()

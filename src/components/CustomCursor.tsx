@@ -26,7 +26,9 @@ export function CustomCursor() {
   const iconColor = useTransform(isInverted, (v) => v > 0.5 ? 'rgba(0, 0, 0, 0.7)' : 'white')
 
   // Mode-specific visibility
-  const playOpacity = useTransform(mode, (m) => m === 'play' ? 1 : 0)
+  const playOpacity = useTransform(mode, (m) => m === 'play' || m === 'play-circle' ? 1 : 0)
+  const playIconSize = useTransform(mode, (m) => m === 'play-circle' ? 22 : 32)
+  const playMarginLeft = useTransform(mode, (m) => m === 'play-circle' ? 2 : 3)
   const grabOrDrag = useTransform(mode, (m) => m === 'grab' || m === 'drag' ? 1 : 0)
 
   // Parallax: derive from the lag between raw mouse and spring-animated position.
@@ -106,12 +108,12 @@ export function CustomCursor() {
       {/* Play triangle — rounded corners, parallaxes with cursor movement */}
       <motion.svg
         viewBox="0 0 24 24"
-        width={32}
-        height={32}
         style={{
           position: 'absolute',
+          width: playIconSize,
+          height: playIconSize,
           opacity: playOpacity,
-          marginLeft: 3,
+          marginLeft: playMarginLeft,
           x: parallaxX,
           y: parallaxY,
         }}

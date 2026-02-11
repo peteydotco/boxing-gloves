@@ -23,10 +23,10 @@ function App() {
     return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.mobile : true
   })
 
-  // Below mobile breakpoint (768px) we swap to a taller portrait graffiti asset
-  // that fills the vertical space better on phone-sized viewports.
+  // Below tablet breakpoint (1024px) we swap to a taller portrait graffiti asset
+  // that fills the vertical space better on narrower viewports.
   const [isMobile, setIsMobile] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.mobile : false
+    return typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.tablet : false
   })
 
   // Graffiti scale factor — scales continuously below tabletWide (1128px) to prevent
@@ -64,7 +64,7 @@ function App() {
       const w = window.innerWidth
       setIsDesktop(w >= BREAKPOINTS.desktop)
       setShowCursor(w >= BREAKPOINTS.mobile)
-      setIsMobile(w < BREAKPOINTS.mobile)
+      setIsMobile(w < BREAKPOINTS.tablet)
       setGraffitiScale(computeGraffitiScale(w))
     }
 

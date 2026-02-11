@@ -453,8 +453,6 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
 
   return (
     <motion.button
-      data-cursor="morph"
-      data-cursor-radius="10"
       onClick={(e) => {
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
@@ -510,6 +508,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
 
         {/* Album art - larger size to match Highlights section height */}
         <motion.div
+          data-cursor="play-circle"
           className="shrink-0 rounded-[6px] overflow-hidden relative"
           style={{
             width: isMobile ? '65px' : `${Math.round(112 * contentScale)}px`,
@@ -871,6 +870,11 @@ export function MorphingCard({
       <motion.div
         ref={cardRef}
         className="fixed overflow-hidden"
+        // Non-CTA cards have rich/dark backgrounds — invert cursor to light variant
+        {...(card.variant !== 'cta' ? { 'data-cursor-invert': '' } : {})}
+        // Suppress i-beam text cursor on expanded card content (read-only text).
+        // The CTA "Add a role..." input is a real <input> which uses native caret, not TEXT_NODE.
+        data-cursor-no-text=""
         style={{
           backgroundColor: expandedStyles.bg,
           color: expandedStyles.textColor,
@@ -927,9 +931,9 @@ export function MorphingCard({
           borderRadius: initialBorderRadius,
           rotate: 0,
           scale: 1,
-          // Match compact pill boxShadow for seamless handoff
+          // Compact pills have no boxShadow — use 'none' to prevent shadow jump on unmount
           boxShadow: expandedFromCompact
-            ? '0 4px 12px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06)'
+            ? 'none'
             : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop)
               ? '0 12px 24px 0 rgba(0,0,0,0.04), 0 4px 12px 0 rgba(0,0,0,0.08)'
               : '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',

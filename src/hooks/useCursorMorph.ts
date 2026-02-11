@@ -17,6 +17,10 @@ const PLAY_WIDTH = 78
 const PLAY_HEIGHT = 54
 const PLAY_RADIUS = 16
 
+// Play-circle cursor — circular play button for smaller targets (album art, etc.)
+const PLAY_CIRCLE_SIZE = 40
+const PLAY_CIRCLE_RADIUS = PLAY_CIRCLE_SIZE / 2
+
 // Drag cursor — iPadOS-style omnidirectional move indicator
 const DRAG_SIZE = 64
 const DRAG_RADIUS = DRAG_SIZE / 2
@@ -30,7 +34,7 @@ const MAGNETIC_STRENGTH = 0.08
 // Max pixels the element can be displaced
 const MAGNETIC_MAX = 3
 
-export type CursorMode = 'default' | 'morph' | 'morph-only' | 'grow' | 'text' | 'play' | 'drag' | 'grab'
+export type CursorMode = 'default' | 'morph' | 'morph-only' | 'grow' | 'text' | 'play' | 'play-circle' | 'drag' | 'grab'
 
 export interface CursorMorphValues {
   x: MotionValue<number>
@@ -86,6 +90,10 @@ function getTextBeamHeight(clientX: number, clientY: number, target: Element): n
 
     // Exclude text inside interactive elements — those use morph/grow, not i-beam
     if (target.closest('button, a, [role="button"], summary')) return 0
+
+    // Opt-out: ancestors with data-cursor-no-text suppress the i-beam entirely
+    // (expanded TopCards use this — the text is read-only, not selectable)
+    if (target.closest('[data-cursor-no-text]')) return 0
 
     // Return the computed line-height (or font-size as fallback) to size the beam
     const style = getComputedStyle(textEl)
@@ -384,6 +392,21 @@ export function useCursorMorph(): CursorMorphValues {
       borderRadius.set(PLAY_RADIUS)
     }
 
+    const setPlayCircle = (clientX: number, clientY: number) => {
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      updateMode('play-circle')
+      isMorphed.set(0)
+      rawX.set(clientX)
+      rawY.set(clientY)
+      width.set(PLAY_CIRCLE_SIZE)
+      height.set(PLAY_CIRCLE_SIZE)
+      borderRadius.set(PLAY_CIRCLE_RADIUS)
+    }
+
     const setTextBeam = (clientX: number, clientY: number, beamH: number) => {
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
@@ -479,6 +502,24 @@ export function useCursorMorph(): CursorMorphValues {
         return
       }
 
+      // Check for play-circle target (circular play button for smaller targets)
+      const playCircleEl = target?.closest('[data-cursor="play-circle"]') as HTMLElement | null
+      if (playCircleEl) {
+        setPlayCircle(e.clientX, e.clientY)
+        return
+      }
+
+      // Explicit text-beam opt-in — forces i-beam for areas like <input> fields
+      // that caretRangeFromPoint can't detect (no TEXT_NODE).
+      // Overrides data-cursor-no-text on parent.
+      const textOptIn = target?.closest('[data-cursor-text]') as HTMLElement | null
+      if (textOptIn) {
+        const style = getComputedStyle(textOptIn)
+        const lh = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2 || TEXT_BEAM_HEIGHT
+        setTextBeam(e.clientX, e.clientY, lh)
+        return
+      }
+
       // Check for grow target (just enlarge circle)
       const growEl = target?.closest('[data-cursor="grow"]') as HTMLElement | null
       if (growEl) {
@@ -570,6 +611,7 @@ export function useCursorMorph(): CursorMorphValues {
         // Map each mode to the data-cursor attribute it requires
         const attrMap: Record<string, string | null> = {
           play: 'play',
+          'play-circle': 'play-circle',
           drag: 'drag',
           grab: 'grab',
           grow: 'grow',
