@@ -8,7 +8,7 @@ const MORPH_PADDING = 4
 const IFRAME_TIMEOUT = 150
 
 // I-beam text cursor dimensions (iPadOS-style)
-const TEXT_BEAM_WIDTH = 4
+const TEXT_BEAM_WIDTH = 2.5
 const TEXT_BEAM_HEIGHT = 26
 const TEXT_BEAM_RADIUS = 2
 
@@ -17,12 +17,20 @@ const PLAY_WIDTH = 78
 const PLAY_HEIGHT = 54
 const PLAY_RADIUS = 16
 
+// Drag cursor — iPadOS-style omnidirectional move indicator
+const DRAG_SIZE = 64
+const DRAG_RADIUS = DRAG_SIZE / 2
+
+// Grab cursor — slightly enlarged circle for hover-over-draggable
+const GRAB_SIZE = 44
+const GRAB_RADIUS = GRAB_SIZE / 2
+
 // Magnetic pull: element shifts toward cursor by this fraction of the offset
 const MAGNETIC_STRENGTH = 0.08
 // Max pixels the element can be displaced
 const MAGNETIC_MAX = 3
 
-export type CursorMode = 'default' | 'morph' | 'morph-only' | 'grow' | 'text' | 'play'
+export type CursorMode = 'default' | 'morph' | 'morph-only' | 'grow' | 'text' | 'play' | 'drag' | 'grab'
 
 export interface CursorMorphValues {
   x: MotionValue<number>
@@ -383,9 +391,41 @@ export function useCursorMorph(): CursorMorphValues {
       isMorphed.set(0)
       rawX.set(clientX)
       rawY.set(clientY)
-      width.set(TEXT_BEAM_WIDTH)
+      // Scale beam width proportionally to height — thicker for larger text
+      const beamW = Math.max(TEXT_BEAM_WIDTH, TEXT_BEAM_WIDTH * (beamH / TEXT_BEAM_HEIGHT))
+      width.set(beamW)
       height.set(beamH)
-      borderRadius.set(TEXT_BEAM_RADIUS)
+      borderRadius.set(Math.max(TEXT_BEAM_RADIUS, beamW / 2))
+    }
+
+    const setDrag = (clientX: number, clientY: number) => {
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      updateMode('drag')
+      isMorphed.set(0)
+      rawX.set(clientX)
+      rawY.set(clientY)
+      width.set(DRAG_SIZE)
+      height.set(DRAG_SIZE)
+      borderRadius.set(DRAG_RADIUS)
+    }
+
+    const setGrabCursor = (clientX: number, clientY: number) => {
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      updateMode('grab')
+      isMorphed.set(0)
+      rawX.set(clientX)
+      rawY.set(clientY)
+      width.set(GRAB_SIZE)
+      height.set(GRAB_SIZE)
+      borderRadius.set(GRAB_RADIUS)
     }
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -400,6 +440,20 @@ export function useCursorMorph(): CursorMorphValues {
 
       // Detect dark-background sections for cursor color inversion
       isInverted.set(target?.closest('[data-cursor-invert]') ? 1 : 0)
+
+      // Check for drag target first (active dragging — omnidirectional arrows)
+      const dragEl = target?.closest('[data-cursor="drag"]') as HTMLElement | null
+      if (dragEl) {
+        setDrag(e.clientX, e.clientY)
+        return
+      }
+
+      // Check for grab target (hovering over draggable — enlarged circle)
+      const grabEl = target?.closest('[data-cursor="grab"]') as HTMLElement | null
+      if (grabEl) {
+        setGrabCursor(e.clientX, e.clientY)
+        return
+      }
 
       // Check for morph target first (magnetic snap)
       const morphEl = target?.closest('[data-cursor="morph"]') as HTMLElement | null
@@ -443,6 +497,20 @@ export function useCursorMorph(): CursorMorphValues {
           opacity.set(0)
         }, IFRAME_TIMEOUT)
       }
+    }
+
+    // On press, re-check data-cursor so drag mode triggers immediately
+    // (without waiting for the next mousemove). RAF ensures R3F's onPointerDown
+    // has already set the attribute on the canvas element.
+    const handleMouseDown = (e: MouseEvent) => {
+      const cx = e.clientX, cy = e.clientY
+      requestAnimationFrame(() => {
+        const target = document.elementFromPoint(cx, cy)
+        const dragEl = target?.closest('[data-cursor="drag"]') as HTMLElement | null
+        if (dragEl) {
+          setDrag(cx, cy)
+        }
+      })
     }
 
     const handleMouseEnter = () => { opacity.set(1) }
@@ -493,6 +561,7 @@ export function useCursorMorph(): CursorMorphValues {
     rafRef.current = requestAnimationFrame(tick)
 
     document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mousedown', handleMouseDown)
     document.documentElement.addEventListener('mouseenter', handleMouseEnter)
     document.documentElement.addEventListener('mouseleave', handleMouseLeave)
 
@@ -505,6 +574,7 @@ export function useCursorMorph(): CursorMorphValues {
       }
       document.removeEventListener('mouseover', handleMouseOver, true)
       document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mousedown', handleMouseDown)
       document.documentElement.removeEventListener('mouseenter', handleMouseEnter)
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave)
       cancelAnimationFrame(rafRef.current)

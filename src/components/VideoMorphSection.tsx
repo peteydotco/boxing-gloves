@@ -266,7 +266,7 @@ export function VideoMorphSection() {
         style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: '#3D1A2A',
+          backgroundColor: '#0E0E0E',
           opacity: darkOverlayOpacity,
           pointerEvents: 'none',
           zIndex: -2,

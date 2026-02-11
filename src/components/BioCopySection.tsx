@@ -119,17 +119,22 @@ export function BioCopySection() {
   const lines = useLineBreaks(BIO_TEXT, containerRef)
   const [isOverDark, setIsOverDark] = useState(false)
 
-  // Detect dark overlay from VideoMorphSection — same thresholds as TopCards CTA pill
+  // Detect dark overlay from VideoMorphSection — uses the exact same
+  // scrollYProgress formula and thresholds as VideoMorphSection's darkOverlayOpacity.
+  // offset: ['start end', 'end start'] → progress = (scrollY - (sectionTop - viewH)) / (sectionH + viewH)
+  // Dark at progress ∈ [0.21, 0.78] (matches darkOverlayOpacity opacity=1 range)
   useEffect(() => {
     let currentDark = false
     const handleScroll = () => {
       const videoSection = document.querySelector('[data-section="video-morph"]') as HTMLElement | null
       if (videoSection) {
-        const vRect = videoSection.getBoundingClientRect()
+        const rect = videoSection.getBoundingClientRect()
         const sectionH = videoSection.offsetHeight
         const viewH = window.innerHeight
-        const progress = (-vRect.top + viewH) / (sectionH + viewH)
-        const nowDark = progress > 0.175 && progress < 0.83
+        // Replicate Framer Motion useScroll with offset=['start end','end start']:
+        // progress 0 = section top at viewport bottom, progress 1 = section bottom at viewport top
+        const progress = (viewH - rect.top) / (sectionH + viewH)
+        const nowDark = progress > 0.21 && progress < 0.78
         if (nowDark !== currentDark) {
           currentDark = nowDark
           setIsOverDark(nowDark)

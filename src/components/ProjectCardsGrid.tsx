@@ -14,15 +14,15 @@ export function ProjectCardsGrid() {
       data-scroll
       data-scroll-section
     >
-      {/* 35vh spacer — ensures the video player is ~half scrolled off
+      {/* Spacer — ensures the video player is ~half scrolled off
           the top of the viewport before the "Selected Works" lockup enters */}
-      <div style={{ height: '25vh' }} />
+      <div style={{ height: '15vh' }} />
 
       {/* Positioned container for the staggered card grid */}
       <div
         style={{
           position: 'relative',
-          height: 4640,
+          height: 3480,
           width: '100%',
         }}
       >
@@ -33,7 +33,7 @@ export function ProjectCardsGrid() {
           data-scroll-speed="-0.05"
           style={{
             position: 'absolute',
-            top: 280,
+            top: 220,
             left: 'calc(1 * var(--col) + 22px)',
             display: 'flex',
             flexDirection: 'column',
@@ -74,7 +74,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 120, left: 'calc(58.33% + 8px)' }}
+          style={{ position: 'absolute', top: 80, left: 'calc(58.33% + 8px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
@@ -92,7 +92,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 1260, left: 25 }}
+          style={{ position: 'absolute', top: 1020, left: 25 }}
         >
           <ProjectCard
             width={colSpan(6)}
@@ -112,7 +112,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 1920, left: 'calc(58.33% + 7px)' }}
+          style={{ position: 'absolute', top: 1580, left: 'calc(58.33% + 7px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
@@ -130,7 +130,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 2380, left: 'calc(8.33% + 22px)' }}
+          style={{ position: 'absolute', top: 2040, left: 'calc(8.33% + 22px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
@@ -148,7 +148,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 3780, left: 'calc(33.33% + 15px)' }}
+          style={{ position: 'absolute', top: 2860, left: 'calc(33.33% + 15px)' }}
         >
           <ProjectCard
             width={colSpan(7)}
