@@ -1416,10 +1416,13 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     x: glassMagX,
                     y: glassMagY,
                   }}
+                  // Start hidden when remounting after close-from-compact so the glass
+                  // dissolves in via the existing transition instead of popping in at full opacity.
+                  {...(justClosedFromCompact.current && { initial: { opacity: 0 } })}
                   animate={{ opacity: isMiniTray ? 1 : 0 }}
                   transition={morphStyle === 4
-                    ? { duration: 0.12, ease: 'easeOut' }  // faster dissolve = anticipation
-                    : { duration: 0.2, ease: 'easeOut' }
+                    ? { duration: 0.18, ease: 'easeOut' }  // faster dissolve = anticipation
+                    : { duration: 0.3, ease: 'easeOut' }
                   }
                 />
 
