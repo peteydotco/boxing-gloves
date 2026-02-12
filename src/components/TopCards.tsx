@@ -127,8 +127,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   // 2: Bouncy spring — ctaEntranceSpring (playful springback) on all pills
   // 3: Scale overshoot — pills overshoot scaleY to 1.06 during height morph
   // 4: Combined — stagger + bouncy spring + glass dissolves ahead as anticipation
-  type MorphStyle = 1 | 2 | 3 | 4
-  const [morphStyle, setMorphStyle] = React.useState<MorphStyle>(4)
+  const morphStyle = 4
 
   // ── Mini tray magnetic attraction ──
   // Self-contained spring system: cursor offset → clamped displacement → sprung motion values
@@ -1764,55 +1763,6 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
             </motion.div>
           )}
         </AnimatePresence>,
-        document.body
-      )}
-      {/* ── Pill Morph Style Debugger ── */}
-      {typeof document !== 'undefined' && createPortal(
-        <div
-          style={{
-            position: 'fixed',
-            bottom: 16,
-            right: 16,
-            zIndex: 99999,
-            background: 'rgba(0,0,0,0.85)',
-            backdropFilter: 'blur(12px)',
-            borderRadius: 12,
-            padding: '10px 12px',
-            display: 'flex',
-            gap: 6,
-            alignItems: 'center',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: 11,
-            color: 'rgba(255,255,255,0.6)',
-            pointerEvents: 'auto',
-          }}
-        >
-          <span style={{ marginRight: 4, whiteSpace: 'nowrap' }}>Morph:</span>
-          {([1, 2, 3, 4] as MorphStyle[]).map((style) => {
-            const labels = { 1: 'Stagger', 2: 'Bouncy', 3: 'Overshoot', 4: 'Combined' }
-            const isActive = morphStyle === style
-            return (
-              <button
-                key={style}
-                onClick={() => setMorphStyle(style)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  border: 'none',
-                  fontSize: 10,
-                  fontWeight: isActive ? 600 : 400,
-                  cursor: 'pointer',
-                  background: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
-                  color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
-                  transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {style}. {labels[style]}
-              </button>
-            )
-          })}
-        </div>,
         document.body
       )}
     </>

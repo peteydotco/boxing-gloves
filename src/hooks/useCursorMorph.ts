@@ -6,6 +6,10 @@ const DEFAULT_SIZE = 22
 const GROW_SIZE = 48
 const MORPH_PADDING = 4
 const IFRAME_TIMEOUT = 150
+// How long the cursor holds its morphed shape after leaving an element before
+// reverting to the default circle. Bridges gaps between adjacent magnetic elements
+// so the cursor doesn't flash to default during rapid element-to-element swiping.
+const DEFAULT_DEBOUNCE = 100
 
 // I-beam text cursor dimensions (iPadOS-style)
 const TEXT_BEAM_WIDTH = 2.5
@@ -147,6 +151,9 @@ export function useCursorMorph(): CursorMorphValues {
   // Flag set on scroll — avoids calling elementFromPoint every frame in the rAF tick.
   // Only needs re-check when the page has scrolled (element may have moved under cursor).
   const scrollDirtyRef = useRef(false)
+  // Debounce timer for reverting to default — holds morphed shape briefly after
+  // leaving an element so the cursor can bridge to adjacent elements without flashing.
+  const defaultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!enabled) return
@@ -253,23 +260,55 @@ export function useCursorMorph(): CursorMorphValues {
       liftTimers.set(el, timer)
     }
 
+    // Cancel any pending debounce-to-default timer (used when cursor bridges
+    // between adjacent magnetic elements — prevents the default circle flash).
+    const cancelPendingDefault = () => {
+      if (defaultTimerRef.current) {
+        clearTimeout(defaultTimerRef.current)
+        defaultTimerRef.current = null
+      }
+    }
+
     const setDefault = (clientX: number, clientY: number) => {
-      // Release any previously morphed element
+      // If a debounce timer is already pending, just update cursor position
+      // so it follows the mouse during the linger window.
+      if (defaultTimerRef.current) {
+        rawX.set(clientX)
+        rawY.set(clientY)
+        return
+      }
+      // Already in default — just track position
+      if (modeRef.current === 'default') {
+        rawX.set(clientX)
+        rawY.set(clientY)
+        return
+      }
+
+      // Release magnetic/lift immediately so the element springs back
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+        morphTargetRef.current = null
       }
-      morphTargetRef.current = null
-      updateMode('default')
-      isMorphed.set(0)
+
+      // Un-snap from element center — follow mouse immediately
       rawX.set(clientX)
       rawY.set(clientY)
-      width.set(DEFAULT_SIZE)
-      height.set(DEFAULT_SIZE)
-      borderRadius.set(DEFAULT_SIZE / 2)
+
+      // Debounce the shape reset: hold morphed size briefly so crossing
+      // to an adjacent element transitions directly without flashing to default.
+      defaultTimerRef.current = setTimeout(() => {
+        defaultTimerRef.current = null
+        updateMode('default')
+        isMorphed.set(0)
+        width.set(DEFAULT_SIZE)
+        height.set(DEFAULT_SIZE)
+        borderRadius.set(DEFAULT_SIZE / 2)
+      }, DEFAULT_DEBOUNCE)
     }
 
     const setMorph = (el: HTMLElement, mouseX: number, mouseY: number) => {
+      cancelPendingDefault()
       // Release previous target if switching elements
       if (morphTargetRef.current && morphTargetRef.current !== el) {
         clearLiftProps(morphTargetRef.current)
@@ -319,6 +358,7 @@ export function useCursorMorph(): CursorMorphValues {
     // but NO magnetic displacement or lift scale on the element itself.
     // Safe for Framer Motion–animated elements whose transforms we must not touch.
     const setMorphOnly = (el: HTMLElement, mouseX: number, mouseY: number) => {
+      cancelPendingDefault()
       // Release previous target if switching elements
       if (morphTargetRef.current && morphTargetRef.current !== el) {
         clearLiftProps(morphTargetRef.current)
@@ -363,6 +403,7 @@ export function useCursorMorph(): CursorMorphValues {
     }
 
     const setGrow = (clientX: number, clientY: number) => {
+      cancelPendingDefault()
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
@@ -378,6 +419,7 @@ export function useCursorMorph(): CursorMorphValues {
     }
 
     const setPlay = (clientX: number, clientY: number) => {
+      cancelPendingDefault()
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
@@ -393,6 +435,7 @@ export function useCursorMorph(): CursorMorphValues {
     }
 
     const setPlayCircle = (clientX: number, clientY: number) => {
+      cancelPendingDefault()
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
@@ -408,6 +451,7 @@ export function useCursorMorph(): CursorMorphValues {
     }
 
     const setTextBeam = (clientX: number, clientY: number, beamH: number) => {
+      cancelPendingDefault()
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
@@ -425,6 +469,7 @@ export function useCursorMorph(): CursorMorphValues {
     }
 
     const setDrag = (clientX: number, clientY: number) => {
+      cancelPendingDefault()
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
@@ -440,6 +485,7 @@ export function useCursorMorph(): CursorMorphValues {
     }
 
     const setGrabCursor = (clientX: number, clientY: number) => {
+      cancelPendingDefault()
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
         if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
@@ -559,6 +605,7 @@ export function useCursorMorph(): CursorMorphValues {
 
     const handleMouseEnter = () => { opacity.set(1) }
     const handleMouseLeave = () => {
+      cancelPendingDefault()
       opacity.set(0)
       if (morphTargetRef.current) {
         clearLiftProps(morphTargetRef.current)
@@ -581,8 +628,12 @@ export function useCursorMorph(): CursorMorphValues {
           clearLiftProps(el)
           if (m === 'morph') releaseMagnetic(el)
           morphTargetRef.current = null
+          cancelPendingDefault()
           updateMode('default')
           isMorphed.set(0)
+          width.set(DEFAULT_SIZE)
+          height.set(DEFAULT_SIZE)
+          borderRadius.set(DEFAULT_SIZE / 2)
         } else {
           if (m === 'morph') {
             // Full morph: re-apply magnetic + lift and read displaced rect
@@ -661,6 +712,7 @@ export function useCursorMorph(): CursorMorphValues {
       document.documentElement.removeEventListener('mouseleave', handleMouseLeave)
       cancelAnimationFrame(rafRef.current)
       if (iframeFadeTimerRef.current) clearTimeout(iframeFadeTimerRef.current)
+      cancelPendingDefault()
     }
   }, [enabled, rawX, rawY, width, height, borderRadius, opacity, isMorphed, isInverted, mode, x, y])
 

@@ -8,7 +8,7 @@ export const cards: CardData[] = [
     title: 'School of Visual Arts',
     shortcut: '1',
     variant: 'blue',
-    compactLabel: 'Adjunct Professor',
+    compactLabel: 'Adjunct IxD Professor',
     expandedContent: {
       roleLabel: 'IxD Professor at',
       dateRange: '2021 → Present',
