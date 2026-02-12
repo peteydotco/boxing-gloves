@@ -1,8 +1,8 @@
 import * as React from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { MorphingCard } from './MorphingCard'
 import { createPortal } from 'react-dom'
-import { BREAKPOINTS, CAROUSEL_CONFIG, backdropColors, signatureSpring, getVariantStyles, hoverTransition } from '../constants'
+import { BREAKPOINTS, CAROUSEL_CONFIG, backdropColors, signatureSpring, ctaEntranceSpring, getVariantStyles } from '../constants'
 import { cards, stackedCardConfigs } from '../data/cards'
 
 // Canonical card dimensions - the "ideal" size we design for
@@ -65,6 +65,11 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.mobile && window.innerWidth < BREAKPOINTS.desktop : false
   })
 
+  // Track viewport width for computing animated pill widths in compact bar
+  const [viewportWidth, setViewportWidth] = React.useState<number>(() => {
+    return typeof window !== 'undefined' ? window.innerWidth : 1440
+  })
+
   // Compute which cards to show based on cardIndices prop
   const cardsToShow = cardIndices ? cardIndices.map(i => cards[i]).filter(Boolean) : cards
 
@@ -93,8 +98,15 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   // Store scroll position when expanding to restore on collapse
   const savedScrollPosition = React.useRef<number>(0)
 
-  // Compact sticky state — pills that follow the user on scroll
-  const [isCompact, setIsCompact] = React.useState(false)
+  // Compact sticky state — three tiers:
+  //   'hidden'  → default cards visible, no sticky bar
+  //   'mini'    → tiny colored pills fixed at top center (collapsed tray)
+  //   'expanded'→ full compact bar with labels (on hover over mini tray)
+  type CompactState = 'hidden' | 'mini' | 'expanded'
+  const [compactState, setCompactState] = React.useState<CompactState>('hidden')
+  const isCompact = compactState !== 'hidden' // derived for existing code compatibility
+  const isMiniTray = compactState === 'mini'
+  const isCompactExpanded = compactState === 'expanded'
   const [isOverDark, setIsOverDark] = React.useState(false)
   const topCardsWrapperRef = React.useRef<HTMLDivElement>(null)
   const compactCardRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map())
@@ -105,6 +117,37 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   const sharedScrollLeft = React.useRef<number>(0)
   const expandedFromCompact = React.useRef(false)
   const justClosedFromCompact = React.useRef(false)
+  // When closing from compact, onExitComplete handles overflow restoration via rAF.
+  // This flag prevents the generic overflow useEffect from racing ahead and restoring
+  // overflow (scrollbar) before the compact bar has painted.
+  const deferOverflowRestore = React.useRef(false)
+
+  // ── Pill morph style debugger ──
+  // 1: Stagger only — pills expand outward from center with 40ms stagger
+  // 2: Bouncy spring — ctaEntranceSpring (playful springback) on all pills
+  // 3: Scale overshoot — pills overshoot scaleY to 1.06 during height morph
+  // 4: Combined — stagger + bouncy spring + glass dissolves ahead as anticipation
+  type MorphStyle = 1 | 2 | 3 | 4
+  const [morphStyle, setMorphStyle] = React.useState<MorphStyle>(4)
+
+  // ── Mini tray magnetic attraction ──
+  // Self-contained spring system: cursor offset → clamped displacement → sprung motion values
+  // Three layers at different multipliers create depth parallax (glass < container < pills)
+  const miniMagX = useMotionValue(0)
+  const miniMagY = useMotionValue(0)
+  const springMagX = useSpring(miniMagX, { stiffness: 300, damping: 25, mass: 0.5 })
+  const springMagY = useSpring(miniMagY, { stiffness: 300, damping: 25, mass: 0.5 })
+  // Children inherit the container's displacement. These are RELATIVE corrections:
+  // glass: undo 50% of parent → net 50% of cursor pull (lags behind)
+  // pills: add 40% on top of parent → net 140% of cursor pull (leads ahead)
+  const glassMagX = useTransform(springMagX, v => v * -0.5)
+  const glassMagY = useTransform(springMagY, v => v * -0.5)
+  const pillMagX = useTransform(springMagX, v => v * 0.4)
+  const pillMagY = useTransform(springMagY, v => v * 0.4)
+
+  // Hover intent timeouts for mini tray ↔ expanded transition
+  const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
+  const leaveTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   React.useEffect(() => {
     const BUFFER = 20
@@ -114,20 +157,24 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       const wrapper = topCardsWrapperRef.current
       if (!wrapper) return
       const rect = wrapper.getBoundingClientRect()
+      // Scrolled past default cards → show mini tray
       if (!currentCompact && rect.bottom < -BUFFER) {
         currentCompact = true
-        // Capture default row scroll before it hides, so compact bar can pick it up
         if (scrollContainerRef.current) {
           sharedScrollLeft.current = scrollContainerRef.current.scrollLeft
         }
-        setIsCompact(true)
-      } else if (currentCompact && rect.bottom > BUFFER) {
+        setCompactState(prev => prev === 'hidden' ? 'mini' : prev)
+      }
+      // Scrolled back to default cards → hide everything
+      else if (currentCompact && rect.bottom > BUFFER) {
         currentCompact = false
-        // Sync default row scroll from shared position (set by compact bar) before it reappears
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollLeft = sharedScrollLeft.current
         }
-        setIsCompact(false)
+        setCompactState('hidden')
+        // Clear any pending hover timeouts
+        if (hoverTimeoutRef.current) { clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = null }
+        if (leaveTimeoutRef.current) { clearTimeout(leaveTimeoutRef.current); leaveTimeoutRef.current = null }
       }
 
       // Detect dark video section overlap for CTA pill color swap
@@ -157,6 +204,74 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // --- Mini tray ↔ expanded compact bar hover handlers ---
+  const handleMiniTrayEnter = React.useCallback(() => {
+    if (leaveTimeoutRef.current) { clearTimeout(leaveTimeoutRef.current); leaveTimeoutRef.current = null }
+    hoverTimeoutRef.current = setTimeout(() => {
+      // Reset magnetic displacement — springs animate back during morph ("settling" feel)
+      miniMagX.set(0)
+      miniMagY.set(0)
+      setCompactState('expanded')
+    }, 80) // brief hover-intent delay
+  }, [miniMagX, miniMagY])
+
+  const handleCompactBarEnter = React.useCallback(() => {
+    // Re-entering expanded bar cancels any pending collapse
+    if (leaveTimeoutRef.current) { clearTimeout(leaveTimeoutRef.current); leaveTimeoutRef.current = null }
+  }, [])
+
+  const handleCompactBarLeave = React.useCallback(() => {
+    if (hoverTimeoutRef.current) { clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = null }
+    leaveTimeoutRef.current = setTimeout(() => {
+      setCompactState(prev => prev === 'expanded' ? 'mini' : prev)
+    }, 300) // forgiving leave delay
+  }, [])
+
+  // Touch/mobile: tap mini tray to expand immediately
+  const handleMiniTrayClick = React.useCallback(() => {
+    if (hoverTimeoutRef.current) { clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = null }
+    setCompactState('expanded')
+  }, [])
+
+  // Mini tray magnetic attraction: cursor pulls the tray toward it.
+  // The hit zone extends beyond the tray (~60px padding) so the pull starts
+  // as the cursor approaches. Strength attenuates with distance from center.
+  const MINI_MAG_STRENGTH = 0.18  // stronger than cards (0.08) since target is smaller
+  const MINI_MAG_MAX = 5          // max 5px displacement (vs 3px for cards)
+  const MINI_MAG_RADIUS = 120     // distance (px) at which attraction drops to zero
+  const morphContainerRef = React.useRef<HTMLDivElement>(null)
+  const handleMiniTrayMouseMove = React.useCallback((e: React.MouseEvent) => {
+    // Always compute offset from the actual morphing container's center,
+    // even when the event fires on the larger hit zone.
+    const el = morphContainerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    const dx = e.clientX - centerX
+    const dy = e.clientY - centerY
+    // Attenuate pull based on distance — full strength at center, zero at MINI_MAG_RADIUS
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    const falloff = Math.max(0, 1 - dist / MINI_MAG_RADIUS)
+    const strength = MINI_MAG_STRENGTH * falloff
+    const tx = Math.max(-MINI_MAG_MAX, Math.min(MINI_MAG_MAX, dx * strength))
+    const ty = Math.max(-MINI_MAG_MAX, Math.min(MINI_MAG_MAX, dy * strength))
+    miniMagX.set(tx)
+    miniMagY.set(ty)
+  }, [miniMagX, miniMagY])
+  const handleMiniTrayHitZoneLeave = React.useCallback(() => {
+    miniMagX.set(0)
+    miniMagY.set(0)
+  }, [miniMagX, miniMagY])
+
+  // Clean up hover timeouts on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+      if (leaveTimeoutRef.current) clearTimeout(leaveTimeoutRef.current)
+    }
   }, [])
 
   // Capture compact card positions and expand
@@ -192,7 +307,12 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     })
     setCardPositions(positions)
     expandedFromCompact.current = true
-    setExpandedIndex(index)
+    // Two-phase expand: don't call setExpandedIndex yet. First, trigger a re-render
+    // so the compact bar's exit prop picks up expandedFromCompact.current = true
+    // (AnimatePresence caches exit from the last render where the component was present).
+    // Phase 2 useEffect then calls setExpandedIndex to actually remove the compact bar.
+    pendingExpandIndex.current = index
+    setExpandFromCompactTriggered(true)
   }
 
   // Capture all card positions before expanding
@@ -214,61 +334,44 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
 
   // Track if close has been triggered (to sequence exit positions before clearing expandedIndex)
   const [closeTriggered, setCloseTriggered] = React.useState(false)
+  // Two-phase expand from compact: phase 1 sets expandedFromCompact ref and triggers
+  // re-render so AnimatePresence caches the correct exit prop ({ opacity: 0 } not slide).
+  // Phase 2 (useEffect) then sets expandedIndex to actually remove the compact bar.
+  const [expandFromCompactTriggered, setExpandFromCompactTriggered] = React.useState(false)
+  const pendingExpandIndex = React.useRef<number | null>(null)
 
   const handleCloseExpanded = () => {
     closingCardIndex.current = expandedIndex
     if (expandedIndex === null) return
 
-    // ── Closing back to compact pills ──
-    // Compact bar is unmounted during expansion, so we can't read DOM.
-    // Use the positions captured at expand time. On non-desktop the compact bar
-    // scrolls, so if the user navigated to a different card we need to compute
-    // a new compact scroll position and shift all pill positions accordingly.
+    // ── Closing back to mini tray ──
+    // Skip the expanded compact bar entirely — collapse straight to the mini
+    // tray's tiny pill positions so there's no intermediate state.
     if (expandedFromCompact.current) {
       const newExitPositions = new Map<string, { top: number; left: number; width: number; height: number }>()
-      const closingCard = visibleCards[expandedIndex]
-      const closingPos = closingCard ? cardPositions.get(closingCard.id) : null
+      const vw = window.innerWidth
+      const miniPillW = 28
+      const miniPillH = 8
+      const miniGap = 4
+      const miniTrayW = numPills * miniPillW + (numPills - 1) * miniGap
+      const miniTrayLeft = (vw - miniTrayW) / 2
+      // Mini tray marginTop matches the expanded pills' vertical center
+      const miniMarginTop = vw < BREAKPOINTS.mobile ? 32 : 40
 
-      // On desktop the compact bar doesn't scroll — positions are correct as-is.
-      // On tablet/mobile the compact bar scrolls: we need to ensure the closing
-      // card's pill is visible when the compact bar remounts.
-      let scrollDelta = 0
-      if (!isDesktop && closingPos) {
-        const viewportWidth = window.innerWidth
-        const bleedPadding = 12 // 0.75rem
-        // The captured pill left is viewport-relative at the captured scroll state.
-        // Check if the closing pill would be visible. If not, compute a new
-        // scroll state that shows it and apply the delta to all positions.
-        const pillLeft = closingPos.left
-        const pillRight = pillLeft + closingPos.width
-        // Pill is "visible" if it's fully within the viewport (with small margin)
-        const isVisible = pillLeft >= bleedPadding && pillRight <= viewportWidth - bleedPadding
-        if (!isVisible) {
-          // Pill is off-screen. Compute how far to scroll to bring it on-screen.
-          // We want the pill near the left edge (or right edge for the last card).
-          if (expandedIndex === visibleCards.length - 1) {
-            // Last pill: align to right edge
-            scrollDelta = pillRight - (viewportWidth - bleedPadding)
-          } else {
-            // Other pills: align to left edge
-            scrollDelta = pillLeft - bleedPadding
-          }
-          savedCompactScrollPosition.current += scrollDelta
-        }
-      }
-
-      visibleCards.forEach((card) => {
-        const capturedPos = cardPositions.get(card.id)
-        if (capturedPos) {
-          newExitPositions.set(card.id, {
-            top: capturedPos.top,
-            left: capturedPos.left - scrollDelta,
-            width: capturedPos.width,
-            height: capturedPos.height,
-          })
-        }
+      visibleCards.forEach((card, idx) => {
+        newExitPositions.set(card.id, {
+          top: miniMarginTop,
+          left: miniTrayLeft + idx * (miniPillW + miniGap),
+          width: miniPillW,
+          height: miniPillH,
+        })
       })
       setMobileExitPositions(newExitPositions)
+      // Defer overflow restoration: the cleanup of the overflow useEffect will fire
+      // when expandedIndex goes null, but we need overflow to stay 'hidden' during
+      // the entire exit animation so the scrollbar doesn't reappear and shift positions.
+      // onExitComplete's rAF will clear this flag and restore overflow after paint.
+      deferOverflowRestore.current = true
       setCloseTriggered(true)
       return
     }
@@ -350,9 +453,24 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     }
   }, [closeTriggered])
 
+  // Two-phase expand from compact — phase 2: the re-render from phase 1 has baked
+  // expandedFromCompact.current=true into the compact bar's exit prop cache.
+  // Now safe to set expandedIndex, which removes the compact bar with the correct exit (fade, not slide).
+  React.useEffect(() => {
+    if (expandFromCompactTriggered) {
+      setExpandFromCompactTriggered(false)
+      setExpandedIndex(pendingExpandIndex.current!)
+      pendingExpandIndex.current = null
+    }
+  }, [expandFromCompactTriggered])
+
   // Handle ESC key, arrow keys for navigation, number keys to open cards, and ⌘+C to copy email
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Disable ALL card shortcuts when compact bar is showing (mini or expanded).
+      // The default cards are off-screen so shortcuts would look broken.
+      if (isCompact && expandedIndex === null) return
+
       // ⌘+C to copy email address
       if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
         // Only intercept if no text is selected
@@ -414,7 +532,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [expandedIndex, cardsToShow.length])
+  }, [expandedIndex, cardsToShow.length, isCompact])
 
   // Parallax velocity state - smoothed scroll velocity for parallax effect
   const [parallaxOffset, setParallaxOffset] = React.useState(0)
@@ -795,15 +913,20 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       document.body.style.overflow = 'hidden'
       // Add data attribute so other components know TopCards are expanded
       document.documentElement.setAttribute('data-topcards-expanded', 'true')
-    } else if (!isClosing) {
+    } else if (!isClosing && !deferOverflowRestore.current) {
       // Only restore overflow if we're not in the middle of an exit animation
-      // (onExitComplete handles restoration for closing-from-compact case)
+      // and not deferring to onExitComplete's rAF (closing-from-compact case)
       document.body.style.overflow = ''
       document.documentElement.removeAttribute('data-topcards-expanded')
     }
     return () => {
-      document.body.style.overflow = ''
-      document.documentElement.removeAttribute('data-topcards-expanded')
+      // Don't restore overflow in cleanup if we're deferring to onExitComplete's rAF
+      // (closing-from-compact case). The cleanup fires on every dependency change,
+      // including the expandedIndex→null transition that starts the exit animation.
+      if (!deferOverflowRestore.current) {
+        document.body.style.overflow = ''
+        document.documentElement.removeAttribute('data-topcards-expanded')
+      }
     }
   }, [expandedIndex, isClosing])
 
@@ -816,6 +939,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
       setIsDesktop(w >= BREAKPOINTS.desktop)
       setIsMobile(w < BREAKPOINTS.mobile)
       setIsTablet(w >= BREAKPOINTS.mobile && w < BREAKPOINTS.desktop)
+      setViewportWidth(w)
       // Force re-render to recalculate expanded positions if a card is expanded
       if (expandedIndex !== null) {
         setResizeKey(prev => prev + 1)
@@ -875,6 +999,37 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
   // Mobile & Tablet: all 4 cards in horizontal scroll
   // Desktop: top 3 cards + full CTA card inline (no scroll)
   const visibleCards = isDesktop ? (ctaCard ? [...topThreeCards, ctaCard] : topThreeCards) : mobileCards
+
+  // Compute explicit expanded pill width for smooth Framer Motion interpolation.
+  // `flex` shorthand can't be animated, so we compute the final width value
+  // that the flex layout would produce and animate `width` directly.
+  const numPills = visibleCards.length
+  const expandedPillWidth = React.useMemo(() => {
+    // Site padding: 24px each side for wide viewports (≥ tabletWide), 12px otherwise.
+    // On desktop, morphing container handles it; on non-desktop, inner flex handles it.
+    // Either way, the pill content area = viewportWidth - sitePad*2.
+    const sitePad = viewportWidth >= BREAKPOINTS.tabletWide ? 24 : 12
+    const gapSize = isMobile ? 8 : 16
+    const totalGaps = (numPills - 1) * gapSize
+    const available = viewportWidth - sitePad * 2 - totalGaps
+    const dynamicWidth = Math.floor(available / numPills)
+
+    // If the dynamic width is large enough (≥ 260px), use it so pills fill
+    // the available space. Otherwise fall back to 260px fixed (will scroll).
+    if (dynamicWidth >= 260) {
+      return dynamicWidth
+    }
+    return 260
+  }, [viewportWidth, numPills, isMobile])
+
+  // Whether the expanded pills need horizontal scrolling (total pill+gap > available space).
+  // Drives overflow, justifyContent, and container padding decisions.
+  const pillsWillScroll = expandedPillWidth === 260 && (() => {
+    const sitePad = viewportWidth >= BREAKPOINTS.tabletWide ? 24 : 12
+    const gapSize = isMobile ? 8 : 16
+    const total = numPills * 260 + (numPills - 1) * gapSize
+    return total > viewportWidth - sitePad * 2
+  })()
 
   // Get collapsed position for a card (used for initial/opening animation)
   // Exit position is calculated separately and passed via exitPosition prop
@@ -963,7 +1118,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     onClick={() => capturePositionsAndExpand(cardIndex)}
                     onClose={handleCloseExpanded}
                     onHighlightClick={(label) => console.log('Highlight clicked:', label)}
-                    hideShortcut={!isDesktop}
+                    hideShortcut={isMobile}
                     compactCta={isCompactCtaCard}
                     mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
                     emailCopied={emailCopied}
@@ -987,15 +1142,16 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
             const wasFromCompact = expandedFromCompact.current
             expandedFromCompact.current = false
             closingCardIndex.current = null
+            // deferOverflowRestore was already set in handleCloseExpanded (line 374)
+            // to prevent the overflow useEffect cleanup from restoring overflow early.
+            // It stays true here; onExitComplete's rAF below will clear it after paint.
             setIsClosing(false)
-            // When closing back to compact, skip the slide-in animation
             if (wasFromCompact) {
               justClosedFromCompact.current = true
-              // Delay overflow restoration: let compact bar mount and paint first (with scrollbar
-              // still hidden, matching the viewport width at position-capture time), then restore
-              // overflow so the scrollbar reappearing doesn't cause a visible jump.
+              setCompactState('mini')
               requestAnimationFrame(() => {
                 justClosedFromCompact.current = false
+                deferOverflowRestore.current = false
                 document.body.style.overflow = ''
                 document.documentElement.removeAttribute('data-topcards-expanded')
               })
@@ -1104,7 +1260,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                       onClick={() => {}}
                       onClose={handleCloseExpanded}
                       onHighlightClick={(label) => console.log('Highlight clicked:', label)}
-                      hideShortcut={!isDesktop}
+                      hideShortcut={isMobile}
                       compactCta={isCompactCtaCard}
                       mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
                       emailCopied={emailCopied}
@@ -1128,207 +1284,532 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
         document.body
       )}
 
-      {/* Compact sticky bar — portal to body, all breakpoints */}
+      {/* Compact sticky bar — unified morphing container: mini tray ↔ expanded bar */}
       {typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
           {isCompact && !isExpanded && !isClosing && (
             <motion.div
               key="compact-bar"
-              className="fixed top-0 left-0 right-0 horizontal-padding-responsive top-padding-responsive"
-              style={{ zIndex: 20, paddingBottom: 20, overflow: 'visible' }}
-              initial={justClosedFromCompact.current ? { y: 0, opacity: 1 } : { y: -60, opacity: 0 }}
+              className="fixed top-0 left-0 right-0"
+              style={{
+                zIndex: 20,
+                display: 'flex',
+                justifyContent: 'center',
+                pointerEvents: 'none', // Let children handle pointer events
+                overflow: 'visible',
+              }}
+              initial={justClosedFromCompact.current
+                ? { y: 0, opacity: 1 }
+                : { y: -60, opacity: 0 }
+              }
               animate={{ y: 0, opacity: 1 }}
               exit={expandedFromCompact.current ? { opacity: 0 } : { y: -60, opacity: 0 }}
-              transition={expandedFromCompact.current
-                ? { opacity: { duration: 0.15, ease: 'easeOut' } }
-                : signatureSpring
+              transition={justClosedFromCompact.current
+                ? { duration: 0 }
+                : expandedFromCompact.current
+                  ? { opacity: { duration: 0.15, ease: 'easeOut' } }
+                  : signatureSpring
               }
             >
-              <div
-                ref={(el) => {
-                  compactScrollRef.current = el
-                  if (el) {
-                    // Restore scroll: prefer savedCompactScrollPosition after closing from compact,
-                    // otherwise sync from the shared position (matches default card row).
-                    if (justClosedFromCompact.current) {
-                      el.scrollLeft = savedCompactScrollPosition.current
-                    } else {
-                      el.scrollLeft = sharedScrollLeft.current
-                    }
-                  }
-                }}
-                onScroll={(e) => {
-                  // Keep shared scroll position in sync when user scrolls the compact bar
-                  sharedScrollLeft.current = (e.target as HTMLDivElement).scrollLeft
-                }}
-                className="flex scrollbar-hide"
+              {/* Magnetic hit zone — invisible area around the mini tray that captures
+                  mouse movement for the magnetic attraction effect. Extends ~60px beyond
+                  the tray so the pull starts as the cursor approaches. Only rendered in
+                  mini state; the morphing container handles its own events when expanded. */}
+              {isMiniTray && (() => {
+                const hitPad = 60 // px beyond tray in each direction
+                const trayW = numPills * 28 + (numPills - 1) * 4
+                const trayMarginTop = isMobile ? 32 : 40
+                return (
+                  <div
+                    onMouseMove={handleMiniTrayMouseMove}
+                    onMouseLeave={handleMiniTrayHitZoneLeave}
+                    style={{
+                      position: 'absolute',
+                      // Center on the mini tray's actual position
+                      top: Math.max(0, trayMarginTop - hitPad),
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: trayW + hitPad * 2,
+                      height: 8 + hitPad * 2 + Math.min(hitPad, trayMarginTop), // 8px tray height + padding
+                      pointerEvents: 'auto',
+                      zIndex: 0,
+                    }}
+                  />
+                )
+              })()}
+
+              {/* Morphing container — pills live here, glass floats independently.
+                  Width animates between mini (pills + gaps) and expanded (viewport).
+                  Must be numeric px values for Framer Motion to interpolate smoothly. */}
+              <motion.div
+                ref={morphContainerRef}
+                onMouseEnter={isMiniTray ? handleMiniTrayEnter : handleCompactBarEnter}
+                onMouseLeave={handleCompactBarLeave}
+                onClick={isMiniTray ? handleMiniTrayClick : undefined}
+                data-cursor={isMiniTray ? 'grow' : undefined}
                 style={{
-                  gap: isMobile ? '0.5rem' : '1rem',
-                  justifyContent: isDesktop ? 'center' : 'flex-start',
-                  overflowX: isDesktop ? 'visible' : 'auto',
-                  overflowY: 'visible',
-                  // Negative top margin + matching padding extends the clip region
-                  // above the pills so dashed CTA borders aren't cropped
-                  marginTop: -4,
-                  paddingTop: 4,
-                  ...(!isDesktop && {
-                    marginLeft: '-0.75rem',
-                    marginRight: '-0.75rem',
-                    paddingLeft: '0.75rem',
-                    paddingRight: '0.75rem',
-                    paddingBottom: 8,
-                  }),
+                  pointerEvents: 'auto',
+                  display: 'flex',
+                  // No alignItems: 'center' — padding controls vertical positioning.
+                  // Using center causes Y-drift during morph due to asymmetric padding.
+                  position: 'relative',
+                  overflow: 'visible',
+                  cursor: isMiniTray ? 'pointer' : 'default',
+                  // Magnetic attraction: container follows cursor via sprung motion values.
+                  // In expanded state, reset to 0 (spring animates back during morph).
+                  x: isMiniTray ? springMagX : 0,
+                  y: isMiniTray ? springMagY : 0,
+                  zIndex: 1,
                 }}
+                // When remounting after close-from-compact, start at mini target values
+                // so the morphing container doesn't spring from 0 (collapse-transitions.md §7).
+                {...(justClosedFromCompact.current && {
+                  initial: {
+                    width: numPills * 28 + (numPills - 1) * 4,
+                    marginTop: isMobile ? 32 : 40,
+                    paddingLeft: 0,
+                    paddingRight: 0,
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                  },
+                })}
+                animate={{
+                  width: isMiniTray
+                    ? numPills * 28 + (numPills - 1) * 4
+                    : viewportWidth,
+                  // Mini tray's vertical center must match the expanded pills' vertical
+                  // center so the morph animation fans out purely horizontally.
+                  // Expanded center = paddingTop + pillHeight/2 = 20+24 (desktop) or 12+24 (mobile) = 44 or 36
+                  // Mini center = marginTop + miniHeight/2 → marginTop = expandedCenter - 4
+                  marginTop: isMiniTray ? (isMobile ? 32 : 40) : 0,
+                  // When pills scroll, zero out horizontal padding so the scroll
+                  // container extends to the viewport edges (site padding is
+                  // handled by the inner flex's clip-extension padding instead).
+                  // When pills fit, apply site padding normally.
+                  paddingLeft: isMiniTray ? 0 : (pillsWillScroll ? 0 : (viewportWidth >= BREAKPOINTS.tabletWide ? 24 : 12)),
+                  paddingRight: isMiniTray ? 0 : (pillsWillScroll ? 0 : (viewportWidth >= BREAKPOINTS.tabletWide ? 24 : 12)),
+                  // Symmetric vertical padding — prevents Y-drift during morph.
+                  // Both top and bottom use the same value per breakpoint.
+                  paddingTop: isMiniTray ? 0 : (isMobile ? 12 : 20),
+                  paddingBottom: isMiniTray ? 0 : (isMobile ? 12 : 20),
+                }}
+                transition={(morphStyle === 2 || morphStyle === 4) ? ctaEntranceSpring : signatureSpring}
               >
-                {visibleCards.map((card) => {
-                  const cardIndex = cardsToShow.findIndex(c => c.id === card.id)
-                  const styles = getVariantStyles(themeMode)[card.variant]
-                  const isCta = card.variant === 'cta'
-                  // CTA colors adapt when scrolling over the dark video section
-                  const ctaTextColor = isOverDark ? 'rgba(255,255,255,0.7)' : '#8E8E8E'
-                  const ctaBorderColor = isOverDark ? 'rgba(255,255,255,0.4)' : styles.border
-                  const ctaBg = isOverDark ? 'rgba(255,255,255,0.08)' : styles.bg
-                  return (
-                    <motion.div
-                      key={card.id}
-                      ref={(el) => { compactCardRefs.current.set(card.id, el) }}
-                      data-cursor="morph-only"
-                      data-cursor-radius="44"
-                      className="flex items-center cursor-pointer relative"
-                      style={{
-                        height: 48,
-                        borderRadius: 44,
-                        backgroundColor: isCta ? ctaBg : styles.bg,
-                        border: isCta ? 'none' : `1px solid ${styles.border}`,
-                        paddingLeft: 25,
-                        paddingRight: 19,
-                        flex: isDesktop ? '1 1 0%' : '1 0 260px',
-                        minWidth: isDesktop ? 0 : undefined,
-                        backdropFilter: isCta ? 'blur(8px)' : undefined,
-                        transition: 'background-color 0.4s ease',
-                      }}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      transition={hoverTransition}
-                      onMouseMove={(e) => {
-                        const el = e.currentTarget
-                        const rect = el.getBoundingClientRect()
-                        el.style.setProperty('--spot-x', `${((e.clientX - rect.left) / rect.width * 100).toFixed(1)}%`)
-                        el.style.setProperty('--spot-y', `${((e.clientY - rect.top) / rect.height * 100).toFixed(1)}%`)
-                        el.style.setProperty('--spot-opacity', '1')
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.setProperty('--spot-opacity', '0')
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        captureCompactPositionsAndExpand(cardIndex)
-                      }}
-                    >
-                      {/* Spotlight hover effects — border spot skipped for CTA (dotted border) */}
-                      <div className="compact-pill-spot" />
-                      {!isCta && <div className="compact-pill-border-spot" />}
-                      {/* CTA dashed border — SVG for precise dash:12 gap:8 round caps */}
-                      {isCta && (
-                        <svg
-                          className="absolute pointer-events-none"
-                          style={{ inset: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'visible' }}
-                        >
-                          <rect
-                            x="0" y="0" width="100%" height="100%"
-                            rx="24" ry="24"
-                            fill="none"
-                            stroke={ctaBorderColor}
-                            strokeWidth="2.5"
-                            strokeDasharray="12 8"
-                            strokeLinecap="round"
-                            style={{ transition: 'stroke 0.4s ease' }}
-                          />
-                        </svg>
-                      )}
-                      <span
-                        data-cursor-parallax=""
-                        className="flex-1 truncate"
+                {/* Frosted glass pill — fixed 148×28 capsule, never resizes.
+                    Centered over the pill content, simply dissolves on expand/collapse. */}
+                <motion.div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: 148,
+                    height: 28,
+                    // Use CSS translate for centering (separate from Framer Motion's x/y transform)
+                    translate: '-50% -50%',
+                    borderRadius: 22,
+                    pointerEvents: 'none',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    backgroundColor: isOverDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                    transition: 'background-color 0.4s ease',
+                    // Magnetic: glass lags behind container (counter-displacement)
+                    x: glassMagX,
+                    y: glassMagY,
+                  }}
+                  animate={{ opacity: isMiniTray ? 1 : 0 }}
+                  transition={morphStyle === 4
+                    ? { duration: 0.12, ease: 'easeOut' }  // faster dissolve = anticipation
+                    : { duration: 0.2, ease: 'easeOut' }
+                  }
+                />
+
+                {/* Inner flex container — handles scroll on tablet/mobile when expanded */}
+                <div
+                  ref={(el) => {
+                    compactScrollRef.current = el
+                    if (el && isCompactExpanded) {
+                      if (justClosedFromCompact.current) {
+                        el.scrollLeft = savedCompactScrollPosition.current
+                      } else {
+                        el.scrollLeft = sharedScrollLeft.current
+                      }
+                    }
+                  }}
+                  onScroll={(e) => {
+                    if (isCompactExpanded) {
+                      sharedScrollLeft.current = (e.target as HTMLDivElement).scrollLeft
+                    }
+                  }}
+                  className="flex scrollbar-hide"
+                  style={{
+                    // Width compensates for clip-extension negative margin (8px each side).
+                    // The negative margin extends the scroll/clip region; the matching
+                    // portion of padding pushes content back in. Site padding is also
+                    // included in the padding (non-desktop) so pills start at the correct inset.
+                    width: isMiniTray ? '100%' : 'calc(100% + 16px)',
+                    position: 'relative',
+                    zIndex: 1,
+                    justifyContent: isMiniTray ? 'center' : (pillsWillScroll ? 'flex-start' : 'center'),
+                    overflowX: isMiniTray ? 'visible' : (pillsWillScroll ? 'auto' : 'visible'),
+                    overflowY: 'visible',
+                    // Negative margin + matching padding extends the clip/scroll region
+                    // beyond the pills (collapse-transitions.md §11).
+                    // Negative margin = clip extension only (8px each side).
+                    // Padding = clip extension + site padding (non-desktop), so pills
+                    // start at the correct site-padding inset while the scroll container
+                    // bleeds to the viewport edges.
+                    ...(isMiniTray ? {} : (() => {
+                      const clip = 8 // base clip extension for CTA border + magnetic cursor
+                      // When pills scroll, morphing container has 0 horizontal padding,
+                      // so inner flex handles the site padding inset via its own padding.
+                      const sitePad = pillsWillScroll ? (viewportWidth >= BREAKPOINTS.tabletWide ? 24 : 12) : 0
+                      return {
+                        marginTop: -clip,
+                        marginBottom: -clip,
+                        marginLeft: -clip,
+                        marginRight: -clip,
+                        paddingTop: clip,
+                        paddingBottom: clip,
+                        paddingLeft: clip + sitePad,
+                        paddingRight: clip + sitePad,
+                      }
+                    })()),
+                  }}
+                >
+                  {visibleCards.map((card, pillIdx) => {
+                    const cardIndex = cardsToShow.findIndex(c => c.id === card.id)
+                    const styles = getVariantStyles(themeMode)[card.variant]
+                    const isCta = card.variant === 'cta'
+                    const isLastPill = pillIdx === visibleCards.length - 1
+                    const pillGap = isMiniTray ? 4 : (isMobile ? 8 : 16)
+
+                    // Stagger: pills expand outward from center. Inner pills first.
+                    const center = (visibleCards.length - 1) / 2
+                    const distFromCenter = Math.abs(pillIdx - center)
+                    const staggerDelay = distFromCenter * 0.055 // 55ms per step from center
+
+                    // Per-morph-style spring + delay
+                    const useBouncy = morphStyle === 2 || morphStyle === 4
+                    const useStagger = morphStyle === 1 || morphStyle === 4
+                    const useOvershoot = morphStyle === 3 || morphStyle === 4
+                    const baseSpring = useBouncy ? ctaEntranceSpring : signatureSpring
+                    const delay = useStagger && !isMiniTray ? staggerDelay : 0
+                    // Height + width get underdamped springs for visible elastic overshoot
+                    const overshootSpring = { type: 'spring' as const, stiffness: 400, damping: 22, mass: 0.7 }
+                    const pillTransition = {
+                      ...baseSpring,
+                      delay,
+                      height: { ...(useOvershoot ? overshootSpring : baseSpring), delay },
+                      width: { ...(useOvershoot ? { ...overshootSpring, damping: 26 } : baseSpring), delay },
+                    }
+
+                    // Mini tray pill colors (from Figma)
+                    const miniColors: Record<string, string> = {
+                      blue: '#0165ff',
+                      white: '#1a1a2e',
+                      red: '#eb2d37',
+                      cta: isOverDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.36)',
+                    }
+
+                    // CTA colors adapt when scrolling over dark video section
+                    const ctaTextColor = isOverDark ? 'rgba(255,255,255,0.7)' : '#8E8E8E'
+                    const ctaBorderColor = isOverDark ? 'rgba(255,255,255,0.4)' : styles.border
+                    const ctaBg = isOverDark ? 'rgba(255,255,255,0.08)' : styles.bg
+
+                    return (
+                      <motion.div
+                        key={card.id}
+                        ref={(el) => { compactCardRefs.current.set(card.id, el) }}
+                        data-cursor={isMiniTray ? undefined : 'morph-only'}
+                        data-cursor-radius={isMiniTray ? undefined : '44'}
+                        className={`relative ${isMiniTray ? '' : 'cursor-pointer'}`}
                         style={{
                           position: 'relative',
-                          zIndex: 1,
-                          fontFamily: 'Inter',
-                          fontWeight: 500,
-                          fontSize: '16px',
-                          letterSpacing: '-0.01em',
-                          lineHeight: '22px',
-                          color: isCta ? ctaTextColor : '#FFFFFF',
-                          transition: isCta ? 'color 0.4s ease' : undefined,
-                          whiteSpace: 'nowrap',
+                          overflow: 'visible',
+                          // No flex shorthand — width is animated explicitly by Framer Motion
+                          flexShrink: 0,
+                          flexGrow: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          // Magnetic parallax: pills lead ahead of container (floating layer)
+                          x: pillMagX,
+                          y: pillMagY,
+                          backdropFilter: (!isMiniTray && isCta) ? 'blur(8px)' : undefined,
+                          WebkitBackdropFilter: (!isMiniTray && isCta) ? 'blur(8px)' : undefined,
+                          transition: 'background-color 0.4s ease',
+                        }}
+                        // When remounting after close-from-compact, start at mini dimensions
+                        // so pills don't spring from 0 → 28×8 (visible growth glitch).
+                        {...(justClosedFromCompact.current && {
+                          initial: {
+                            width: 28,
+                            height: 8,
+                            borderRadius: 44,
+                            backgroundColor: miniColors[card.variant] || miniColors.blue,
+                            paddingLeft: 0,
+                            paddingRight: 0,
+                            marginRight: isLastPill ? 0 : 4,
+                          },
+                        })}
+                        animate={{
+                          width: isMiniTray ? 28 : expandedPillWidth,
+                          height: isMiniTray ? 8 : 48,
+                          borderRadius: 44,
+                          backgroundColor: isMiniTray
+                            ? miniColors[card.variant] || miniColors.blue
+                            : (isCta ? ctaBg : styles.bg),
+                          paddingLeft: isMiniTray ? 0 : 25,
+                          paddingRight: isMiniTray ? 0 : 19,
+                          marginRight: isLastPill ? 0 : pillGap,
+                        }}
+                        transition={pillTransition}
+                        whileHover={isMiniTray ? {} : { scale: 1.02 }}
+                        whileTap={isMiniTray ? {} : { scale: 0.97 }}
+                        onMouseMove={(e) => {
+                          if (isMiniTray) return
+                          const el = e.currentTarget
+                          const rect = el.getBoundingClientRect()
+                          el.style.setProperty('--spot-x', `${((e.clientX - rect.left) / rect.width * 100).toFixed(1)}%`)
+                          el.style.setProperty('--spot-y', `${((e.clientY - rect.top) / rect.height * 100).toFixed(1)}%`)
+                          el.style.setProperty('--spot-opacity', '1')
+                        }}
+                        onMouseLeave={(e) => {
+                          if (isMiniTray) return
+                          e.currentTarget.style.setProperty('--spot-opacity', '0')
+                        }}
+                        onClick={(e) => {
+                          if (isMiniTray) return // mini tray click is handled on container
+                          e.stopPropagation()
+                          captureCompactPositionsAndExpand(cardIndex)
                         }}
                       >
-                        {card.compactLabel || card.label}
-                      </span>
-                      {isCta ? (
+                        {/* Non-CTA border — only when expanded */}
+                        {!isCta && (
+                          <motion.div
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              borderRadius: 'inherit',
+                              border: `1px solid ${styles.border}`,
+                              pointerEvents: 'none',
+                            }}
+                            animate={{ opacity: isMiniTray ? 0 : 1 }}
+                            transition={{ duration: 0.15 }}
+                          />
+                        )}
+
+                        {/* CTA dashed border — only visible when expanded */}
+                        {isCta && !isMiniTray && (
+                          <motion.svg
+                            className="absolute pointer-events-none"
+                            style={{ inset: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'visible' }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.1, duration: 0.2 }}
+                          >
+                            <rect
+                              x="0" y="0" width="100%" height="100%"
+                              rx="24" ry="24"
+                              fill="none"
+                              stroke={ctaBorderColor}
+                              strokeWidth="2.5"
+                              strokeDasharray="12 8"
+                              strokeLinecap="round"
+                              style={{ transition: 'stroke 0.4s ease' }}
+                            />
+                          </motion.svg>
+                        )}
+
+                        {/* CTA mini tray dashed border — only visible in mini state */}
+                        {isCta && isMiniTray && (
+                          <svg
+                            className="absolute pointer-events-none"
+                            style={{ inset: 0, width: '100%', height: '100%', overflow: 'visible' }}
+                          >
+                            <rect
+                              x="0" y="0" width="100%" height="100%"
+                              rx="4" ry="4"
+                              fill="none"
+                              stroke={isOverDark ? 'rgba(255,255,255,0.4)' : '#cacaca'}
+                              strokeWidth="1.5"
+                              strokeDasharray="3 2.5"
+                              strokeLinecap="round"
+                              style={{ transition: 'stroke 0.4s ease' }}
+                            />
+                          </svg>
+                        )}
+
+                        {/* Spotlight hover effects — only when expanded */}
+                        {!isMiniTray && <div className="compact-pill-spot" />}
+                        {!isMiniTray && !isCta && <div className="compact-pill-border-spot" />}
+
+                        {/* Label text — fades in behind the pill morph */}
+                        <motion.span
+                          data-cursor-parallax=""
+                          className="flex-1 truncate"
+                          style={{
+                            position: 'relative',
+                            zIndex: 1,
+                            fontFamily: 'Inter',
+                            fontWeight: 500,
+                            fontSize: '16px',
+                            letterSpacing: '-0.01em',
+                            lineHeight: '22px',
+                            color: isCta ? ctaTextColor : '#FFFFFF',
+                            transition: isCta ? 'color 0.4s ease' : undefined,
+                            whiteSpace: 'nowrap',
+                            pointerEvents: isMiniTray ? 'none' : 'auto',
+                          }}
+                          // Start hidden when remounting after close-from-compact to prevent
+                          // label text flashing visible before fading out (same pattern as pills).
+                          {...(justClosedFromCompact.current && { initial: { opacity: 0 } })}
+                          animate={{
+                            opacity: isMiniTray ? 0 : 1,
+                          }}
+                          transition={{
+                            opacity: {
+                              duration: isMiniTray ? 0.1 : 0.25,
+                              delay: isMiniTray ? 0 : 0.08,
+                              ease: 'easeInOut',
+                            },
+                          }}
+                        >
+                          {card.compactLabel || card.label}
+                        </motion.span>
+
+                        {/* Shortcut badge — fades in behind pill morph */}
                         <motion.div
-                          className="flex items-center justify-center shrink-0 rounded-full overflow-hidden"
                           style={{
+                            pointerEvents: isMiniTray ? 'none' : 'auto',
                             position: 'relative',
                             zIndex: 1,
-                            backgroundColor: isOverDark ? 'rgba(255,255,255,0.15)' : '#DDDDDD',
-                            transition: 'background-color 0.4s ease',
-                            padding: '4px 6px 4px 8px',
-                            height: 18.66,
                           }}
-                          initial={false}
-                          animate={{ width: emailCopied ? 108 : 46 }}
-                          transition={signatureSpring}
+                          // Start hidden when remounting after close-from-compact to prevent
+                          // badge numbers flashing visible before fading out.
+                          {...(justClosedFromCompact.current && { initial: { opacity: 0 } })}
+                          animate={{
+                            opacity: isMiniTray ? 0 : 1,
+                          }}
+                          transition={{
+                            opacity: {
+                              duration: isMiniTray ? 0.1 : 0.25,
+                              delay: isMiniTray ? 0 : 0.08,
+                              ease: 'easeInOut',
+                            },
+                          }}
                         >
-                          <div
-                            className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
-                            style={{
-                              fontFamily: 'DotGothic16',
-                              fontWeight: 400,
-                              letterSpacing: '0.08em',
-                              position: 'relative',
-                              top: '-0.5px',
-                              color: ctaTextColor,
-                              transition: 'color 0.4s ease',
-                            }}
-                          >
-                            {emailCopied ? 'Email Copied' : card.shortcut}
-                          </div>
+                          {isCta ? (
+                            <motion.div
+                              className="flex items-center justify-center shrink-0 rounded-full overflow-hidden"
+                              style={{
+                                backgroundColor: isOverDark ? 'rgba(255,255,255,0.15)' : '#DDDDDD',
+                                transition: 'background-color 0.4s ease',
+                                padding: '4px 6px 4px 8px',
+                                height: 18.66,
+                              }}
+                              initial={false}
+                              animate={{ width: emailCopied ? 108 : 46 }}
+                              transition={signatureSpring}
+                            >
+                              <div
+                                className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
+                                style={{
+                                  fontFamily: 'DotGothic16',
+                                  fontWeight: 400,
+                                  letterSpacing: '0.08em',
+                                  position: 'relative',
+                                  top: '-0.5px',
+                                  color: ctaTextColor,
+                                  transition: 'color 0.4s ease',
+                                }}
+                              >
+                                {emailCopied ? 'Email Copied' : card.shortcut}
+                              </div>
+                            </motion.div>
+                          ) : (
+                            <div
+                              className="flex items-center justify-center shrink-0"
+                              style={{
+                                backgroundColor: 'rgba(0,0,0,0.2)',
+                                borderRadius: 20,
+                                padding: '4px 8px',
+                                minWidth: 18.66,
+                                height: 18.66,
+                              }}
+                            >
+                              <span
+                                className="text-[12px] uppercase leading-[100%]"
+                                style={{
+                                  fontFamily: 'DotGothic16',
+                                  fontWeight: 400,
+                                  letterSpacing: '0.08em',
+                                  position: 'relative',
+                                  top: '-0.5px',
+                                  color: styles.textColor,
+                                }}
+                              >
+                                {card.shortcut}
+                              </span>
+                            </div>
+                          )}
                         </motion.div>
-                      ) : (
-                        <div
-                          className="flex items-center justify-center shrink-0"
-                          style={{
-                            position: 'relative',
-                            zIndex: 1,
-                            backgroundColor: 'rgba(0,0,0,0.2)',
-                            borderRadius: 20,
-                            padding: '4px 8px',
-                            minWidth: 18.66,
-                            height: 18.66,
-                          }}
-                        >
-                          <span
-                            className="text-[12px] uppercase leading-[100%]"
-                            style={{
-                              fontFamily: 'DotGothic16',
-                              fontWeight: 400,
-                              letterSpacing: '0.08em',
-                              position: 'relative',
-                              top: '-0.5px',
-                              color: styles.textColor,
-                            }}
-                          >
-                            {card.shortcut}
-                          </span>
-                        </div>
-                      )}
-                    </motion.div>
-                  )
-                })}
-              </div>
+                      </motion.div>
+                    )
+                  })}
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>,
+        document.body
+      )}
+      {/* ── Pill Morph Style Debugger ── */}
+      {typeof document !== 'undefined' && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 99999,
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: 12,
+            padding: '10px 12px',
+            display: 'flex',
+            gap: 6,
+            alignItems: 'center',
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontSize: 11,
+            color: 'rgba(255,255,255,0.6)',
+            pointerEvents: 'auto',
+          }}
+        >
+          <span style={{ marginRight: 4, whiteSpace: 'nowrap' }}>Morph:</span>
+          {([1, 2, 3, 4] as MorphStyle[]).map((style) => {
+            const labels = { 1: 'Stagger', 2: 'Bouncy', 3: 'Overshoot', 4: 'Combined' }
+            const isActive = morphStyle === style
+            return (
+              <button
+                key={style}
+                onClick={() => setMorphStyle(style)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  border: 'none',
+                  fontSize: 10,
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                  background: isActive ? 'rgba(255,255,255,0.2)' : 'transparent',
+                  color: isActive ? '#fff' : 'rgba(255,255,255,0.5)',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {style}. {labels[style]}
+              </button>
+            )
+          })}
+        </div>,
         document.body
       )}
     </>

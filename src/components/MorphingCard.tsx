@@ -945,19 +945,29 @@ export function MorphingCard({
             : (expandedFromCompact || card.variant === 'cta')
               ? { backgroundColor: styles.bg }
               : {}),
-          transition: {
-            top: mobileCollapseSpring,
-            left: mobileCollapseSpring,
-            width: mobileCollapseSpring,
-            height: mobileCollapseSpring,
-            borderRadius: mobileCollapseSpring,
-            rotate: mobileCollapseSpring,
-            scale: mobileCollapseSpring,
-            boxShadow: { duration: 0.4, ease: 'easeOut' },
-            backgroundColor: expandedFromCompact && card.variant === 'cta'
-              ? { duration: 0.1, ease: 'easeOut' }
-              : { duration: 0.3, ease: 'easeOut' },
-          },
+          transition: (() => {
+            // Compact-close uses a fast tween: no overshoot, no long settling tail.
+            // A spring's overdamped mode converges slowly in the last few pixels (340ms tail),
+            // which leaves a visible blob near the mini tray. A 200ms ease-out tween
+            // reaches the target cleanly and triggers onExitComplete promptly.
+            const collapseTween = { type: 'tween' as const, duration: 0.2, ease: [0.33, 1, 0.68, 1] }
+            const collapseTransition = expandedFromCompact
+              ? collapseTween
+              : mobileCollapseSpring
+            return {
+              top: collapseTransition,
+              left: collapseTransition,
+              width: collapseTransition,
+              height: collapseTransition,
+              borderRadius: collapseTransition,
+              rotate: collapseTransition,
+              scale: collapseTransition,
+              boxShadow: { duration: 0.4, ease: 'easeOut' },
+              backgroundColor: expandedFromCompact && card.variant === 'cta'
+                ? { duration: 0.1, ease: 'easeOut' }
+                : { duration: 0.2, ease: 'easeOut' },
+            }
+          })(),
         }}
         transition={{
           // Position - use bouncy spring for carousel nav AND for exit (collapse) animation
@@ -1063,7 +1073,7 @@ export function MorphingCard({
           animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? '24px 14px 16px 16px' : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? '24px 24px 18px 24px' : '24px 22px 24px 24px' }}
           exit={{
             ...(expandedFromCompact
-              ? { opacity: 0, transition: { opacity: { duration: 0.12, ease: 'easeOut' } } }
+              ? { opacity: 0, transition: { opacity: { duration: 0.06, ease: 'easeOut' } } }
               : { padding: compactCta ? '18px 10px 19px 12px' : '18px 10px 19px 20px',
                   transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] } } }),
           }}
@@ -1166,7 +1176,10 @@ export function MorphingCard({
               right: 10,
               top: 10,
               paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px',
-              opacity: hideShortcut ? 0 : 1,
+              opacity: (hideShortcut || expandedFromCompact) ? 0 : 1,
+              transition: expandedFromCompact
+                ? { opacity: { duration: 0.08, ease: 'easeOut' } }
+                : undefined,
             }}
             transition={contentSpring}
           >
@@ -1667,102 +1680,44 @@ export function MorphingCard({
 
         </motion.div>
 
-        {/* Compact pill ghost — fades in during exit to seamlessly hand off to real compact bar */}
-        {expandedFromCompact && card.variant !== 'cta' && (
-          <motion.div
-            className="absolute inset-0 flex items-center pointer-events-none"
-            style={{
-              paddingLeft: 25,
-              paddingRight: 19,
-              borderRadius: 44,
-              border: `1px solid ${styles.border}`,
-              boxSizing: 'border-box',
-            }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0 }}
-            exit={{ opacity: 1 }}
-            transition={{ opacity: { duration: 0.15, ease: 'easeIn', delay: 0.05 } }}
-          >
-            <span className="flex-1 truncate" style={{
-              fontFamily: 'Inter', fontWeight: 500, fontSize: '16px',
-              letterSpacing: '-0.01em', lineHeight: '22px',
-              color: '#FFFFFF', whiteSpace: 'nowrap',
-            }}>
-              {card.compactLabel || card.label}
-            </span>
-            <div className="flex items-center justify-center shrink-0" style={{
-              backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 20,
-              padding: '4px 8px', minWidth: 18.66, height: 18.66,
-            }}>
-              <span className="text-[12px] uppercase leading-[100%]" style={{
-                fontFamily: 'DotGothic16', fontWeight: 400,
-                letterSpacing: '0.08em', position: 'relative', top: '-0.5px',
-                color: styles.textColor,
-              }}>
-                {card.shortcut}
-              </span>
-            </div>
-          </motion.div>
-        )}
+        {/* Non-CTA compact ghost removed: close-from-compact now targets mini tray (28×8px bare
+            colored pills with no text/badge/border), so the card's own exit backgroundColor
+            handles the visual match. The old ghost showed expanded-compact-bar labels + borders
+            that don't exist at mini-tray size. */}
 
-        {/* CTA compact pill ghost — fades in during exit with dashed border + CTA styling */}
-        {/* Colors adapt to isOverDark to match the real compact pill over the dark video section */}
+        {/* CTA compact pill ghost — fades in during exit to match the mini tray CTA pill.
+            Uses mini-tray-sized border params (rx=4, thin stroke, small dashes) since the
+            exit target is the 28×8px mini pill, not the expanded compact pill. */}
         {expandedFromCompact && card.variant === 'cta' && (() => {
-          const ghostTextColor = isOverDark ? 'rgba(255,255,255,0.7)' : ((styles as typeof variantStylesLight.cta).ctaTitleColor || '#8E8E8E')
-          const ghostBorderColor = isOverDark ? 'rgba(255,255,255,0.4)' : styles.border
-          const ghostBadgeBg = isOverDark ? 'rgba(255,255,255,0.15)' : '#DDDDDD'
-          const ghostBg = isOverDark ? 'rgba(255,255,255,0.08)' : styles.bg
+          const ghostBorderColor = isOverDark ? 'rgba(255,255,255,0.4)' : '#cacaca'
+          const ghostBg = isOverDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.36)'
           return (
           <motion.div
-            className="absolute inset-0 flex items-center pointer-events-none"
+            className="absolute inset-0 pointer-events-none"
             style={{
-              paddingLeft: 25,
-              paddingRight: 19,
               borderRadius: 44,
               backgroundColor: ghostBg,
-              backdropFilter: 'blur(8px)',
               boxSizing: 'border-box',
             }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 0 }}
             exit={{ opacity: 1 }}
-            transition={{ opacity: { duration: 0.08, ease: 'easeOut' } }}
+            transition={{ opacity: { duration: 0.12, ease: 'easeIn', delay: 0.12 } }}
           >
-            {/* CTA dashed border — SVG for precise dash:12 gap:8 round caps */}
             <svg
               className="absolute pointer-events-none"
-              style={{ inset: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'visible' }}
+              style={{ inset: 0, width: '100%', height: '100%', overflow: 'visible' }}
             >
               <rect
                 x="0" y="0" width="100%" height="100%"
-                rx="24" ry="24"
+                rx="4" ry="4"
                 fill="none"
                 stroke={ghostBorderColor}
-                strokeWidth="2.5"
-                strokeDasharray="12 8"
+                strokeWidth="1.5"
+                strokeDasharray="3 2.5"
                 strokeLinecap="round"
               />
             </svg>
-            <span className="flex-1 truncate" style={{
-              fontFamily: 'Inter', fontWeight: 500, fontSize: '16px',
-              letterSpacing: '-0.01em', lineHeight: '22px',
-              color: ghostTextColor,
-              whiteSpace: 'nowrap',
-            }}>
-              {card.compactLabel || card.label}
-            </span>
-            <div className="flex items-center justify-center shrink-0 rounded-full overflow-hidden" style={{
-              backgroundColor: ghostBadgeBg,
-              padding: '4px 6px 4px 8px', height: 18.66, width: 46,
-            }}>
-              <span className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1" style={{
-                fontFamily: 'DotGothic16', fontWeight: 400,
-                letterSpacing: '0.08em', position: 'relative', top: '-0.5px',
-                color: ghostTextColor,
-              }}>
-                {card.shortcut}
-              </span>
-            </div>
           </motion.div>
           )
         })()}
@@ -1862,7 +1817,7 @@ export function MorphingCard({
       )}
 
       {/* Badge - positioned absolutely in top right, OUTSIDE the padded container */}
-      {!compactCta && !hideShortcut && (
+      {!compactCta && !hideShortcut && !expandedFromCompact && (
         <div
           className="absolute"
           style={{

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 
 const BIO_TEXT =
-  'Peter Evan Rodriguez is a Nuyorican designer solving hard problems with soft product. He brings over a decade of insight, intuition and influence from his dome to your chrome. Nowadays he\u2019s shaping product design for Squarespace\u2019s flagship website builder with pro-grade AI and expressibility tools.'
+  'Peter Evan Rodriguez is a Nuyorican designer solving hard problems with soft product. Nowadays he\u2019s shaping the core experience of Squarespace\u2019s flagship website builder with design\u2011minded AI and expressibility tools.'
 
 const FONT_STYLE: React.CSSProperties = {
   fontFamily: 'Inter',
@@ -119,43 +119,31 @@ export function BioCopySection() {
   const lines = useLineBreaks(BIO_TEXT, containerRef)
   const [isOverDark, setIsOverDark] = useState(false)
 
-  // Track reveal state ourselves instead of relying on whileInView + once:true.
-  // The problem: whileInView fires based on IntersectionObserver, but lines are
-  // measured asynchronously (RAF + ResizeObserver + font loading). If the observer
-  // fires before lines are populated, the animation triggers on empty content.
-  // When lines later populate, new motion.div children mount in the parent's
-  // already-completed "visible" state — but inherit initial="hidden" from their
-  // variants, staying invisible forever.
-  //
-  // Fix: defer whileInView until lines are ready. Use a manual IO so once:true
-  // semantics only apply after lines exist.
+  // Reveal state — resets when the section leaves the viewport so the
+  // stagger animation replays every time the user scrolls back down to it.
+  // Deferred until lines are measured so the animation never fires on empty content.
   const [revealed, setRevealed] = useState(false)
   const linesReady = lines.length > 0
 
   useEffect(() => {
-    if (!linesReady || revealed) return
+    if (!linesReady) return
     const el = containerRef.current
     if (!el) return
-
-    // If already scrolled past (refresh below bio), reveal immediately
-    const rect = el.getBoundingClientRect()
-    if (rect.bottom < 0) {
-      setRevealed(true)
-      return
-    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setRevealed(true)
-          observer.disconnect()
+        } else {
+          // Reset when scrolled out so the animation replays on re-entry
+          setRevealed(false)
         }
       },
       { threshold: 0.15 },
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [linesReady, revealed])
+  }, [linesReady])
 
   // Detect dark overlay from VideoMorphSection — uses the exact same
   // scrollYProgress formula as VideoMorphSection's darkOverlayOpacity.

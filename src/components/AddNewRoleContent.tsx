@@ -217,7 +217,7 @@ export function AddNewRoleContent({
   isFocused = true,
   styles,
   emailCopied: emailCopiedProp = false,
-  expandedFromCompact: _expandedFromCompact = false,
+  expandedFromCompact = false,
   compactLabel: _compactLabel,
 }: AddNewRoleContentProps) {
   // Helper: scale a pixel value proportionally (mobile uses slightly smaller base sizes)
@@ -289,7 +289,7 @@ export function AddNewRoleContent({
             style={{ backgroundColor: themeBadgeBg }}
             initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: 1 }}
             animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 0 }}
-            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: 1 }}
+            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: expandedFromCompact ? 0 : 1 }}
             transition={contentSpring}
           >
             <div
