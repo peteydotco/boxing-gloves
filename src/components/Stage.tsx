@@ -138,19 +138,19 @@ export function Stage({ stage, isActive, onRequestCaseStudy, isExpanding = false
 
   const getLogoCardSpotlight = () => {
     if (!logoCardHovered) return 'none'
-    return `radial-gradient(circle at ${logoCardMouse.x}% ${logoCardMouse.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, rgba(255, 255, 255, 0.8) 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
+    return `radial-gradient(circle at ${logoCardMouse.x}% ${logoCardMouse.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(230, 230, 232, 0.35) 15%, rgba(255, 255, 255, 0.45) 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
   }
 
   // Description card border spotlight
   const getDescCardSpotlight = () => {
     if (!descCardHovered) return 'none'
-    return `radial-gradient(circle at ${descCardMouse.x}% ${descCardMouse.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 25%, rgba(255, 255, 255, 0.1) 50%, transparent 100%)`
+    return `radial-gradient(circle at ${descCardMouse.x}% ${descCardMouse.y}%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.18) 25%, rgba(255, 255, 255, 0.06) 50%, transparent 100%)`
   }
 
   // Metadata panel border spotlight
   const getMetaSpotlight = () => {
     if (!metaHovered) return 'none'
-    return `radial-gradient(circle at ${metaMouse.x}% ${metaMouse.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 25%, rgba(255, 255, 255, 0.1) 50%, transparent 100%)`
+    return `radial-gradient(circle at ${metaMouse.x}% ${metaMouse.y}%, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.18) 25%, rgba(255, 255, 255, 0.06) 50%, transparent 100%)`
   }
 
 

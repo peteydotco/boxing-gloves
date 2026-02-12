@@ -11,19 +11,18 @@ export function VideoMorphSection() {
   const [isPlaying, setIsPlaying] = useState(false)
   const sectionRef = useRef<HTMLDivElement>(null)
 
-  // Grid-proportional video width: 8 of 12 columns (66.67% of content area)
+  // Grid-proportional video width: 8 of 12 columns on desktop, 10 of 12 at ≤1028px
   // Content area = viewport - 2 × 25px margin = viewport - 50px
   // Column width = (contentArea - 11 gutters × 20px) / 12
-  // 8 columns = 8 × colWidth + 7 × gutter
   const GRID_MARGIN = 25
   const GRID_GUTTER = 20
   const GRID_COLS = 12
-  const VIDEO_COLS = 8
 
   const computeGridWidth = (vw: number) => {
+    const videoCols = vw <= 1028 ? 12 : 8
     const contentArea = vw - 2 * GRID_MARGIN
     const colWidth = (contentArea - (GRID_COLS - 1) * GRID_GUTTER) / GRID_COLS
-    return VIDEO_COLS * colWidth + (VIDEO_COLS - 1) * GRID_GUTTER
+    return videoCols * colWidth + (videoCols - 1) * GRID_GUTTER
   }
 
   const [targetWidth, setTargetWidth] = useState(() => {
@@ -38,6 +37,15 @@ export function VideoMorphSection() {
 
   // Tablet/mobile breakpoint: stack labels vertically when viewport < tablet breakpoint
   const isNarrow = viewportWidth < BREAKPOINTS.tablet
+  // Compact breakpoint: labels slide outward and video spans 10 cols, eclipsing them
+  const isCompactVideo = viewportWidth <= 1028
+
+  // 2-column offset from center for label positioning at compact breakpoints
+  const twoColOffset = (() => {
+    const contentArea = viewportWidth - 50
+    const colWidth = (contentArea - 220) / 12
+    return Math.round(2 * colWidth + 1.5 * GRID_GUTTER)
+  })()
 
   useEffect(() => {
     const handleResize = () => {
@@ -59,6 +67,14 @@ export function VideoMorphSection() {
   const videoOpacity = useTransform(morphProgress, [0, 0.4, 0.6], [0, 0, 1])
   const loaderOpacity = useTransform(morphProgress, [0, 0.05], [1, 0])
   const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(255,255,255,0)', 'rgba(255,255,255,1)'])
+  // Compact label slide: start tight next to loader (24px gap), slide out to twoColOffset
+  const LABEL_START_GAP = 11 + 24 // half loader (11px) + 24px gap
+  const labelLeftX = useTransform(morphProgress, (v: number) => {
+    return -(LABEL_START_GAP + (twoColOffset - LABEL_START_GAP) * v)
+  })
+  const labelRightX = useTransform(morphProgress, (v: number) => {
+    return LABEL_START_GAP + (twoColOffset - LABEL_START_GAP) * v
+  })
   // Skew — captured from loader's live CSS animation on first morph only
   const morphSkew = useSpring(0, morphSpring)
   const loaderInnerRef = useRef<HTMLDivElement>(null)
@@ -282,19 +298,35 @@ export function VideoMorphSection() {
         {/* Center anchor — only the content row participates in centering;
             credits are positioned absolutely below so they don't push the row up */}
         <div className="relative">
-        {/* Content row — flex layout: horizontal on desktop, vertical on narrow viewports */}
+        {/* Content row — flex layout: horizontal on desktop, vertical on narrow viewports.
+            At ≤1028px, labels are positioned absolutely so the morphing video eclipses them. */}
         <div
           className="flex items-center justify-center"
           style={{
-            gap: 24,
-            flexDirection: isNarrow ? 'column' : 'row',
+            gap: isCompactVideo ? 0 : 24,
+            flexDirection: (isNarrow && !isCompactVideo) ? 'column' : 'row',
             width: '100vw',
             padding: '0 25px',
             boxSizing: 'border-box',
+            position: 'relative',
           }}
         >
-          {/* Top/Left label */}
-          <motion.span style={{ ...labelStyle, color: labelColor, textAlign: 'right' }}>
+          {/* Top/Left label — at ≤1028px, positioned absolutely ~2 cols from center;
+              the morphing video grows past it, creating the eclipse effect */}
+          <motion.span style={{
+            ...labelStyle,
+            color: labelColor,
+            textAlign: isCompactVideo ? 'right' : (isNarrow ? 'center' : 'right'),
+            ...(isCompactVideo ? {
+              position: 'absolute' as const,
+              right: '50%',
+              top: '50%',
+              x: labelLeftX,
+              y: '-50%',
+              zIndex: 0,
+              flex: 'none',
+            } : {}),
+          }}>
             Live from SQSP
           </motion.span>
 
@@ -302,7 +334,7 @@ export function VideoMorphSection() {
           <div
             ref={morphWrapperRef}
             className="relative"
-            style={{ flexShrink: 0 }}
+            style={{ flexShrink: 0, zIndex: 1 }}
             onMouseEnter={() => morphComplete && setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onMouseMove={handleMouseMove}
@@ -425,8 +457,22 @@ export function VideoMorphSection() {
             </motion.div>
           </div>
 
-          {/* Right label */}
-          <motion.span style={{ ...labelStyle, color: labelColor, textAlign: 'left' }}>
+          {/* Right label — at ≤1028px, positioned absolutely ~2 cols from center;
+              the morphing video grows past it, creating the eclipse effect */}
+          <motion.span style={{
+            ...labelStyle,
+            color: labelColor,
+            textAlign: isCompactVideo ? 'left' : (isNarrow ? 'center' : 'left'),
+            ...(isCompactVideo ? {
+              position: 'absolute' as const,
+              left: '50%',
+              top: '50%',
+              x: labelRightX,
+              y: '-50%',
+              zIndex: 0,
+              flex: 'none',
+            } : {}),
+          }}>
             Circle Day 2025
           </motion.span>
         </div>

@@ -147,8 +147,8 @@ export function Card({ id, label, title, shortcut, variant, onClick, isBottomFix
   // Matched to compact pill border spotlight for consistent richness
   const spotlightGradient = isHovered
     ? variant === 'cta'
-      ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, ${defaultBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
-      : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.9) 0%, rgba(200, 210, 230, 0.5) 30%, rgba(140, 140, 150, 0.2) 60%, transparent 85%)`
+      ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(230, 230, 232, 0.35) 15%, ${defaultBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
+      : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.55) 0%, rgba(200, 210, 230, 0.3) 30%, rgba(140, 140, 150, 0.12) 60%, transparent 85%)`
     : 'none'
 
   // Border width for the spotlight ring mask (slightly thicker than the 1px

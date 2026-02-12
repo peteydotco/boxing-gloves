@@ -447,9 +447,9 @@ canvas {
 .compact-pill-border-spot {
   background: radial-gradient(
     circle at var(--spot-x, 50%) var(--spot-y, 50%),
-    rgba(255, 255, 255, 0.9) 0%,
-    rgba(200, 210, 230, 0.5) 20%,
-    rgba(140, 140, 150, 0.2) 50%,
+    rgba(255, 255, 255, 0.55) 0%,
+    rgba(200, 210, 230, 0.3) 20%,
+    rgba(140, 140, 150, 0.12) 50%,
     transparent 70%
   );
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);

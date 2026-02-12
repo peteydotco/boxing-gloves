@@ -1167,6 +1167,10 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                   justifyContent: isDesktop ? 'center' : 'flex-start',
                   overflowX: isDesktop ? 'visible' : 'auto',
                   overflowY: 'visible',
+                  // Negative top margin + matching padding extends the clip region
+                  // above the pills so dashed CTA borders aren't cropped
+                  marginTop: -4,
+                  paddingTop: 4,
                   ...(!isDesktop && {
                     marginLeft: '-0.75rem',
                     marginRight: '-0.75rem',

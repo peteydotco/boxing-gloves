@@ -8,6 +8,9 @@ import { ProjectCard } from './ProjectCard'
 const colSpan = (n: number) =>
   `calc(${n} * ((100vw - 50px - 220px) / 12) + ${n - 1} * 20px)`
 
+/** Compact layout for narrower viewports (≤ 1028px) */
+const isCompact = typeof window !== 'undefined' && window.innerWidth <= 1028
+
 export function ProjectCardsGrid() {
   return (
     <section
@@ -16,13 +19,13 @@ export function ProjectCardsGrid() {
     >
       {/* Spacer — ensures the video player is ~half scrolled off
           the top of the viewport before the "Selected Works" lockup enters */}
-      <div style={{ height: '15vh' }} />
+      <div style={{ height: isCompact ? '6vh' : '15vh' }} />
 
       {/* Positioned container for the staggered card grid */}
       <div
         style={{
           position: 'relative',
-          height: 3480,
+          height: isCompact ? 3080 : 3680,
           width: '100%',
         }}
       >
@@ -33,7 +36,7 @@ export function ProjectCardsGrid() {
           data-scroll-speed="-0.05"
           style={{
             position: 'absolute',
-            top: 220,
+            top: isCompact ? 80 : 220,
             left: 'calc(1 * var(--col) + 22px)',
             display: 'flex',
             flexDirection: 'column',
@@ -74,7 +77,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 80, left: 'calc(58.33% + 8px)' }}
+          style={{ position: 'absolute', top: isCompact ? 0 : 80, left: 'calc(58.33% + 8px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
@@ -92,10 +95,10 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 1020, left: 25 }}
+          style={{ position: 'absolute', top: isCompact ? 620 : 1020, left: 25 }}
         >
           <ProjectCard
-            width={colSpan(6)}
+            width={colSpan(7)}
             aspectRatio={689 / 508}
             imageSrc="/images/proj-squarespace.webp"
             logoSrc="/images/logos/squarespace-logo.svg"
@@ -112,7 +115,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 1580, left: 'calc(58.33% + 7px)' }}
+          style={{ position: 'absolute', top: isCompact ? 1180 : 1580, left: 'calc(58.33% + 7px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
@@ -130,7 +133,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 2040, left: 'calc(8.33% + 22px)' }}
+          style={{ position: 'absolute', top: isCompact ? 1640 : 2040, left: 'calc(8.33% + 22px)' }}
         >
           <ProjectCard
             width={colSpan(5)}
@@ -148,7 +151,7 @@ export function ProjectCardsGrid() {
           className="scroll-fade-in"
           data-scroll
           data-scroll-repeat
-          style={{ position: 'absolute', top: 2860, left: 'calc(33.33% + 15px)' }}
+          style={{ position: 'absolute', top: isCompact ? 2460 : 3060, left: 'calc(33.33% + 15px)' }}
         >
           <ProjectCard
             width={colSpan(7)}

@@ -219,7 +219,7 @@ export function StackedBlades({
                   height: peekFromBottom,
                   borderTopLeftRadius: borderRadius,
                   borderTopRightRadius: borderRadius,
-                  background: `radial-gradient(circle at ${bladeMouse.x}% ${bladeMouse.y}%, rgba(255, 255, 255, 1) 0%, rgba(200, 210, 230, 0.8) 15%, rgba(140, 140, 150, 0.3) 35%, rgba(120, 120, 130, 0.15) 55%, transparent 100%)`,
+                  background: `radial-gradient(circle at ${bladeMouse.x}% ${bladeMouse.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(200, 210, 230, 0.45) 15%, rgba(140, 140, 150, 0.3) 35%, rgba(120, 120, 130, 0.15) 55%, transparent 100%)`,
                   WebkitMask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
                   mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
                   maskComposite: 'exclude',
