@@ -221,6 +221,67 @@ function App() {
               display: 'block',
             }}
           />
+
+          {/* Bio text strings positioned along the SVG's brush stroke tail */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '36%',
+              left: '12%',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize: 'clamp(14px, 1.1vw, 20px)',
+              fontWeight: 500,
+              lineHeight: 1.5,
+              color: '#1a1a1a',
+              textAlign: 'center',
+              pointerEvents: 'none',
+              opacity: 1,
+            }}
+          >
+            Peter Rodriguez is<br />
+            a nuyorican designer<br />
+            solving hard problems<br />
+            with soft products.
+          </div>
+
+          <div
+            style={{
+              position: 'absolute',
+              top: '52%',
+              right: '14%',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize: 'clamp(14px, 1.1vw, 20px)',
+              fontWeight: 500,
+              lineHeight: 1.5,
+              color: '#1a1a1a',
+              textAlign: 'right',
+              pointerEvents: 'none',
+              opacity: 1,
+            }}
+          >
+            Bringing over a decade of insight,<br />
+            intuition &amp; influence –<br />
+            off the dome, to your chrome.
+          </div>
+
+          <div
+            style={{
+              position: 'absolute',
+              top: '72%',
+              left: '8%',
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize: 'clamp(14px, 1.1vw, 20px)',
+              fontWeight: 500,
+              lineHeight: 1.5,
+              color: '#1a1a1a',
+              textAlign: 'left',
+              pointerEvents: 'none',
+              opacity: 1,
+              maxWidth: '22%',
+            }}
+          >
+            Nowadays he's shaping product for Squarespace's flagship website builder with design-minded AI tools.
+          </div>
         </motion.div>
       </div>
 
