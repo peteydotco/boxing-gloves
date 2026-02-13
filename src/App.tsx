@@ -200,12 +200,11 @@ function App() {
         <motion.div
           style={{
             position: 'relative',
-            // Portrait SVG (538 × 1185.79) — height-driven sizing.
-            // PETEY letterforms occupy roughly the top 45% of the SVG.
-            // At 250vh total height, PETEY spans ~112vh — nicely overflowing
-            // the 100vh hero with the same enlarged, cropped-in feel.
-            // The lower portions extend into the scroll-out area below.
-            height: `${(isMobile ? 200 : 250) * graffitiScale}vh`,
+            // Portrait SVG (538 × 1185.79) — scaled to roughly match the
+            // original raster graffiti's width (~150vw). At 550vh the SVG
+            // is ~250vh wide on 16:9, comparable to the old max(150vw, 180vh).
+            // PETEY letterforms occupy the top ~45%, spanning ~247vh.
+            height: `${(isMobile ? 400 : 550) * graffitiScale}vh`,
             width: 'auto',
             aspectRatio: '538 / 1185.79',
             maxWidth: 'none',
@@ -268,6 +267,17 @@ function App() {
 
       </section>
 
+      {/* Spacer — pushes content below the full extent of the PETEY graffiti SVG.
+           SVG height is ~550vh (desktop) starting at -5vh margin, so it ends at ~545vh.
+           Hero occupies 100vh, leaving ~445vh of graffiti below the hero. */}
+      <div
+        aria-hidden
+        style={{
+          height: `${((isMobile ? 400 : 550) * graffitiScale - 100)}vh`,
+          position: 'relative',
+          pointerEvents: 'none',
+        }}
+      />
 
       {/* ===== Video Morph Section ===== */}
       <VideoMorphSection />
