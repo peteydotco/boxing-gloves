@@ -33,76 +33,6 @@ const PATH_D = [
   'C 455 4050, 490 4030, 500 4020',
 ].join(' ')
 
-// ---------------------------------------------------------------------------
-// Text strings that appear along the trail at various scroll positions.
-// pathFraction: 0–1 position along the path for placement.
-// revealAt: scroll progress (0–1) when the text starts fading in.
-// side: which side of the trail the text sits on.
-// ---------------------------------------------------------------------------
-
-interface TrailText {
-  text: string
-  pathFraction: number
-  revealAt: number
-  side: 'left' | 'right'
-  fontSize?: string
-  fontWeight?: number
-}
-
-const TRAIL_TEXTS: TrailText[] = [
-  {
-    text: 'Peter Evan Rodriguez',
-    pathFraction: 0.06,
-    revealAt: 0.04,
-    side: 'right',
-    fontSize: 'clamp(32px, 3vw, 52px)',
-    fontWeight: 600,
-  },
-  {
-    text: 'Nuyorican designer',
-    pathFraction: 0.18,
-    revealAt: 0.14,
-    side: 'left',
-    fontSize: 'clamp(24px, 2.2vw, 38px)',
-    fontWeight: 500,
-  },
-  {
-    text: 'solving hard problems\nwith soft product',
-    pathFraction: 0.32,
-    revealAt: 0.26,
-    side: 'right',
-    fontSize: 'clamp(26px, 2.4vw, 40px)',
-    fontWeight: 500,
-  },
-  {
-    text: 'Squarespace',
-    pathFraction: 0.48,
-    revealAt: 0.40,
-    side: 'left',
-    fontSize: 'clamp(28px, 2.8vw, 48px)',
-    fontWeight: 600,
-  },
-  {
-    text: 'design-minded AI\n& expressibility tools',
-    pathFraction: 0.62,
-    revealAt: 0.54,
-    side: 'right',
-    fontSize: 'clamp(24px, 2.2vw, 38px)',
-    fontWeight: 500,
-  },
-  {
-    text: 'from my dome\nto your chrome',
-    pathFraction: 0.78,
-    revealAt: 0.68,
-    side: 'left',
-    fontSize: 'clamp(28px, 2.8vw, 46px)',
-    fontWeight: 600,
-  },
-]
-
-// Horizontal offset (in vw-relative px) for text labels from the path point
-const TEXT_OFFSET = 80
-
 // Section height and derived scroll travel
 const SECTION_HEIGHT_VH = 500
 const SCROLL_TRAVEL_VH = SECTION_HEIGHT_VH - 100
@@ -112,6 +42,83 @@ const VB_W = 1000
 const VB_H = 5000
 
 // ---------------------------------------------------------------------------
+// Text strings that appear along the trail at various scroll positions.
+// pathFraction: 0–1 position along the path for placement.
+// side: which side of the trail the text sits on.
+// ---------------------------------------------------------------------------
+
+interface TrailText {
+  text: string
+  /** 0–1 fraction along the path where this text is placed (drives reveal timing) */
+  pathFraction: number
+  /** Vertical position as % of section height (0–100) */
+  topPct: number
+  /** Horizontal position: 'left' places text in left 40%, 'right' in right 40% */
+  side: 'left' | 'right'
+  fontSize?: string
+  fontWeight?: number
+}
+
+// Compute topPct so text is centered in the viewport when the trail reaches it.
+// At scroll progress p, the camera shows container rows from p*SCROLL_TRAVEL to
+// p*SCROLL_TRAVEL + 100vh. To center text at that moment:
+//   topPct = (p * SCROLL_TRAVEL + 50) / SECTION_HEIGHT * 100
+function computeTopPct(pathFraction: number): number {
+  return ((pathFraction * SCROLL_TRAVEL_VH + 50) / SECTION_HEIGHT_VH) * 100
+}
+
+const TRAIL_TEXTS: TrailText[] = [
+  {
+    text: 'Peter Evan Rodriguez',
+    pathFraction: 0.08,
+    topPct: computeTopPct(0.08),
+    side: 'left',
+    fontSize: 'clamp(32px, 3vw, 52px)',
+    fontWeight: 600,
+  },
+  {
+    text: 'Nuyorican designer',
+    pathFraction: 0.20,
+    topPct: computeTopPct(0.20),
+    side: 'right',
+    fontSize: 'clamp(24px, 2.2vw, 38px)',
+    fontWeight: 500,
+  },
+  {
+    text: 'solving hard problems\nwith soft product',
+    pathFraction: 0.34,
+    topPct: computeTopPct(0.34),
+    side: 'left',
+    fontSize: 'clamp(26px, 2.4vw, 40px)',
+    fontWeight: 500,
+  },
+  {
+    text: 'Squarespace',
+    pathFraction: 0.50,
+    topPct: computeTopPct(0.50),
+    side: 'right',
+    fontSize: 'clamp(28px, 2.8vw, 48px)',
+    fontWeight: 600,
+  },
+  {
+    text: 'design-minded AI\n& expressibility tools',
+    pathFraction: 0.65,
+    topPct: computeTopPct(0.65),
+    side: 'left',
+    fontSize: 'clamp(24px, 2.2vw, 38px)',
+    fontWeight: 500,
+  },
+  {
+    text: 'from my dome\nto your chrome',
+    pathFraction: 0.80,
+    topPct: computeTopPct(0.80),
+    side: 'right',
+    fontSize: 'clamp(28px, 2.8vw, 46px)',
+    fontWeight: 600,
+  },
+]
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -119,26 +126,15 @@ export function GraffitiScrollOut() {
   const sectionRef = useRef<HTMLDivElement>(null)
   const pathRef = useRef<SVGPathElement>(null)
   const [totalLength, setTotalLength] = useState(0)
-  const [textPositions, setTextPositions] = useState<{ x: number; y: number }[]>([])
 
   // Measure path length after mount
   useEffect(() => {
     const measure = () => {
       if (pathRef.current) {
         const len = pathRef.current.getTotalLength()
-        if (len > 0) {
-          setTotalLength(len)
-
-          // Compute text positions from path
-          const positions = TRAIL_TEXTS.map((t) => {
-            const pt = pathRef.current!.getPointAtLength(t.pathFraction * len)
-            return { x: pt.x, y: pt.y }
-          })
-          setTextPositions(positions)
-        }
+        if (len > 0) setTotalLength(len)
       }
     }
-    // Wait a frame for SVG to render
     const raf = requestAnimationFrame(measure)
     return () => cancelAnimationFrame(raf)
   }, [])
@@ -161,9 +157,6 @@ export function GraffitiScrollOut() {
   )
   // Convert vh number to CSS string
   const svgY = useTransform(svgTranslateY, (v) => `${v}vh`)
-
-  // Subtle fade-in for the trail's leading edge
-  const trailOpacity = useTransform(scrollYProgress, [0, 0.04], [0, 1])
 
   return (
     <section
@@ -203,7 +196,6 @@ export function GraffitiScrollOut() {
               inset: 0,
               width: '100%',
               height: '100%',
-              opacity: trailOpacity,
             }}
           >
             <defs>
@@ -247,15 +239,13 @@ export function GraffitiScrollOut() {
           </motion.svg>
 
           {/* Text labels along the trail */}
-          {textPositions.length === TRAIL_TEXTS.length &&
-            TRAIL_TEXTS.map((item, i) => (
-              <TrailTextLabel
-                key={i}
-                item={item}
-                position={textPositions[i]}
-                scrollYProgress={scrollYProgress}
-              />
-            ))}
+          {TRAIL_TEXTS.map((item, i) => (
+            <TrailTextLabel
+              key={i}
+              item={item}
+              scrollYProgress={scrollYProgress}
+            />
+          ))}
         </motion.div>
       </div>
     </section>
@@ -268,45 +258,31 @@ export function GraffitiScrollOut() {
 
 function TrailTextLabel({
   item,
-  position,
   scrollYProgress,
 }: {
   item: TrailText
-  position: { x: number; y: number }
   scrollYProgress: ReturnType<typeof useScroll>['scrollYProgress']
 }) {
-  const opacity = useTransform(
-    scrollYProgress,
-    [item.revealAt, item.revealAt + 0.06],
-    [0, 1],
-  )
-  const translateY = useTransform(
-    scrollYProgress,
-    [item.revealAt, item.revealAt + 0.06],
-    [24, 0],
-  )
+  // Text reveals when the trail drawing front reaches its position along the path.
+  const revealStart = item.pathFraction
+  const revealEnd = revealStart + 0.04
 
-  // Convert SVG coordinates to percentage positions within the container
-  const leftPct = (position.x / VB_W) * 100
-  const topPct = (position.y / VB_H) * 100
-
-  // Offset text to the side of the trail
-  const xOffset = item.side === 'right' ? TEXT_OFFSET : -TEXT_OFFSET
-  const textAlign = item.side === 'right' ? 'left' : 'right' as const
-  // Anchor: right-side text anchors from its left edge; left-side from right edge
-  const transformOrigin = item.side === 'right' ? 'left center' : 'right center'
+  const opacity = useTransform(scrollYProgress, [revealStart, revealEnd], [0, 1])
+  const translateY = useTransform(scrollYProgress, [revealStart, revealEnd], [20, 0])
 
   return (
     <motion.div
       style={{
         position: 'absolute',
-        left: `${leftPct}%`,
-        top: `${topPct}%`,
-        x: xOffset,
+        top: `${item.topPct}%`,
+        // Left-side text: anchored from the left edge with padding
+        // Right-side text: anchored from the right edge with padding
+        ...(item.side === 'left'
+          ? { left: 'clamp(24px, 5vw, 80px)' }
+          : { right: 'clamp(24px, 5vw, 80px)' }),
         y: translateY,
         opacity,
-        transformOrigin,
-        textAlign,
+        textAlign: item.side === 'left' ? 'left' : ('right' as const),
         whiteSpace: 'pre-line',
         fontFamily: 'Inter, system-ui, sans-serif',
         fontSize: item.fontSize || 'clamp(24px, 2.2vw, 38px)',
@@ -315,8 +291,7 @@ function TrailTextLabel({
         letterSpacing: '-0.03em',
         color: '#0E0E0E',
         pointerEvents: 'none',
-        // Prevent text from being too wide on narrow screens
-        maxWidth: 'min(400px, 40vw)',
+        maxWidth: 'min(440px, 38vw)',
       }}
     >
       {item.text}
