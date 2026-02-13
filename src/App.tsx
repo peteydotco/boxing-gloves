@@ -264,12 +264,12 @@ function App() {
 
       </section>
 
-      {/* Spacer — pushes content below most of the PETEY graffiti SVG.
-           Shortened by 20% of SVG height so the video section overlaps the tail. */}
+      {/* Spacer — scroll through the graffiti before content resumes.
+           0.92 of SVG height so the transition runs long, overlapping just the tail. */}
       <div
         aria-hidden
         style={{
-          height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.8).toFixed(1)}vw - 24vw - 100vh)`,
+          height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.92).toFixed(1)}vw - 24vw - 100vh)`,
           position: 'relative',
           pointerEvents: 'none',
         }}
