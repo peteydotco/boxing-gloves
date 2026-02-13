@@ -216,7 +216,8 @@ function App() {
             // Pull the SVG up so the PETEY text's visual center (~22% of total
             // height) aligns with the boxing gloves (~40% from viewport top).
             marginTop: '-24vw',
-            marginLeft: '4vw',
+            // Shift SVG slightly right via transform so it doesn't affect layout
+            translateX: '2%',
           }}
         >
           <PeteyGraffitiSvg
