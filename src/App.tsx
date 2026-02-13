@@ -80,8 +80,8 @@ function App() {
   const heroRef = useRef<HTMLElement>(null)
 
   // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
-  const GRAFFITI_TILT = 3    // max degrees of rotation
-  const GRAFFITI_SHIFT = 8   // max px translate (small, just enough to feel physical)
+  const GRAFFITI_TILT = 0.5  // max degrees of rotation (very subtle)
+  const GRAFFITI_SHIFT = 2   // max px translate (barely perceptible)
   const graffitiSpring = { stiffness: 50, damping: 20, mass: 1 }
   const graffitiTiltTargetX = useMotionValue(0)
   const graffitiTiltTargetY = useMotionValue(0)
