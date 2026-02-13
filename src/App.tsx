@@ -3,7 +3,6 @@ import { CustomCursor } from './components/CustomCursor'
 import { TopCards } from './components/TopCards'
 import { VideoMorphSection } from './components/VideoMorphSection'
 import { ScrollingTextSection } from './components/ScrollingTextSection'
-import { GraffitiScrollOut } from './components/GraffitiScrollOut'
 import { PeteyGraffitiSvg } from './components/PeteyGraffitiSvg'
 import { SelectedWorksHeader } from './components/SelectedWorksHeader'
 import { ProjectCardsGrid } from './components/ProjectCardsGrid'
@@ -11,7 +10,7 @@ import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { BREAKPOINTS } from './constants'
-import { motion, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion'
+import { motion, useMotionValue, useSpring } from 'framer-motion'
 import LocomotiveScroll from 'locomotive-scroll'
 
 function App() {
@@ -25,17 +24,15 @@ function App() {
     return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.mobile : true
   })
 
-  // Below tablet breakpoint (1024px) we swap to a taller portrait graffiti asset
-  // that fills the vertical space better on narrower viewports.
+  // Below tablet breakpoint (1024px) we use a shorter graffiti height
+  // to keep PETEY legible on narrower viewports.
   const [isMobile, setIsMobile] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.tablet : false
   })
 
   // Graffiti scale factor — scales continuously below tabletWide (1128px) to prevent
-  // harsh left/right cropping while keeping PETEY centered and legible.
-  // Above 1128: 1.0 (full size: 150vw / 180vh).
-  // Below 1128→768: linearly interpolates from 1.0 → 0.667 (100vw / 120vh).
-  // Both vw and vh terms scale in lockstep to keep the image proportional.
+  // the SVG from being too large on narrower viewports.
+  // Above 1128: 1.0 (full size). Below 1128→768: interpolates from 1.0 → 0.667.
   const computeGraffitiScale = (w: number) => {
     if (w >= BREAKPOINTS.tabletWide) return 1
     if (w <= BREAKPOINTS.mobile) return 2 / 3
@@ -80,18 +77,7 @@ function App() {
     }
   }, [handleKeyDown])
 
-  // Hero section ref — used for scroll-driven graffiti fade
   const heroRef = useRef<HTMLElement>(null)
-
-  // Scroll-driven graffiti fade
-  const { scrollYProgress: heroScrollProgress } = useScroll({
-    target: heroRef,
-    offset: ['start start', 'end start'],
-  })
-  const graffitiOpacity = useTransform(
-    heroScrollProgress, [0, 0.4],
-    [0.10, 0],
-  )
 
   // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
   const GRAFFITI_TILT = 3    // max degrees of rotation
@@ -194,58 +180,56 @@ function App() {
       className="relative w-full min-h-screen flex flex-col"
     >
 
-      {/* ===== Hero Section ===== */}
-      <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
-        {/* PETEY graffiti SVG — enlarged and optically centered behind the boxing gloves.
-             Portrait SVG (538 × 1185.79) extends well below the hero; overflow: hidden clips
-             it at 100vh. The GraffitiScrollOut section continues the same SVG below. */}
+      {/* ===== PETEY Graffiti SVG — page-level background layer =====
+           Single instance positioned absolutely from the App root.
+           Scrolls naturally with the page, sitting behind all sections.
+           The tall portrait SVG starts at the hero and extends well below it. */}
+      <motion.div
+        className="absolute pointer-events-none"
+        style={{
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          perspective: 1200,
+          opacity: 0.10,
+        }}
+      >
         <motion.div
-          className="absolute pointer-events-none"
           style={{
-            inset: 0,
-            opacity: graffitiOpacity,
-            zIndex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            perspective: 1200,
-            // Feather the bottom edge so the graffiti dissolves naturally
-            // before the hero/bio boundary — avoids a hard color break and
-            // doesn't interfere with the grain overlay above.
-            maskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)',
+            position: 'relative',
+            // Portrait SVG (538 × 1185.79) — height-driven sizing.
+            // PETEY letterforms occupy roughly the top 45% of the SVG.
+            // At 250vh total height, PETEY spans ~112vh — nicely overflowing
+            // the 100vh hero with the same enlarged, cropped-in feel.
+            // The lower portions extend into the scroll-out area below.
+            height: `${(isMobile ? 200 : 250) * graffitiScale}vh`,
+            width: 'auto',
+            aspectRatio: '538 / 1185.79',
+            maxWidth: 'none',
+            flexShrink: 0,
+            rotateX: graffitiRotateX,
+            rotateY: graffitiRotateY,
+            x: graffitiX,
+            y: graffitiY,
+            // Nudge up slightly so PETEY is optically centered behind the gloves
+            marginTop: '-5vh',
           }}
         >
-          <motion.div
+          <PeteyGraffitiSvg
             style={{
-              position: 'relative',
-              // Portrait SVG (538 × 1185.79) — height-driven sizing.
-              // PETEY letterforms occupy roughly the top 45% of the SVG.
-              // At 250vh total height, PETEY spans ~112vh — nicely overflowing
-              // the 100vh hero with the same enlarged, cropped-in feel.
-              height: `${(isMobile ? 200 : 250) * graffitiScale}vh`,
-              width: 'auto',
-              aspectRatio: '538 / 1185.79',
-              maxWidth: 'none',
-              flexShrink: 0,
-              rotateX: graffitiRotateX,
-              rotateY: graffitiRotateY,
-              x: graffitiX,
-              y: graffitiY,
-              translateX: '0%',
-              translateY: '-5%',
+              width: '100%',
+              height: '100%',
+              display: 'block',
             }}
-          >
-            <PeteyGraffitiSvg
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'block',
-              }}
-            />
-          </motion.div>
+          />
         </motion.div>
+      </motion.div>
+
+      {/* ===== Hero Section ===== */}
+      <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
 
         {/* Desktop: 3D Scene */}
         {isDesktop && (
@@ -284,9 +268,6 @@ function App() {
 
       </section>
 
-
-      {/* ===== Graffiti Scroll-Out Trail ===== */}
-      <GraffitiScrollOut />
 
       {/* ===== Video Morph Section ===== */}
       <VideoMorphSection />
