@@ -200,12 +200,12 @@ function App() {
         <motion.div
           style={{
             position: 'relative',
-            // Portrait SVG (538 × 1185.79) — scaled to roughly match the
-            // original raster graffiti's width (~150vw). At 550vh the SVG
-            // is ~250vh wide on 16:9, comparable to the old max(150vw, 180vh).
-            // PETEY letterforms occupy the top ~45%, spanning ~247vh.
-            height: `${(isMobile ? 400 : 550) * graffitiScale}vh`,
-            width: 'auto',
+            // Width-driven sizing — "slightly clipped on left and right".
+            // 115vw means ~7.5% overhang per side. Height follows from the
+            // 538 : 1185.79 aspect ratio (~253vw ≈ 450vh on 16:9).
+            // PETEY letterforms occupy the top ~45% of the SVG.
+            width: `${(isMobile ? 105 : 115) * graffitiScale}vw`,
+            height: 'auto',
             aspectRatio: '538 / 1185.79',
             maxWidth: 'none',
             flexShrink: 0,
@@ -213,8 +213,9 @@ function App() {
             rotateY: graffitiRotateY,
             x: graffitiX,
             y: graffitiY,
-            // Nudge up slightly so PETEY is optically centered behind the gloves
-            marginTop: '-5vh',
+            // Pull the SVG up so the PETEY text's visual center (~22% of total
+            // height) aligns with the boxing gloves (~40% from viewport top).
+            marginTop: '-24vw',
           }}
         >
           <PeteyGraffitiSvg
@@ -268,12 +269,12 @@ function App() {
       </section>
 
       {/* Spacer — pushes content below the full extent of the PETEY graffiti SVG.
-           SVG height is ~550vh (desktop) starting at -5vh margin, so it ends at ~545vh.
-           Hero occupies 100vh, leaving ~445vh of graffiti below the hero. */}
+           SVG total height ≈ 253vw × graffitiScale, offset up by 24vw. Subtracts
+           the hero's 100vh to get the remaining distance. */}
       <div
         aria-hidden
         style={{
-          height: `${((isMobile ? 400 : 550) * graffitiScale - 100)}vh`,
+          height: `calc(${((isMobile ? 105 : 115) * graffitiScale * (1185.79 / 538)).toFixed(1)}vw - 24vw - 100vh)`,
           position: 'relative',
           pointerEvents: 'none',
         }}
