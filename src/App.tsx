@@ -222,68 +222,46 @@ function App() {
             }}
           />
 
-          {/* Bio text strings positioned along the SVG's brush stroke tail */}
-          <div
-            style={{
-              position: 'absolute',
-              top: '36%',
-              left: '12%',
-              fontFamily: 'Inter, system-ui, sans-serif',
-              fontSize: 'clamp(14px, 1.1vw, 20px)',
-              fontWeight: 500,
-              lineHeight: 1.5,
-              color: '#1a1a1a',
-              textAlign: 'center',
-              pointerEvents: 'none',
-              opacity: 1,
-            }}
-          >
-            Peter Rodriguez is<br />
-            a nuyorican designer<br />
-            solving hard problems<br />
-            with soft products.
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              top: '52%',
-              right: '14%',
-              fontFamily: 'Inter, system-ui, sans-serif',
-              fontSize: 'clamp(14px, 1.1vw, 20px)',
-              fontWeight: 500,
-              lineHeight: 1.5,
-              color: '#1a1a1a',
-              textAlign: 'right',
-              pointerEvents: 'none',
-              opacity: 1,
-            }}
-          >
-            Bringing over a decade of insight,<br />
-            intuition &amp; influence –<br />
-            off the dome, to your chrome.
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              top: '72%',
-              left: '8%',
-              fontFamily: 'Inter, system-ui, sans-serif',
-              fontSize: 'clamp(14px, 1.1vw, 20px)',
-              fontWeight: 500,
-              lineHeight: 1.5,
-              color: '#1a1a1a',
-              textAlign: 'left',
-              pointerEvents: 'none',
-              opacity: 1,
-              maxWidth: '22%',
-            }}
-          >
-            Nowadays he's shaping product for Squarespace's flagship website builder with design-minded AI tools.
-          </div>
         </motion.div>
       </div>
+
+      {/* ===== Bio text strings — positioned along the graffiti tail =====
+           Separate from the graffiti wrapper so they aren't affected by its
+           10% opacity. Positioned absolutely using calc() to align with the
+           SVG's vertical extent. Each block uses a staggered line reveal. */}
+      <BioTextBlock
+        top={`calc(-24vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.36).toFixed(1)}vw)`}
+        left="12vw"
+        align="center"
+        lines={[
+          'Peter Rodriguez is',
+          'a nuyorican designer',
+          'solving hard problems',
+          'with soft products.',
+        ]}
+      />
+      <BioTextBlock
+        top={`calc(-24vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.52).toFixed(1)}vw)`}
+        right="12vw"
+        align="right"
+        lines={[
+          'Bringing over a decade of insight,',
+          'intuition & influence –',
+          'off the dome, to your chrome.',
+        ]}
+      />
+      <BioTextBlock
+        top={`calc(-24vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.72).toFixed(1)}vw)`}
+        left="6vw"
+        align="left"
+        maxWidth="260px"
+        lines={[
+          "Nowadays he's shaping product",
+          "for Squarespace's flagship",
+          'website builder with',
+          'design-minded AI tools.',
+        ]}
+      />
 
       {/* ===== Hero Section ===== */}
       <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
@@ -384,6 +362,98 @@ function App() {
         </div>
       )}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Bio text block — staggered line-by-line reveal (same pattern as BioCopySection)
+// ---------------------------------------------------------------------------
+
+const wrapperVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.08 },
+  },
+}
+
+const lineVariants = {
+  hidden: { opacity: 0, y: 28 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.25, 0.1, 0.25, 1] as const,
+    },
+  },
+}
+
+function BioTextBlock({
+  top,
+  left,
+  right,
+  align,
+  maxWidth,
+  lines,
+}: {
+  top: string
+  left?: string
+  right?: string
+  align: 'left' | 'center' | 'right'
+  maxWidth?: string
+  lines: string[]
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [revealed, setRevealed] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setRevealed(true)
+        } else {
+          setRevealed(false)
+        }
+      },
+      { threshold: 0.15 },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <motion.div
+      ref={ref}
+      variants={wrapperVariants}
+      initial="hidden"
+      animate={revealed ? 'visible' : 'hidden'}
+      style={{
+        position: 'absolute',
+        top,
+        ...(left ? { left } : {}),
+        ...(right ? { right } : {}),
+        zIndex: 1,
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: 'clamp(15px, 1.2vw, 22px)',
+        fontWeight: 500,
+        lineHeight: 1.5,
+        letterSpacing: '-0.01em',
+        color: '#0E0E0E',
+        textAlign: align,
+        pointerEvents: 'none',
+        maxWidth: maxWidth || 'none',
+      }}
+    >
+      {lines.map((line, i) => (
+        <div key={i} style={{ overflow: 'hidden' }}>
+          <motion.div variants={lineVariants}>
+            {line}
+          </motion.div>
+        </div>
+      ))}
+    </motion.div>
   )
 }
 
