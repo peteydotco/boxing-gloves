@@ -184,40 +184,39 @@ function App() {
            Single instance positioned absolutely from the App root.
            Scrolls naturally with the page, sitting behind all sections.
            The tall portrait SVG starts at the hero and extends well below it. */}
-      <motion.div
+      {/* ===== PETEY Graffiti SVG — page-level background layer =====
+           Single instance positioned absolutely from the App root.
+           Scrolls naturally with the page, sitting behind all sections.
+           overflow: hidden prevents the oversized SVG from causing scrollbars. */}
+      <div
         className="absolute pointer-events-none"
         style={{
           top: 0,
           left: 0,
-          right: 0,
+          width: '100vw',
           zIndex: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          perspective: 1200,
+          overflow: 'hidden',
           opacity: 0.10,
         }}
       >
         <motion.div
           style={{
-            position: 'relative',
-            // Width-driven sizing — "slightly clipped on left and right".
-            // 115vw means ~7.5% overhang per side. Height follows from the
-            // 538 : 1185.79 aspect ratio (~253vw ≈ 450vh on 16:9).
-            // PETEY letterforms occupy the top ~45% of the SVG.
+            // Width-driven sizing — slightly clipped on left and right.
+            // Height follows from the 538:1185.79 aspect ratio.
             width: `${(isMobile ? 112 : 125) * graffitiScale}vw`,
             height: 'auto',
             aspectRatio: '538 / 1185.79',
-            maxWidth: 'none',
-            flexShrink: 0,
+            // Center horizontally with slight rightward offset:
+            // marginLeft auto-centers, then translateX nudges right
+            marginLeft: `calc(50vw - ${((isMobile ? 112 : 125) * graffitiScale / 2).toFixed(1)}vw)`,
+            translateX: '2%',
+            // Pull up so PETEY aligns behind the boxing gloves
+            marginTop: '-24vw',
             rotateX: graffitiRotateX,
             rotateY: graffitiRotateY,
             x: graffitiX,
             y: graffitiY,
-            // Pull the SVG up so the PETEY text's visual center (~22% of total
-            // height) aligns with the boxing gloves (~40% from viewport top).
-            marginTop: '-24vw',
-            // Shift SVG slightly right via transform so it doesn't affect layout
-            translateX: '2%',
+            perspective: 1200,
           }}
         >
           <PeteyGraffitiSvg
@@ -228,7 +227,7 @@ function App() {
             }}
           />
         </motion.div>
-      </motion.div>
+      </div>
 
       {/* ===== Hero Section ===== */}
       <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
