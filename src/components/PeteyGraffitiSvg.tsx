@@ -3,15 +3,17 @@ import React from 'react'
 interface PeteyGraffitiSvgProps {
   className?: string
   style?: React.CSSProperties
+  fill?: string
 }
 
 export const PeteyGraffitiSvg = React.forwardRef<SVGSVGElement, PeteyGraffitiSvgProps>(
-  function PeteyGraffitiSvg({ className, style }, ref) {
+  function PeteyGraffitiSvg({ className, style, fill = '#888888' }, ref) {
     return (
       <svg
         ref={ref}
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 538 1185.79"
+        fill={fill}
         className={className}
         style={style}
       >

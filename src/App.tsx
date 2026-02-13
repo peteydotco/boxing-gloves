@@ -4,11 +4,14 @@ import { TopCards } from './components/TopCards'
 import { VideoMorphSection } from './components/VideoMorphSection'
 import { ScrollingTextSection } from './components/ScrollingTextSection'
 import { PeteyGraffitiSvg } from './components/PeteyGraffitiSvg'
+import { BioText1Svg } from './components/BioText1Svg'
+import { BioText2Svg } from './components/BioText2Svg'
+import { BioText3Svg } from './components/BioText3Svg'
 import { SelectedWorksHeader } from './components/SelectedWorksHeader'
 import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, type ReactNode } from 'react'
 import { BREAKPOINTS } from './constants'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import LocomotiveScroll from 'locomotive-scroll'
@@ -206,7 +209,7 @@ function App() {
             marginLeft: `calc(50vw - ${((isMobile ? 116 : 130) * graffitiScale / 2).toFixed(1)}vw)`,
             translateX: '3%',
             // Pull up so PETEY aligns behind the boxing gloves
-            marginTop: '-24vw',
+            marginTop: '-32vw',
             rotateX: graffitiRotateX,
             rotateY: graffitiRotateY,
             x: graffitiX,
@@ -225,43 +228,31 @@ function App() {
         </motion.div>
       </div>
 
-      {/* ===== Bio text strings — positioned along the graffiti tail =====
+      {/* ===== Bio text SVGs — positioned along the graffiti tail =====
            Separate from the graffiti wrapper so they aren't affected by its
            10% opacity. Positioned absolutely using calc() to align with the
-           SVG's vertical extent. Each block uses a staggered line reveal. */}
-      <BioTextBlock
-        top={`calc(-24vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.36).toFixed(1)}vw)`}
+           SVG's vertical extent. Each block fades in on scroll. */}
+      <BioSvgReveal
+        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.36).toFixed(1)}vw)`}
         left="12vw"
-        align="center"
-        lines={[
-          'Peter Rodriguez is',
-          'a nuyorican designer',
-          'solving hard problems',
-          'with soft products.',
-        ]}
-      />
-      <BioTextBlock
-        top={`calc(-24vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.52).toFixed(1)}vw)`}
+        width="clamp(200px, 18vw, 320px)"
+      >
+        <BioText1Svg style={{ width: '100%', height: 'auto', display: 'block' }} />
+      </BioSvgReveal>
+      <BioSvgReveal
+        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.52).toFixed(1)}vw)`}
         right="12vw"
-        align="right"
-        lines={[
-          'Bringing over a decade of insight,',
-          'intuition & influence –',
-          'off the dome, to your chrome.',
-        ]}
-      />
-      <BioTextBlock
-        top={`calc(-24vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.72).toFixed(1)}vw)`}
+        width="clamp(280px, 26vw, 460px)"
+      >
+        <BioText2Svg style={{ width: '100%', height: 'auto', display: 'block' }} />
+      </BioSvgReveal>
+      <BioSvgReveal
+        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.72).toFixed(1)}vw)`}
         left="6vw"
-        align="left"
-        maxWidth="260px"
-        lines={[
-          "Nowadays he's shaping product",
-          "for Squarespace's flagship",
-          'website builder with',
-          'design-minded AI tools.',
-        ]}
-      />
+        width="clamp(240px, 24vw, 420px)"
+      >
+        <BioText3Svg style={{ width: '100%', height: 'auto', display: 'block' }} />
+      </BioSvgReveal>
 
       {/* ===== Hero Section ===== */}
       <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
@@ -308,7 +299,7 @@ function App() {
       <div
         aria-hidden
         style={{
-          height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.92).toFixed(1)}vw - 24vw - 100vh)`,
+          height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.92).toFixed(1)}vw - 32vw - 100vh)`,
           position: 'relative',
           pointerEvents: 'none',
         }}
@@ -366,42 +357,21 @@ function App() {
 }
 
 // ---------------------------------------------------------------------------
-// Bio text block — staggered line-by-line reveal (same pattern as BioCopySection)
+// Bio SVG reveal — fade + slide-up on scroll into view
 // ---------------------------------------------------------------------------
 
-const wrapperVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.08 },
-  },
-}
-
-const lineVariants = {
-  hidden: { opacity: 0, y: 28 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.25, 0.1, 0.25, 1] as const,
-    },
-  },
-}
-
-function BioTextBlock({
+function BioSvgReveal({
   top,
   left,
   right,
-  align,
-  maxWidth,
-  lines,
+  width,
+  children,
 }: {
   top: string
   left?: string
   right?: string
-  align: 'left' | 'center' | 'right'
-  maxWidth?: string
-  lines: string[]
+  width: string
+  children: ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [revealed, setRevealed] = useState(false)
@@ -426,33 +396,23 @@ function BioTextBlock({
   return (
     <motion.div
       ref={ref}
-      variants={wrapperVariants}
-      initial="hidden"
-      animate={revealed ? 'visible' : 'hidden'}
+      initial={{ opacity: 0, y: 28 }}
+      animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
+      transition={{
+        duration: 0.6,
+        ease: [0.25, 0.1, 0.25, 1],
+      }}
       style={{
         position: 'absolute',
         top,
         ...(left ? { left } : {}),
         ...(right ? { right } : {}),
+        width,
         zIndex: 1,
-        fontFamily: 'Inter, system-ui, sans-serif',
-        fontSize: 'clamp(15px, 1.2vw, 22px)',
-        fontWeight: 500,
-        lineHeight: 1.5,
-        letterSpacing: '-0.01em',
-        color: '#0E0E0E',
-        textAlign: align,
         pointerEvents: 'none',
-        maxWidth: maxWidth || 'none',
       }}
     >
-      {lines.map((line, i) => (
-        <div key={i} style={{ overflow: 'hidden' }}>
-          <motion.div variants={lineVariants}>
-            {line}
-          </motion.div>
-        </div>
-      ))}
+      {children}
     </motion.div>
   )
 }

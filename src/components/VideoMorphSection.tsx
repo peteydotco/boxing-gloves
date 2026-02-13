@@ -80,24 +80,58 @@ export function VideoMorphSection() {
   const loaderInnerRef = useRef<HTMLDivElement>(null)
   const hasPlayedSkew = useRef(false)
 
-  // Scroll-linked background fade — starts as the "Live from SQSP" label
-  // enters the viewport, fully dark by the time it's 25% up from the bottom.
+  // Scroll-linked transition — dramatic color-wash dome.
   //
-  // offset: ['start end', 'end start'] → progress 0 = section top at viewport bottom,
-  //   progress 1 = section bottom at viewport top.
-  // Total scroll travel = 250vh (section) + 100vh (viewport) = 350vh.
+  // Inspired by abhijitrout.in: a tall, static gradient "dome" image sits
+  // between the white page and the dark video section. As the user scrolls
+  // the dome naturally enters from below and the page transitions through:
+  //   white → blue (#0064FF) → red (#EF4562) → dark (#0E0E0E)
   //
-  // The sticky label first enters viewport bottom at ~progress 0.14 (≈50vh / 350vh).
-  // 25% up from viewport bottom = 75vh from top. Label reaches that point at ~progress 0.21.
-  // Fade back to light near the end as section exits.
+  // The dome is NOT animated with scale/opacity — it simply scrolls with
+  // the page. Only the flat dark overlay fades in/out so that the video
+  // content has a guaranteed solid dark backdrop.
   const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start end', 'end start'] })
-  // Opacity for the dark overlay — 0 = transparent (body bg + grain visible), 1 = fully dark
+
+  // Gradient dome — translateY driven by scroll.  The dome starts below
+  // the viewport (100vh) and scrolls up to well above it (-130vh) as the
+  // section enters.  Because the dome is 130vh tall and its bottom goes
+  // dark → black, when it has scrolled up ~30vh the viewport is fully
+  // covered in dark and the flat overlay can seamlessly take over.
+  //
+  // The dome is rendered as position:fixed so it covers the viewport, but
+  // its Y position is scroll-driven.
+  //
+  // Entry:  progress 0.04 → 0.24  : dome slides from +100vh up to -130vh
+  // Dwell:  the flat overlay is already opaque by 0.22
+  // Exit:   progress 0.78 → 0.94  : dome slides from -130vh down back off-screen
+  // Dome Y position: slides from fully below viewport (+110vh) to well
+  // above (-140vh).  The long travel range (250vh of motion) mapped over
+  // a wide scroll window creates the slow, immersive feel of the reference.
+  const domeY = useTransform(
+    scrollYProgress,
+    [0,   0.02,  0.30,   0.72,  0.96, 1],
+    [110, 110,   -140,   -140,  110,  110],  // in vh
+  )
+  const domeYStr = useTransform(domeY, (v) => `${v}vh`)
+
+  // Dome opacity — visible only during entry and exit transition windows.
+  // Fades in quickly at the start, stays visible through the color wash,
+  // then fades out after the dark overlay is fully opaque.
+  const domeOpacity = useTransform(
+    scrollYProgress,
+    [0, 0.02, 0.04, 0.26, 0.30, 0.72, 0.74, 0.92, 0.96, 1],
+    [0, 0,    1,    1,    0,    0,    1,     1,    0,    0]
+  )
+
+  // Dark overlay — solid #0E0E0E that fades in once the dome's dark
+  // bottom has covered the viewport, ensuring full darkness for video.
   const darkOverlayOpacity = useTransform(
     scrollYProgress,
-    [0, 0.14, 0.21, 0.78, 0.88, 1],
-    [0, 0, 1, 1, 0, 0]
+    [0, 0.20, 0.26, 0.76, 0.84, 1],
+    [0, 0,    1,    1,    0,    0]
   )
-  // Label + loader color inversion follows the same scroll curve
+
+  // Label + loader color inversion — timed to when the dome covers the viewport
   const labelColor = useTransform(
     scrollYProgress,
     [0, 0.14, 0.21, 0.78, 0.88, 1],
@@ -277,8 +311,72 @@ export function VideoMorphSection() {
       className="relative w-full"
       style={{ height: '250vh' }}
     >
-      {/* Full-viewport dark wash — position:fixed so it covers the entire screen
-          with no hard section edges. Grain overlay (also fixed) renders on top. */}
+      {/* ── Gradient dome ──────────────────────────────────────────
+          Fixed-position element whose Y position is driven by scroll
+          progress, simulating a tall gradient "mountain" that scrolls
+          through the viewport.  Inspired by abhijitrout.in which uses
+          a pre-rendered PNG; we recreate it with layered CSS
+          radial-gradients in the brand palette (white→blue→red→dark).
+
+          The dome is 130vh tall. As it scrolls from +100vh (below
+          viewport) to -130vh (above), the viewer sees:
+            1. White page (dome not yet visible)
+            2. Soft blue glow appearing from bottom-center
+            3. Red/magenta mid-ring filling the viewport
+            4. Dark/black bottom covering everything
+          Then the flat dark overlay fades in seamlessly. */}
+      <motion.div
+        style={{
+          position: 'fixed',
+          left: 0,
+          width: '100vw',
+          height: '140vh',
+          pointerEvents: 'none',
+          zIndex: 5,
+          top: 0,
+          y: domeYStr,
+          opacity: domeOpacity,
+          willChange: 'transform, opacity',
+          // Vertical gradient background: transparent at top → dark at bottom.
+          // The transparent top lets the dome blend seamlessly with the page,
+          // and the dark bottom merges into the flat dark overlay.
+          background: 'linear-gradient(to bottom, transparent 0%, transparent 30%, #0E0E0E 75%, #0E0E0E 100%)',
+        }}
+      >
+        {/* Dome shape — oversized horizontally so the soft edges bleed
+            off-screen, creating a mountain/dome silhouette.
+
+            Layer order (painter's algorithm — last listed = rendered first):
+              3. Dark base   (bottom, widest)
+              2. Red/coral   (middle ring)
+              1. Blue glow   (top halo, narrowest)
+
+            All anchored at `50% 100%` (bottom-center) so the dome rises
+            upward like a mountain peak. */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '180%',
+            height: '100%',
+            background: [
+              // 1. Blue glow — concentrated core, the halo at the apex
+              'radial-gradient(ellipse 38% 32% at 50% 100%, rgba(0,100,255,0.75) 0%, transparent 100%)',
+              // 2. Red/coral — wider mid-ring, creates the warm band visible around the blue
+              'radial-gradient(ellipse 52% 46% at 50% 100%, rgba(239,69,98,0.85) 0%, transparent 100%)',
+              // 3. Dark base — widest, fills the bottom of the dome and blends to black
+              'radial-gradient(ellipse 62% 58% at 50% 100%, rgba(14,14,14,1) 0%, transparent 100%)',
+            ].join(', '),
+          }}
+        />
+      </motion.div>
+
+      {/* ── Dark overlay ──────────────────────────────────────────
+          Solid #0E0E0E that fades in once the dome covers the viewport,
+          ensuring a guaranteed dark backdrop while the video is visible.
+          Fades out on exit so the page returns to light. */}
       <motion.div
         style={{
           position: 'fixed',
@@ -286,14 +384,14 @@ export function VideoMorphSection() {
           backgroundColor: '#0E0E0E',
           opacity: darkOverlayOpacity,
           pointerEvents: 'none',
-          zIndex: -2,
+          zIndex: 4,
         }}
       />
 
       {/* Sticky wrapper — pins content to viewport center */}
       <div
         className="sticky top-0 w-full flex items-center justify-center"
-        style={{ height: '100vh', position: 'sticky' }}
+        style={{ height: '100vh', position: 'sticky', zIndex: 10 }}
       >
         {/* Center anchor — only the content row participates in centering;
             credits are positioned absolutely below so they don't push the row up */}
