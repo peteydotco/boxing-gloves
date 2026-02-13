@@ -204,7 +204,7 @@ function App() {
             // 115vw means ~7.5% overhang per side. Height follows from the
             // 538 : 1185.79 aspect ratio (~253vw ≈ 450vh on 16:9).
             // PETEY letterforms occupy the top ~45% of the SVG.
-            width: `${(isMobile ? 105 : 115) * graffitiScale}vw`,
+            width: `${(isMobile ? 112 : 125) * graffitiScale}vw`,
             height: 'auto',
             aspectRatio: '538 / 1185.79',
             maxWidth: 'none',
@@ -216,6 +216,7 @@ function App() {
             // Pull the SVG up so the PETEY text's visual center (~22% of total
             // height) aligns with the boxing gloves (~40% from viewport top).
             marginTop: '-24vw',
+            marginLeft: '4vw',
           }}
         >
           <PeteyGraffitiSvg
@@ -274,7 +275,7 @@ function App() {
       <div
         aria-hidden
         style={{
-          height: `calc(${((isMobile ? 105 : 115) * graffitiScale * (1185.79 / 538)).toFixed(1)}vw - 24vw - 100vh)`,
+          height: `calc(${((isMobile ? 112 : 125) * graffitiScale * (1185.79 / 538)).toFixed(1)}vw - 24vw - 100vh)`,
           position: 'relative',
           pointerEvents: 'none',
         }}
