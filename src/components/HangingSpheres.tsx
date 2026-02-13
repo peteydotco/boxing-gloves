@@ -21,57 +21,67 @@ function createRopeGeometry(
 ): THREE.TubeGeometry {
   // If positions provided, create geometry at correct initial location
   // Otherwise create a minimal geometry that will be updated on first frame
-  const start = anchorPos || new THREE.Vector3(0, 3.2, 0)
+  const start = anchorPos ? new THREE.Vector3(anchorPos.x, anchorPos.y + 4, anchorPos.z) : new THREE.Vector3(0, 7.2, 0)
   const end = glovePos || new THREE.Vector3(0, 0.7, 0)
-  // Extend rope above anchor so shadow casts all the way off viewport
-  const aboveAnchor = new THREE.Vector3(start.x, start.y + 4, start.z)
   const mid = new THREE.Vector3().lerpVectors(start, end, 0.5)
 
-  const curve = new THREE.CatmullRomCurve3([aboveAnchor, start, mid, end])
+  const curve = new THREE.QuadraticBezierCurve3(start, mid, end)
   return new THREE.TubeGeometry(curve, ROPE_SEGMENTS, thickness, ROPE_RADIAL_SEGMENTS, false)
 }
 
-// Update tube geometry vertices in place without creating new geometry
+// Reusable vectors for updateRopeGeometry (avoid per-frame allocation)
+const _P = new THREE.Vector3()
+const _T = new THREE.Vector3()
+const _N = new THREE.Vector3()
+const _B = new THREE.Vector3()
+const _vertex = new THREE.Vector3()
+const _normal = new THREE.Vector3()
+const _refDir = new THREE.Vector3(0, 0, 1) // Fixed reference for stable normals
+
+// Update tube geometry vertices in place without creating new geometry.
+// Uses a fixed-reference-vector approach instead of Frenet frames to avoid
+// normal flipping on near-straight or low-curvature curves.
 function updateRopeGeometry(
   geometry: THREE.TubeGeometry,
   points: THREE.Vector3[],
   thickness: number
 ): void {
-  const curve = new THREE.CatmullRomCurve3(points)
+  const curve = new THREE.QuadraticBezierCurve3(points[0], points[1], points[2])
   const tubularSegments = ROPE_SEGMENTS
   const radialSegments = ROPE_RADIAL_SEGMENTS
-
-  const frames = curve.computeFrenetFrames(tubularSegments, false)
   const position = geometry.attributes.position
 
-  const vertex = new THREE.Vector3()
-  const normal = new THREE.Vector3()
-  const P = new THREE.Vector3()
-
-  // Generate vertices
   for (let i = 0; i <= tubularSegments; i++) {
     const u = i / tubularSegments
-    curve.getPointAt(u, P)
+    curve.getPointAt(u, _P)
+    curve.getTangentAt(u, _T)
 
-    const N = frames.normals[i]
-    const B = frames.binormals[i]
+    // Build a stable frame from a fixed reference direction.
+    // B = normalize(T × ref), N = normalize(B × T)
+    // If T is nearly parallel to ref, fall back to X-axis.
+    _B.crossVectors(_T, _refDir)
+    if (_B.lengthSq() < 1e-6) {
+      _B.crossVectors(_T, _N.set(1, 0, 0))
+    }
+    _B.normalize()
+    _N.crossVectors(_B, _T).normalize()
 
     for (let j = 0; j <= radialSegments; j++) {
       const v = (j / radialSegments) * Math.PI * 2
       const sin = Math.sin(v)
       const cos = -Math.cos(v)
 
-      normal.x = cos * N.x + sin * B.x
-      normal.y = cos * N.y + sin * B.y
-      normal.z = cos * N.z + sin * B.z
-      normal.normalize()
+      _normal.x = cos * _N.x + sin * _B.x
+      _normal.y = cos * _N.y + sin * _B.y
+      _normal.z = cos * _N.z + sin * _B.z
+      _normal.normalize()
 
-      vertex.x = P.x + thickness * normal.x
-      vertex.y = P.y + thickness * normal.y
-      vertex.z = P.z + thickness * normal.z
+      _vertex.x = _P.x + thickness * _normal.x
+      _vertex.y = _P.y + thickness * _normal.y
+      _vertex.z = _P.z + thickness * _normal.z
 
       const index = i * (radialSegments + 1) + j
-      position.setXYZ(index, vertex.x, vertex.y, vertex.z)
+      position.setXYZ(index, _vertex.x, _vertex.y, _vertex.z)
     }
   }
 
@@ -116,13 +126,6 @@ function DraggableGloveWithRope({
   const dropDelayElapsed = useRef(dropDelay === 0)
   const dropStartTime = useRef<number | null>(null)
   const dragEndTime = useRef<number>(0) // Timestamp when drag ended, for post-drag settle
-
-  // Handle drop delay - start timer on mount
-  useEffect(() => {
-    if (dropDelay > 0) {
-      dropStartTime.current = performance.now()
-    }
-  }, [dropDelay])
 
   // Reusable Vector3 objects to avoid garbage collection in useFrame
   const tempVec = useRef({
@@ -169,11 +172,8 @@ function DraggableGloveWithRope({
   )
 
   // Reusable array for rope curve points (avoid allocation in useFrame)
-  // 6 points: extension above anchor (off-screen) + anchor + quarter + mid + threeQuarter + gloveAttach
+  // 3 points: anchor + mid (with sag) + gloveAttach
   const ropePoints = useRef<THREE.Vector3[]>([
-    new THREE.Vector3(),
-    new THREE.Vector3(),
-    new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
@@ -216,6 +216,13 @@ function DraggableGloveWithRope({
     visualRotation.current = new THREE.Quaternion()
     visualRotation.current.setFromEuler(new THREE.Euler(0, yRotation, 0))
   }
+
+  // Handle drop delay - start timer on mount
+  useEffect(() => {
+    if (dropDelay > 0) {
+      dropStartTime.current = performance.now()
+    }
+  }, [dropDelay])
 
   // Soft string constraint + rope visual update
   useFrame(() => {
@@ -401,28 +408,27 @@ function DraggableGloveWithRope({
     t.attachOffset.applyQuaternion(visualRotation.current) // Rotate by glove orientation
     t.gloveAttach.copy(visualPosition.current).add(t.attachOffset) // Add to position
 
-    // Create a slight sag in the middle for natural rope look
+    // Rope sag — only when there's slack (rope shorter than string length)
     const ropeDistance = anchorPos.distanceTo(t.gloveAttach)
     const sag = Math.max(0, (settings.stringLength - ropeDistance) * 0.15)
 
     t.mid.copy(anchorPos).lerp(t.gloveAttach, 0.5)
     t.mid.y -= sag
 
-    t.quarter.copy(anchorPos).lerp(t.gloveAttach, 0.25)
-    t.quarter.y -= sag * 0.5
-
-    t.threeQuarter.copy(anchorPos).lerp(t.gloveAttach, 0.75)
-    t.threeQuarter.y -= sag * 0.5
-
-    // Update rope points in place (no allocation)
-    // pts[0] extends straight up from anchor well off-screen so the rope shadow isn't clipped
+    // Build a smooth curve via quadratic Bezier (no CatmullRom inflection).
+    // Sample 3 points along the Bezier: start, middle, end.
+    // The control point is the sagged midpoint pushed further out so the
+    // Bezier's actual midpoint lands on t.mid (Bezier mid = avg of endpoints
+    // and control weighted, so control needs 2× the offset).
     const pts = ropePoints.current
+    // Start the rope well above the anchor (off-screen) so the shadow is one
+    // continuous curve with no seam. The old separate shadow-extension cylinder
+    // created a visible kink where it met the curved rope.
     pts[0].set(anchorPos.x, anchorPos.y + 4, anchorPos.z)
-    pts[1].copy(anchorPos)
-    pts[2].copy(t.quarter)
-    pts[3].copy(t.mid)
-    pts[4].copy(t.threeQuarter)
-    pts[5].copy(t.gloveAttach)
+    // Push control point to 2× sag so the curve's geometric midpoint matches t.mid
+    pts[1].copy(anchorPos).lerp(t.gloveAttach, 0.5)
+    pts[1].y -= sag * 2
+    pts[2].copy(t.gloveAttach)
 
     // Update geometry vertices in place (no new geometry allocation)
     updateRopeGeometry(ropeGeometry, pts, settings.stringThickness)
@@ -706,6 +712,7 @@ function DraggableGloveWithRope({
       <mesh ref={tubeRef} geometry={ropeGeometry} frustumCulled={false} castShadow>
         <meshStandardMaterial color="#2a2a2a" roughness={0.4} metalness={0.1} />
       </mesh>
+
     </group>
   )
 }

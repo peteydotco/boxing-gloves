@@ -94,11 +94,11 @@ function useLineBreaks(
   return lines
 }
 
-// Variants for staggered line reveal
+// Variants for staggered line slide-up reveal
 const wrapperVariants = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.10 },
+    transition: { staggerChildren: 0.08 },
   },
 }
 
@@ -108,8 +108,8 @@ const lineVariants = {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.7,
-      ease: [0.33, 1, 0.68, 1] as [number, number, number, number],
+      duration: 0.5,
+      ease: [0.25, 0.1, 0.25, 1],
     },
   },
 }

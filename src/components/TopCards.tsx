@@ -52,7 +52,7 @@ const getExpandedCardDimensions = () => {
   return { width, height, gap, scale }
 }
 
-export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: number[], themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' } = {}) {
+export function TopCards({ cardIndices, themeMode = 'light', introStagger = false }: { cardIndices?: number[], themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted', introStagger?: boolean } = {}) {
   const [isDesktop, setIsDesktop] = React.useState<boolean>(() => {
     return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
   })
@@ -1077,16 +1077,24 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
               }),
             }}
           >
-            {visibleCards.map((card) => {
+            {visibleCards.map((card, vi) => {
               const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
 
               // Use desktop treatment (label + title) for CTA card on all breakpoints
               const isCompactCtaCard = false
 
               return (
-                <div
+                <motion.div
                   key={card.id}
                   ref={(el) => { cardRefs.current.set(card.id, el) }}
+                  initial={introStagger ? { y: -30, opacity: 0 } : false}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={introStagger ? {
+                    type: 'spring',
+                    stiffness: 300,
+                    damping: 30,
+                    delay: vi * 0.08,
+                  } : { duration: 0 }}
                   style={{
                     // Desktop: flex cards that share space equally
                     // Tablet: flex cards that grow to fill but never shrink below 260px (scrolls when they can't fit)
@@ -1123,7 +1131,7 @@ export function TopCards({ cardIndices, themeMode = 'light' }: { cardIndices?: n
                     emailCopied={emailCopied}
                     themeMode={themeMode}
                   />
-                </div>
+                </motion.div>
               )
             })}
           </div>

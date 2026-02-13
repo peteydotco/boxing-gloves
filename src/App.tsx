@@ -2,7 +2,8 @@ import { Scene, mousePositionRef } from './components/Scene'
 import { CustomCursor } from './components/CustomCursor'
 import { TopCards } from './components/TopCards'
 import { VideoMorphSection } from './components/VideoMorphSection'
-import { BioCopySection } from './components/BioCopySection'
+import { ScrollingTextSection } from './components/ScrollingTextSection'
+import { GraffitiScrollOut } from './components/GraffitiScrollOut'
 import { SelectedWorksHeader } from './components/SelectedWorksHeader'
 import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
@@ -81,16 +82,15 @@ function App() {
   // Hero section ref — used for scroll-driven graffiti fade
   const heroRef = useRef<HTMLElement>(null)
 
-  // Scroll-driven graffiti fade: 10% opacity at top → 0% by the time hero is ~40% scrolled out.
-  // This ensures the bio section text reads against a clean solid background.
+  // Scroll-driven graffiti fade
   const { scrollYProgress: heroScrollProgress } = useScroll({
     target: heroRef,
-    // "start start" = element top meets viewport top (scrollY=0)
-    // "end start" = element bottom meets viewport top (hero fully scrolled past)
     offset: ['start start', 'end start'],
   })
-  // Map scroll progress [0, 0.4] → opacity [0.10, 0] — fully faded before hero is halfway gone
-  const graffitiOpacity = useTransform(heroScrollProgress, [0, 0.4], [0.10, 0])
+  const graffitiOpacity = useTransform(
+    heroScrollProgress, [0, 0.4],
+    [0.10, 0],
+  )
 
   // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
   const GRAFFITI_TILT = 3    // max degrees of rotation
@@ -192,8 +192,6 @@ function App() {
       ref={containerRef}
       className="relative w-full min-h-screen flex flex-col"
     >
-      {/* Global grain texture — FIRST child so content paints on top */}
-      <div className="grain-overlay" />
 
       {/* ===== Hero Section ===== */}
       <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
@@ -219,20 +217,16 @@ function App() {
             WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
           }}
         >
-          <motion.img
-            src={isMobile ? '/images/graffiti-tag-tall.webp' : '/images/graffiti-tag.webp'}
-            alt=""
-            loading="lazy"
+          <motion.div
             style={{
-              // Landscape asset: oversized width covers viewport, height follows.
-              // Portrait asset (mobile): sized by height to fill the full-screen hero,
-              // width follows the taller aspect ratio.
+              position: 'relative',
               ...(isMobile
                 ? { height: '120vh', width: 'auto' }
                 : { width: `max(${(150 * graffitiScale).toFixed(1)}vw, ${(180 * graffitiScale).toFixed(1)}vh)`, height: 'auto' }
               ),
+              // Force a concrete aspect ratio so the canvas has height to fill
+              aspectRatio: isMobile ? '919 / 1024' : '3897 / 3163',
               maxWidth: 'none',
-              display: 'block',
               flexShrink: 0,
               rotateX: graffitiRotateX,
               rotateY: graffitiRotateY,
@@ -241,7 +235,18 @@ function App() {
               translateX: '-2%',
               translateY: '2%',
             }}
-          />
+          >
+            <img
+              src={isMobile ? '/images/graffiti-tag-tall.webp' : '/images/graffiti-tag.webp'}
+              alt=""
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+          </motion.div>
         </motion.div>
 
         {/* Desktop: 3D Scene */}
@@ -282,11 +287,14 @@ function App() {
       </section>
 
 
-      {/* ===== Bio Copy Section ===== */}
-      <BioCopySection />
+      {/* ===== Graffiti Scroll-Out Trail ===== */}
+      <GraffitiScrollOut />
 
       {/* ===== Video Morph Section ===== */}
       <VideoMorphSection />
+
+      {/* ===== Scrolling Text Section ===== */}
+      <ScrollingTextSection />
 
       {/* ===== Selected Works Header ===== */}
       <SelectedWorksHeader />
