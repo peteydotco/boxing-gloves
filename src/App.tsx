@@ -4,6 +4,7 @@ import { TopCards } from './components/TopCards'
 import { VideoMorphSection } from './components/VideoMorphSection'
 import { ScrollingTextSection } from './components/ScrollingTextSection'
 import { GraffitiScrollOut } from './components/GraffitiScrollOut'
+import { PeteyGraffitiSvg } from './components/PeteyGraffitiSvg'
 import { SelectedWorksHeader } from './components/SelectedWorksHeader'
 import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
@@ -195,10 +196,9 @@ function App() {
 
       {/* ===== Hero Section ===== */}
       <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
-        {/* Graffiti tag background image — centered on PETEY text to align with boxing gloves.
-             Uses max(vw, vh) sizing so the image always covers the viewport while keeping
-             the text centered regardless of aspect ratio. The slight upward nudge (-4%)
-             accounts for the PETEY text sitting above the image's geometric center. */}
+        {/* PETEY graffiti SVG — enlarged and optically centered behind the boxing gloves.
+             Portrait SVG (538 × 1185.79) extends well below the hero; overflow: hidden clips
+             it at 100vh. The GraffitiScrollOut section continues the same SVG below. */}
         <motion.div
           className="absolute pointer-events-none"
           style={{
@@ -213,36 +213,34 @@ function App() {
             // Feather the bottom edge so the graffiti dissolves naturally
             // before the hero/bio boundary — avoids a hard color break and
             // doesn't interfere with the grain overlay above.
-            maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+            maskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, black 75%, transparent 100%)',
           }}
         >
           <motion.div
             style={{
               position: 'relative',
-              ...(isMobile
-                ? { height: '120vh', width: 'auto' }
-                : { width: `max(${(150 * graffitiScale).toFixed(1)}vw, ${(180 * graffitiScale).toFixed(1)}vh)`, height: 'auto' }
-              ),
-              // Force a concrete aspect ratio so the canvas has height to fill
-              aspectRatio: isMobile ? '919 / 1024' : '3897 / 3163',
+              // Portrait SVG (538 × 1185.79) — height-driven sizing.
+              // PETEY letterforms occupy roughly the top 45% of the SVG.
+              // At 250vh total height, PETEY spans ~112vh — nicely overflowing
+              // the 100vh hero with the same enlarged, cropped-in feel.
+              height: `${(isMobile ? 200 : 250) * graffitiScale}vh`,
+              width: 'auto',
+              aspectRatio: '538 / 1185.79',
               maxWidth: 'none',
               flexShrink: 0,
               rotateX: graffitiRotateX,
               rotateY: graffitiRotateY,
               x: graffitiX,
               y: graffitiY,
-              translateX: '-2%',
-              translateY: '2%',
+              translateX: '0%',
+              translateY: '-5%',
             }}
           >
-            <img
-              src={isMobile ? '/images/graffiti-tag-tall.webp' : '/images/graffiti-tag.webp'}
-              alt=""
+            <PeteyGraffitiSvg
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
                 display: 'block',
               }}
             />
