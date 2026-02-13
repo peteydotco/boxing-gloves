@@ -181,13 +181,8 @@ function App() {
     >
 
       {/* ===== PETEY Graffiti SVG — page-level background layer =====
-           Single instance positioned absolutely from the App root.
-           Scrolls naturally with the page, sitting behind all sections.
-           The tall portrait SVG starts at the hero and extends well below it. */}
-      {/* ===== PETEY Graffiti SVG — page-level background layer =====
-           Single instance positioned absolutely from the App root.
-           Scrolls naturally with the page, sitting behind all sections.
-           overflow: hidden prevents the oversized SVG from causing scrollbars. */}
+           Positioned absolutely from the App root, scrolls with the page.
+           overflow: hidden contains the oversized SVG within the viewport. */}
       <div
         className="absolute pointer-events-none"
         style={{
@@ -203,13 +198,13 @@ function App() {
           style={{
             // Width-driven sizing — slightly clipped on left and right.
             // Height follows from the 538:1185.79 aspect ratio.
-            width: `${(isMobile ? 112 : 125) * graffitiScale}vw`,
+            width: `${(isMobile ? 116 : 130) * graffitiScale}vw`,
             height: 'auto',
             aspectRatio: '538 / 1185.79',
             // Center horizontally with slight rightward offset:
             // marginLeft auto-centers, then translateX nudges right
-            marginLeft: `calc(50vw - ${((isMobile ? 112 : 125) * graffitiScale / 2).toFixed(1)}vw)`,
-            translateX: '2%',
+            marginLeft: `calc(50vw - ${((isMobile ? 116 : 130) * graffitiScale / 2).toFixed(1)}vw)`,
+            translateX: '3%',
             // Pull up so PETEY aligns behind the boxing gloves
             marginTop: '-24vw',
             rotateX: graffitiRotateX,
@@ -269,13 +264,12 @@ function App() {
 
       </section>
 
-      {/* Spacer — pushes content below the full extent of the PETEY graffiti SVG.
-           SVG total height ≈ 253vw × graffitiScale, offset up by 24vw. Subtracts
-           the hero's 100vh to get the remaining distance. */}
+      {/* Spacer — pushes content below most of the PETEY graffiti SVG.
+           Shortened by 20% of SVG height so the video section overlaps the tail. */}
       <div
         aria-hidden
         style={{
-          height: `calc(${((isMobile ? 112 : 125) * graffitiScale * (1185.79 / 538)).toFixed(1)}vw - 24vw - 100vh)`,
+          height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.8).toFixed(1)}vw - 24vw - 100vh)`,
           position: 'relative',
           pointerEvents: 'none',
         }}
