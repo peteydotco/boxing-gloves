@@ -502,8 +502,8 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
     // Find the VideoMorphSection — sibling after the gradient runway
     const videoSection = runway.nextElementSibling as HTMLElement | null
 
-    // SplitText word-by-word reveal — same as bio strings 1–3
-    const split = SplitText.create(text, { type: 'words' })
+    // SplitText — words for reveal, chars for exit
+    const split = SplitText.create(text, { type: 'words,chars' })
     gsap.set(split.words, { autoAlpha: 0, y: 12 })
 
     const ctx = gsap.context(() => {
@@ -538,11 +538,13 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
         })
       }
 
-      // ── Fade out — crossfade with the lockup ──
+      // ── Character-by-character exit — letters slide up and out ──
       if (videoSection) {
-        gsap.to(text, {
-          opacity: 0,
-          ease: 'none',
+        gsap.to(split.chars, {
+          autoAlpha: 0,
+          yPercent: -100,
+          ease: 'power2.in',
+          stagger: 0.03,
           scrollTrigger: {
             trigger: videoSection,
             start: 'top top',

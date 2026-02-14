@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react'
 import { motion, useSpring, useTransform, useMotionValueEvent } from 'framer-motion'
-import { gsap, ScrollTrigger } from '../lib/gsap'
+import { gsap, ScrollTrigger, SplitText } from '../lib/gsap'
 import { BREAKPOINTS } from '../constants/breakpoints'
 
 const YOUTUBE_VIDEO_ID = 'rJKduGHwvHk'
@@ -218,23 +218,66 @@ export function VideoMorphSection() {
     const contentRow = contentRowRef.current
     if (!section) return
 
+    const splits: ReturnType<typeof SplitText.create>[] = []
+
     const ctx = gsap.context(() => {
-      // ─── Lockup entrance — dissolve from 0 → 1 ────────────────────
-      // The lockup (labels + loader) starts invisible and fades in as
-      // the section enters. This crossfades with "And occasionally..."
-      // which fades out over the same scroll range in App.tsx.
-      if (contentRow) {
-        gsap.set(contentRow, { opacity: 0 })
-        gsap.fromTo(contentRow, { opacity: 0 }, {
-          opacity: 1,
-          ease: 'none',
+      // ─── Lockup entrance — char-by-char reveal ────────────────────
+      // "And occasionally..." exits char-by-char (top top → 5% top) in App.tsx.
+      // These labels enter AFTER that exit completes (5% top → 10% top).
+      const leftLabel = leftLabelRef.current
+      const rightLabel = rightLabelRef.current
+
+      if (leftLabel) {
+        const splitLeft = SplitText.create(leftLabel, { type: 'chars' })
+        splits.push(splitLeft)
+        gsap.set(splitLeft.chars, { autoAlpha: 0, yPercent: 100 })
+        gsap.to(splitLeft.chars, {
+          autoAlpha: 1,
+          yPercent: 0,
+          ease: 'power2.out',
+          stagger: 0.03,
           scrollTrigger: {
             trigger: section,
-            start: 'top top',          // sticky just engaged, lockup at center
-            end: '5% top',             // ~125px of scroll for crossfade
+            start: '5% top',
+            end: '10% top',
             scrub: true,
           },
         })
+      }
+
+      if (rightLabel) {
+        const splitRight = SplitText.create(rightLabel, { type: 'chars' })
+        splits.push(splitRight)
+        gsap.set(splitRight.chars, { autoAlpha: 0, yPercent: 100 })
+        gsap.to(splitRight.chars, {
+          autoAlpha: 1,
+          yPercent: 0,
+          ease: 'power2.out',
+          stagger: 0.03,
+          scrollTrigger: {
+            trigger: section,
+            start: '5% top',
+            end: '10% top',
+            scrub: true,
+          },
+        })
+      }
+
+      // Loader bar — simple opacity fade alongside labels
+      if (contentRow) {
+        if (loaderInnerRef.current) {
+          gsap.set(loaderInnerRef.current.parentElement!, { autoAlpha: 0 })
+          gsap.to(loaderInnerRef.current.parentElement!, {
+            autoAlpha: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: section,
+              start: '5% top',
+              end: '10% top',
+              scrub: true,
+            },
+          })
+        }
       }
 
       // ─── Label + loader color inversion ────────────────────────────
@@ -264,7 +307,10 @@ export function VideoMorphSection() {
       })
     }, section)
 
-    return () => ctx.revert()
+    return () => {
+      ctx.revert()
+      splits.forEach(s => s.revert())
+    }
   }, [])
 
   const labelStyle = {
@@ -275,6 +321,7 @@ export function VideoMorphSection() {
     whiteSpace: 'nowrap' as const,
     flex: 1,
     minWidth: 0,
+    overflow: 'hidden' as const,
   }
 
   return (
@@ -530,7 +577,7 @@ export function VideoMorphSection() {
           Sentinel at 90vh → crosses viewport center at 40vh into travel. */}
       <div
         ref={sentinelRef}
-        style={{ position: 'absolute', top: '90vh', bottom: 0, width: '100%', pointerEvents: 'none' }}
+        style={{ position: 'absolute', top: '120vh', bottom: 0, width: '100%', pointerEvents: 'none' }}
       />
 
     </section>
