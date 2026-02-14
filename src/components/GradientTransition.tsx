@@ -14,17 +14,16 @@ interface GradientTransitionProps {
  * ENTER behavior:
  *   1. Runway (200vh) provides scroll distance. Sticky container pins
  *      to viewport bottom via `position: sticky; bottom: 0`.
- *   2. Image enters pinned at scaleY(0.15) — a thin sliver at the
- *      viewport bottom. It sits there for the first 30% of the runway
- *      scroll with no scale change.
- *   3. After 30%, scaleY scrubs from 0.15 → 1. The gradient stretches
- *      upward, washing over the light content.
+ *   2. Phase 1 (first 15%): Image eases in from scaleY(0) → scaleY(0.08)
+ *      with power2.out — a thin sliver that scrolls into view naturally.
+ *   3. Phase 2 (remaining 85%): scaleY scrubs from 0.08 → 1 with
+ *      power3.in — the first ~50% barely changes, then growth accelerates.
  *   4. At scaleY(1) the sticky releases. The gradient and the
  *      VideoMorphSection beneath it scroll up naturally together.
  *
  * EXIT behavior:
- *   Mirror of enter — image starts scaleY(0.15) with transform-origin
- *   at top edge, grows downward. Sticky pins to viewport top.
+ *   Mirror of enter — image swings down from top edge. Sticky pins
+ *   to viewport top.
  */
 export function GradientTransition({ direction, src, className = '', style }: GradientTransitionProps) {
   const runwayRef = useRef<HTMLDivElement>(null)
@@ -37,21 +36,34 @@ export function GradientTransition({ direction, src, className = '', style }: Gr
     const image = imageRef.current
     if (!runway || !image) return
 
-    // Initial state — squashed down
+    // Initial state — fully flat (invisible)
     gsap.set(image, {
-      scaleY: 0.15,
+      scaleY: 0,
     })
 
     const ctx = gsap.context(() => {
-      // Delay scale start: the image sits pinned at scaleY(0.15) for
-      // the first 30% of the runway, then grows to 1 over the rest.
+      // Phase 1: Ease in from 0 → 0.08 as it scrolls into view and pins.
+      // This gives a visible sliver that naturally enters the viewport.
       gsap.to(image, {
-        scaleY: 1,
-        ease: 'none',
+        scaleY: 0.08,
+        ease: 'power2.out',
         scrollTrigger: {
           trigger: runway,
-          start: isEnter ? '30% bottom' : '0% top',
-          end: isEnter ? 'bottom bottom' : '70% top',
+          start: 'top bottom',
+          end: '15% bottom',
+          scrub: true,
+        },
+      })
+
+      // Phase 2: Grow from 0.08 → 1 with a steep ease-in so the first
+      // ~50% of the remaining scroll barely changes the scale.
+      gsap.fromTo(image, { scaleY: 0.08 }, {
+        scaleY: 1,
+        ease: 'power3.in',
+        scrollTrigger: {
+          trigger: runway,
+          start: '15% bottom',
+          end: 'bottom bottom',
           scrub: true,
         },
       })

@@ -5,14 +5,12 @@ import { VideoMorphSection } from './components/VideoMorphSection'
 import { GradientTransition } from './components/GradientTransition'
 import { ScrollingTextSection } from './components/ScrollingTextSection'
 import { PeteyGraffitiSvg } from './components/PeteyGraffitiSvg'
-import { BioText1Svg } from './components/BioText1Svg'
-import { BioText2Svg } from './components/BioText2Svg'
-import { BioText3Svg } from './components/BioText3Svg'
+import { SplitText } from './lib/gsap'
 import { SelectedWorksHeader } from './components/SelectedWorksHeader'
 import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
-import { useState, useEffect, useLayoutEffect, useRef, useCallback, type ReactNode } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { BREAKPOINTS } from './constants'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import LocomotiveScroll from 'locomotive-scroll'
@@ -83,6 +81,7 @@ function App() {
   }, [handleKeyDown])
 
   const heroRef = useRef<HTMLElement>(null)
+  const string4TriggerRef = useRef<HTMLDivElement>(null)
 
   // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
   const GRAFFITI_TILT = 0.5  // max degrees of rotation (very subtle)
@@ -236,34 +235,43 @@ function App() {
         </motion.div>
       </div>
 
-      {/* ===== Bio text SVGs — positioned along the graffiti tail =====
+      {/* ===== Bio text — positioned along the graffiti tail =====
            Separate from the graffiti wrapper so they aren't affected by its
-           10% opacity. Positioned absolutely using calc() to align with the
-           SVG's vertical extent. Each block fades in on scroll. */}
-      <BioSvgReveal
-        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.36).toFixed(1)}vw)`}
+           10% opacity. Each block uses GSAP SplitText for a word-by-word
+           scroll-driven reveal, staggered as the user scrolls down the tail. */}
+      <BioTextReveal
+        text="Peter Rodriguez is a nuyorican designer solving hard problems with soft products."
+        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.45).toFixed(1)}vw)`}
         left="12vw"
-        width="clamp(200px, 18vw, 320px)"
-      >
-        <BioText1Svg style={{ width: '100%', height: 'auto', display: 'block' }} />
-      </BioSvgReveal>
-      <BioSvgReveal
-        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.52).toFixed(1)}vw)`}
+        width="clamp(260px, 22vw, 380px)"
+      />
+      <BioTextReveal
+        text="Bringing over a decade of insight, intuition & influence – off the dome, to your chrome."
+        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.60).toFixed(1)}vw)`}
         right="12vw"
-        width="clamp(280px, 26vw, 460px)"
-      >
-        <BioText2Svg style={{ width: '100%', height: 'auto', display: 'block' }} />
-      </BioSvgReveal>
-      <BioSvgReveal
-        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.72).toFixed(1)}vw)`}
+        width="clamp(320px, 28vw, 480px)"
+      />
+      <BioTextReveal
+        text={`Nowadays he\u2019s shaping the core experience of Squarespace\u2019s flagship website builder with design\u2011minded AI tools.`}
+        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.75).toFixed(1)}vw)`}
         left="6vw"
-        width="clamp(240px, 24vw, 420px)"
-      >
-        <BioText3Svg style={{ width: '100%', height: 'auto', display: 'block' }} />
-      </BioSvgReveal>
-      {/* "And occasionally..." is now inside VideoMorphSection's sticky wrapper
-           so it pins at viewport center as the entry dome scrolls over it. */}
-
+        width="clamp(280px, 26vw, 440px)"
+      />
+      {/* Invisible trigger for "And occasionally..." reveal — absolute at 1.05
+           of SVG height so the SplitText fires well below bio string 3
+           without adding any document-flow space. */}
+      <div
+        ref={string4TriggerRef}
+        aria-hidden
+        style={{
+          position: 'absolute',
+          top: `calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 1.05).toFixed(1)}vw)`,
+          left: 0,
+          width: '100%',
+          height: '15vh',
+          pointerEvents: 'none',
+        }}
+      />
       {/* ===== Hero Section ===== */}
       <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
 
@@ -305,20 +313,20 @@ function App() {
       </section>
 
       {/* Spacer — scroll through the graffiti before content resumes.
-           0.72 of SVG height so the gradient dome begins before the tail appears. */}
+           0.58 of SVG height so the gradient dome begins before the tail appears. */}
       <div
         aria-hidden
         style={{
-          height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.72).toFixed(1)}vw - 32vw - 100vh)`,
+          height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.58).toFixed(1)}vw - 32vw - 100vh)`,
           position: 'relative',
           pointerEvents: 'none',
         }}
       />
 
-      {/* ===== "And occasionally..." — fixed text during gradient bloom =====
-           Controlled by ScrollTrigger tied to the entry gradient runway.
-           Fades in as dome starts, fades out before dome completes. */}
-      <AndOccasionallyText />
+      {/* ===== "And occasionally..." — 4th bio text, fixed at viewport center.
+           Reveal triggered by invisible div at 0.90 SVG height position.
+           Pins through gradient dome for handoff to "Live from SQSP..." lockup. ===== */}
+      <AndOccasionallyText triggerRef={string4TriggerRef} />
 
       {/* ===== Entry Gradient Transition ===== */}
       <GradientTransition
@@ -388,51 +396,58 @@ function App() {
 }
 
 // ---------------------------------------------------------------------------
-// Bio SVG reveal — fade + slide-up on scroll into view
+// Bio text reveal — GSAP SplitText word-by-word scroll-driven animation
 // ---------------------------------------------------------------------------
+// Each text block reveals word-by-word as it scrolls into view.
+// Words start at autoAlpha: 0 + y: 12, and stagger in with scrub.
 
-function BioSvgReveal({
+function BioTextReveal({
+  text,
   top,
   left,
   right,
   width,
-  children,
 }: {
+  text: string
   top: string
   left?: string
   right?: string
   width: string
-  children: ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const [revealed, setRevealed] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setRevealed(true)
-        } else {
-          setRevealed(false)
-        }
-      },
-      { threshold: 0.15 },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
+
+    const split = SplitText.create(el, { type: 'words' })
+
+    gsap.set(split.words, { autoAlpha: 0, y: 12 })
+
+    const ctx = gsap.context(() => {
+      gsap.to(split.words, {
+        autoAlpha: 1,
+        y: 0,
+        ease: 'power2.out',
+        stagger: 0.05,
+        scrollTrigger: {
+          trigger: el,
+          start: 'top 85%',
+          end: 'bottom 60%',
+          scrub: true,
+        },
+      })
+    })
+
+    return () => {
+      ctx.revert()
+      split.revert()
+    }
   }, [])
 
   return (
-    <motion.div
+    <div
       ref={ref}
-      initial={{ opacity: 0, y: 28 }}
-      animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 28 }}
-      transition={{
-        duration: 0.6,
-        ease: [0.25, 0.1, 0.25, 1],
-      }}
       style={{
         position: 'absolute',
         top,
@@ -441,38 +456,41 @@ function BioSvgReveal({
         width,
         zIndex: 1,
         pointerEvents: 'none',
+        fontFamily: 'Inter',
+        fontSize: 24,
+        fontWeight: 500,
+        lineHeight: 1.4,
+        letterSpacing: '-0.02em',
+        color: '#0E0E0E',
+        textAlign: 'justify',
       }}
     >
-      {children}
-    </motion.div>
+      {text}
+    </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// "And occasionally, he hops on stage..." — scroll-driven text
+// "And occasionally, he hops on stage..." — 4th bio string
 // ---------------------------------------------------------------------------
-// Behavior:
-//   1. Scrolls in naturally from below (translateY +50vh → 0) during the last
-//      part of the spacer — a "scroll in, then pin" feel.
-//   2. Starts as dark text (#0E0E0E) on the light bg.
-//   3. Transitions to white as the entry gradient dome covers the viewport.
-//   4. Stays pinned at viewport center through the dome and into VideoMorphSection.
-//   5. Fades to opacity 0 simultaneously as the "Live from SQSP" lockup fades in
-//      (at the very start of the VideoMorphSection scroll).
+// position: fixed at viewport center (zero document-flow space).
+// SplitText word-by-word reveal triggered by an invisible absolute div
+// at 1.05 of SVG height — same "appear" effect as bio strings 1–3.
 //
-// Uses a 0-height marker in document flow. GSAP ScrollTriggers reference the
-// gradient runway (next non-fixed sibling) and the VideoMorphSection.
+// After revealing, the text stays at center (inherently pinned via fixed)
+// while the gradient dome covers the screen:
+//   1. Color shifts dark → white during the dome
+//   2. Fades out as "Live from SQSP..." lockup fades in
 
-function AndOccasionallyText() {
+function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLDivElement | null> }) {
   const markerRef = useRef<HTMLDivElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
-  const spanRef = useRef<HTMLSpanElement>(null)
 
   useLayoutEffect(() => {
     const marker = markerRef.current
     const text = textRef.current
-    const span = spanRef.current
-    if (!marker || !text || !span) return
+    const trigger = triggerRef.current
+    if (!marker || !text || !trigger) return
 
     // Find the gradient runway (skip past our own fixed overlay)
     let runway = marker.nextElementSibling as HTMLElement | null
@@ -481,62 +499,72 @@ function AndOccasionallyText() {
     }
     if (!runway) return
 
-    // Find the VideoMorphSection — it's the next sibling after the gradient runway
+    // Find the VideoMorphSection — sibling after the gradient runway
     const videoSection = runway.nextElementSibling as HTMLElement | null
 
-    // Initial state: well below viewport, invisible, dark text
-    gsap.set(text, { y: '50vh' })
-    gsap.set(span, { color: '#0E0E0E' })
+    // SplitText word-by-word reveal — same as bio strings 1–3
+    const split = SplitText.create(text, { type: 'words' })
+    gsap.set(split.words, { autoAlpha: 0, y: 12 })
 
     const ctx = gsap.context(() => {
-      // ── Phase 1a: Slide up into center ──
-      gsap.fromTo(text, { y: '50vh' }, {
+      // ── Word reveal — triggered by invisible div at 0.90 SVG height ──
+      gsap.to(split.words, {
+        autoAlpha: 1,
         y: 0,
-        ease: 'none',
+        ease: 'power2.out',
+        stagger: 0.05,
         scrollTrigger: {
-          trigger: runway,
-          start: '-15% bottom',
-          end: '15% bottom',
+          trigger: trigger,
+          start: 'top 85%',
+          end: 'bottom 60%',
           scrub: true,
         },
       })
 
-      // ── Fade out — crossfade with the lockup ──
-      // Starts when the VideoMorphSection sticky engages (section top =
-      // viewport top) so the lockup is already pinned at viewport center.
-      if (videoSection) {
-        gsap.fromTo(span, { opacity: 1 }, {
-          opacity: 0,
+      // ── Color shift dark → white ──
+      // The dome uses power3.in (t³) so it barely covers center until
+      // ~80% of the runway. Shift at 93–98% where scaleY ≈ 0.83–0.95
+      // so the text stays black until the dome has clearly passed center.
+      if (runway) {
+        gsap.to(text, {
+          color: '#FFFFFF',
           ease: 'none',
           scrollTrigger: {
-            trigger: videoSection,
-            start: 'top top',          // sticky just engaged, lockup at center
-            end: '5% top',             // ~125px of scroll for crossfade
+            trigger: runway,
+            start: '93% bottom',
+            end: '98% bottom',
             scrub: true,
           },
         })
       }
 
-      // ── Phase 2: Color shift dark → white ──
-      gsap.to(span, {
-        color: '#FFFFFF',
-        ease: 'none',
-        scrollTrigger: {
-          trigger: runway,
-          start: '25% bottom',
-          end: '50% bottom',
-          scrub: true,
-        },
-      })
+      // ── Fade out — crossfade with the lockup ──
+      if (videoSection) {
+        gsap.to(text, {
+          opacity: 0,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: videoSection,
+            start: 'top top',
+            end: '5% top',
+            scrub: true,
+          },
+        })
+      }
     })
 
-    return () => ctx.revert()
-  }, [])
+    return () => {
+      ctx.revert()
+      split.revert()
+    }
+  }, [triggerRef])
 
   return (
     <>
+      {/* 0-height marker for sibling discovery (runway, videoSection) */}
       <div ref={markerRef} aria-hidden style={{ height: 0, position: 'relative' }} />
 
+      {/* Fixed at viewport center — zero document flow */}
       <div
         ref={textRef}
         style={{
@@ -547,22 +575,16 @@ function AndOccasionallyText() {
           zIndex: 25,
           pointerEvents: 'none',
           whiteSpace: 'nowrap',
+          fontFamily: 'Inter',
+          fontSize: 24,
+          fontWeight: 500,
+          lineHeight: 1.4,
+          letterSpacing: '-0.02em',
+          color: '#0E0E0E',
+          textAlign: 'center',
         }}
       >
-        <span
-          ref={spanRef}
-          style={{
-            fontFamily: 'Inter',
-            fontSize: 24,
-            fontWeight: 500,
-            letterSpacing: '-0.02em',
-            color: '#0E0E0E',
-            textAlign: 'center',
-            display: 'block',
-          }}
-        >
-          And occasionally, he hops on stage...
-        </span>
+        And occasionally, he hops on stage...
       </div>
     </>
   )
