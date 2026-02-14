@@ -950,7 +950,7 @@ export function MorphingCard({
             // A spring's overdamped mode converges slowly in the last few pixels (340ms tail),
             // which leaves a visible blob near the mini tray. A 200ms ease-out tween
             // reaches the target cleanly and triggers onExitComplete promptly.
-            const collapseTween = { type: 'tween' as const, duration: 0.2, ease: [0.33, 1, 0.68, 1] }
+            const collapseTween = { type: 'tween' as const, duration: 0.2, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] as [number, number, number, number] }
             const collapseTransition = expandedFromCompact
               ? collapseTween
               : mobileCollapseSpring
@@ -1075,7 +1075,7 @@ export function MorphingCard({
             ...(expandedFromCompact
               ? { opacity: 0, transition: { opacity: { duration: 0.06, ease: 'easeOut' } } }
               : { padding: compactCta ? '18px 10px 19px 12px' : '18px 10px 19px 20px',
-                  transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] } } }),
+                  transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }),
           }}
           transition={contentSpring}
           onTouchStart={(e) => {
@@ -1230,7 +1230,7 @@ export function MorphingCard({
                 scale: 1,
                 opacity: compactCta ? 0 : 1,
                 transition: {
-                  scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                  scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
                   ...(compactCta ? { opacity: { duration: 0.15, ease: 'easeOut' } } : {}),
                 },
               }}
@@ -1255,9 +1255,9 @@ export function MorphingCard({
                 marginLeft: '0px',
                 opacity: compactCta ? 0 : 1,
                 transition: {
-                  scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-                  marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-                  marginLeft: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                  scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+                  marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+                  marginLeft: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
                   ...(compactCta ? { opacity: { duration: 0.1, ease: 'easeOut' } } : {}),
                 },
               }}

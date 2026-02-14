@@ -127,7 +127,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
   // 2: Bouncy spring — ctaEntranceSpring (playful springback) on all pills
   // 3: Scale overshoot — pills overshoot scaleY to 1.06 during height morph
   // 4: Combined — stagger + bouncy spring + glass dissolves ahead as anticipation
-  const morphStyle = 4
+  const morphStyle: number = 4
 
   // ── Mini tray magnetic attraction ──
   // Self-contained spring system: cursor offset → clamped displacement → sprung motion values
