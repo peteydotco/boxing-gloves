@@ -215,7 +215,6 @@ export function VideoMorphSection() {
 
   useLayoutEffect(() => {
     const section = sectionRef.current
-    const contentRow = contentRowRef.current
     if (!section) return
 
     const splits: ReturnType<typeof SplitText.create>[] = []
@@ -235,12 +234,12 @@ export function VideoMorphSection() {
           autoAlpha: 1,
           yPercent: 0,
           ease: 'power2.out',
-          stagger: 0.03,
+          stagger: 0.04,
           scrollTrigger: {
             trigger: section,
-            start: '5% top',
-            end: '10% top',
-            scrub: true,
+            start: '10% top',
+            end: '16% top',
+            scrub: 0.6,
           },
         })
       }
@@ -253,31 +252,27 @@ export function VideoMorphSection() {
           autoAlpha: 1,
           yPercent: 0,
           ease: 'power2.out',
-          stagger: 0.03,
+          stagger: -0.04,
           scrollTrigger: {
             trigger: section,
-            start: '5% top',
-            end: '10% top',
-            scrub: true,
+            start: '10% top',
+            end: '16% top',
+            scrub: 0.6,
           },
         })
       }
 
-      // Loader bar — simple opacity fade alongside labels
-      if (contentRow) {
-        if (loaderInnerRef.current) {
-          gsap.set(loaderInnerRef.current.parentElement!, { autoAlpha: 0 })
-          gsap.to(loaderInnerRef.current.parentElement!, {
-            autoAlpha: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: section,
-              start: '5% top',
-              end: '10% top',
-              scrub: true,
-            },
-          })
-        }
+      // Loader starts hidden; appears after label animation resolves (16%).
+      // Framer Motion's loaderOpacity then handles fade-out during morph.
+      if (loaderInnerRef.current) {
+        const loaderOuter = loaderInnerRef.current.parentElement!
+        gsap.set(loaderOuter, { visibility: 'hidden' })
+        ScrollTrigger.create({
+          trigger: section,
+          start: '16% top',
+          onEnter: () => { loaderOuter.style.visibility = 'visible' },
+          onLeaveBack: () => { loaderOuter.style.visibility = 'hidden' },
+        })
       }
 
       // ─── Label + loader color inversion ────────────────────────────

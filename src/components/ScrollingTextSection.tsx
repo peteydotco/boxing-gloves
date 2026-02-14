@@ -1,7 +1,7 @@
 import { useRef, useEffect, useMemo } from 'react'
 import { motion, useScroll, useTransform, type MotionValue } from 'framer-motion'
 
-const TEXT = 'From my dome to your chrome.'
+const TEXT = 'Real eyes realize real UIs.'
 const SECTION_HEIGHT = '450vh'
 
 // Deterministic pseudo-random seeded by index — stable across HMR

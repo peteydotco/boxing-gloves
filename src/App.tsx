@@ -429,12 +429,12 @@ function BioTextReveal({
         autoAlpha: 1,
         y: 0,
         ease: 'power2.out',
-        stagger: 0.05,
+        stagger: 0.08,
         scrollTrigger: {
           trigger: el,
-          start: 'top 85%',
-          end: 'bottom 60%',
-          scrub: true,
+          start: 'top 90%',
+          end: 'bottom 40%',
+          scrub: 0.6,
         },
       })
     })
@@ -503,21 +503,21 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
     const videoSection = runway.nextElementSibling as HTMLElement | null
 
     // SplitText — words for reveal, chars for exit
-    const split = SplitText.create(text, { type: 'words,chars' })
-    gsap.set(split.words, { autoAlpha: 0, y: 12 })
+    const split = SplitText.create(text, { type: 'chars' })
+    gsap.set(split.chars, { opacity: 0, y: 12 })
 
     const ctx = gsap.context(() => {
-      // ── Word reveal — triggered by invisible div at 0.90 SVG height ──
-      gsap.to(split.words, {
-        autoAlpha: 1,
+      // ── Char reveal — triggered by invisible div at 0.90 SVG height ──
+      gsap.to(split.chars, {
+        opacity: 1,
         y: 0,
         ease: 'power2.out',
-        stagger: 0.05,
+        stagger: { each: 0.03, from: 'edges' },
         scrollTrigger: {
           trigger: trigger,
-          start: 'top 85%',
-          end: 'bottom 60%',
-          scrub: true,
+          start: 'top 90%',
+          end: 'bottom 40%',
+          scrub: 0.6,
         },
       })
 
@@ -538,18 +538,19 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
         })
       }
 
-      // ── Character-by-character exit — letters slide up and out ──
+      // ── Container exit — whole text fades up and out ──
+      // Targets the parent div (not individual chars) to avoid
+      // competing with the entrance tween's per-char opacity.
       if (videoSection) {
-        gsap.to(split.chars, {
-          autoAlpha: 0,
-          yPercent: -100,
+        gsap.to(text, {
+          opacity: 0,
+          y: -60,
           ease: 'power2.in',
-          stagger: 0.03,
           scrollTrigger: {
             trigger: videoSection,
             start: 'top top',
-            end: '5% top',
-            scrub: true,
+            end: '10% top',
+            scrub: 0.6,
           },
         })
       }
