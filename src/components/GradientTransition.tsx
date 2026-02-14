@@ -77,13 +77,15 @@ export function GradientTransition({ direction, src, className = '', style }: Gr
       ref={runwayRef}
       className={`relative w-full ${className}`}
       style={{
-        height: '200vh',
+        height: isEnter ? '240vh' : '101vh',
         // Flexbox pushes the sticky child to the bottom of the runway in
         // normal flow. When sticky releases, it sits at the runway's bottom
         // edge — butting up against the VideoMorphSection with no gap.
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: isEnter ? 'flex-end' : 'flex-start',
+        justifyContent: 'flex-end',
+        // Exit: dark bg so the runway above the gradient matches VideoMorphSection
+        backgroundColor: isEnter ? undefined : '#050101',
         // NO overflow hidden here — this is just a scroll spacer
         ...style,
       }}
@@ -92,7 +94,7 @@ export function GradientTransition({ direction, src, className = '', style }: Gr
         className="w-full pointer-events-none"
         style={{
           position: 'sticky',
-          ...(isEnter ? { bottom: 0 } : { top: 0 }),
+          bottom: 0,
           height: '100vh',
           overflow: 'hidden',
         }}
@@ -106,7 +108,7 @@ export function GradientTransition({ direction, src, className = '', style }: Gr
             width: '100%',
             height: '100%',
             objectFit: 'fill',
-            transformOrigin: isEnter ? 'center bottom' : 'center top',
+            transformOrigin: 'center bottom',
             willChange: 'transform',
           }}
         />
