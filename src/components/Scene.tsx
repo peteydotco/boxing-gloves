@@ -101,7 +101,7 @@ function PhysicsWithPauseDetection({ children }: { children: React.ReactNode }) 
   )
 }
 
-function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias, isDarkTheme, themeMode }: {
+function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadius, shadowBias, isDarkTheme, themeMode, gloveDuskRef }: {
   lightPos: [number, number, number]
   shadowMapSize: [number, number]
   cameraBounds: number
@@ -110,11 +110,33 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
   shadowBias: number
   isDarkTheme: boolean
   themeMode: ThemeMode
+  gloveDuskRef?: React.RefObject<number>
 }) {
   const isDarkestTheme = themeMode === 'darkInverted' // Pure black bg needs brighter spotlight
   const { gl } = useThree()
   const mainLightRef = useRef<THREE.DirectionalLight>(null)
   const fillLightRef = useRef<THREE.DirectionalLight>(null)
+  const backLightRef = useRef<THREE.DirectionalLight>(null)
+  const topLightRef = useRef<THREE.PointLight>(null)
+  const ambientRef = useRef<THREE.AmbientLight>(null)
+  const spotRef = useRef<THREE.SpotLight>(null)
+
+  // Pre-computed color pairs for dusk interpolation (allocated once, reused every frame)
+  const duskColors = useRef({
+    mainLight: new THREE.Color('#ffffff'),
+    mainDark: new THREE.Color('#1A0A1A'),      // near-black — "dark side" facing viewer
+    fillLight: new THREE.Color('#a0c4ff'),
+    fillDark: new THREE.Color('#CC6633'),       // warm terra cotta side-spill from sunset behind
+    backLight: new THREE.Color('#ffe4b5'),
+    backDark: new THREE.Color('#FF9955'),       // bright coral-orange — hero rim light
+    topLight: new THREE.Color('#ffffff'),
+    topDark: new THREE.Color('#D8A8D8'),        // soft lavender — upper sunset atmosphere
+    ambLight: new THREE.Color('#ffffff'),
+    ambDark: new THREE.Color('#1A0A1A'),        // near-black — deep shadows, minimal fill
+    spotLight: new THREE.Color('#aabbcc'),
+    spotDark: new THREE.Color('#FF7744'),       // warm orange backlight
+    tmp: new THREE.Color(),
+  })
 
   // Current light position with smooth interpolation
   const currentLightPos = useRef({ x: lightPos[0], y: lightPos[1], z: lightPos[2] })
@@ -166,6 +188,48 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
     }
   })
 
+  // Scroll-driven dusk interpolation — reads gloveDuskRef (0→1) each frame
+  // and imperatively updates all light intensities and colors.
+  // Runs AFTER the mouse-follow useFrame above (declaration order in R3F).
+  useFrame(() => {
+    const t = gloveDuskRef?.current ?? 0
+    if (t === 0) return
+    const c = duskColors.current
+
+    // Front light crushes to near-black — "dark side of the moon"
+    if (mainLightRef.current) {
+      mainLightRef.current.intensity = 3.0 + (0.3 - 3.0) * t
+      mainLightRef.current.color.copy(c.tmp.lerpColors(c.mainLight, c.mainDark, t))
+    }
+    // Side fill dims, picks up warm terra cotta
+    if (fillLightRef.current) {
+      fillLightRef.current.intensity = 1.5 + (0.4 - 1.5) * t
+      fillLightRef.current.color.copy(c.tmp.lerpColors(c.fillLight, c.fillDark, t))
+    }
+    // Back rim SURGES — bright coral-orange sunset edge
+    if (backLightRef.current) {
+      backLightRef.current.intensity = 2.0 + (4.0 - 2.0) * t
+      backLightRef.current.color.copy(c.tmp.lerpColors(c.backLight, c.backDark, t))
+    }
+    // Top light drops, shifts to soft lavender
+    if (topLightRef.current) {
+      topLightRef.current.intensity = 30 + (5 - 30) * t
+      topLightRef.current.color.copy(c.tmp.lerpColors(c.topLight, c.topDark, t))
+    }
+    // Ambient crushes to near-black — deep shadows
+    if (ambientRef.current) {
+      ambientRef.current.intensity = 0.6 + (0.08 - 0.6) * t
+      ambientRef.current.color.copy(c.tmp.lerpColors(c.ambLight, c.ambDark, t))
+    }
+    // Spotlight: repositions from front to BEHIND gloves, warm orange backlight
+    if (spotRef.current) {
+      spotRef.current.intensity = 60 * t
+      spotRef.current.position.z = 8 + (-6 - 8) * t    // front → behind
+      spotRef.current.position.y = 4 + (3 - 4) * t     // slight drop
+      spotRef.current.color.copy(c.tmp.lerpColors(c.spotLight, c.spotDark, t))
+    }
+  })
+
   // Dark theme: cooler nighttime lighting with spotlight feel
   // Light theme: warm, bright daylight lighting
   const mainIntensity = isDarkTheme ? 2.4 : 3
@@ -207,6 +271,7 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
 
       {/* Back light - creates rim lighting */}
       <directionalLight
+        ref={backLightRef}
         position={[0, 3, -5]}
         intensity={backIntensity}
         color={backColor}
@@ -214,25 +279,25 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
 
       {/* Top light */}
       <pointLight
+        ref={topLightRef}
         position={[0, 6, 0]}
         intensity={topIntensity}
         color={topColor}
       />
 
       {/* Ambient fill */}
-      <ambientLight intensity={ambientIntensity} color={isDarkTheme ? '#778899' : '#ffffff'} />
+      <ambientLight ref={ambientRef} intensity={ambientIntensity} color={isDarkTheme ? '#778899' : '#ffffff'} />
 
-      {/* Spotlight for dark theme - focused dramatic lighting on the gloves */}
-      {isDarkTheme && (
-        <spotLight
-          position={[0, 4, 8]}
-          angle={isDarkestTheme ? 0.7 : 0.6}
-          penumbra={isDarkestTheme ? 0.6 : 0.8}
-          intensity={isDarkestTheme ? 80 : 40}
-          color={isDarkestTheme ? '#ffffff' : '#aabbcc'}
-          target-position={[0, 0, 0]}
-        />
-      )}
+      {/* Spotlight — always present, fades in via dusk interpolation (intensity 0 at t=0) */}
+      <spotLight
+        ref={spotRef}
+        position={[0, 4, 8]}
+        angle={0.6}
+        penumbra={0.8}
+        intensity={isDarkTheme ? (isDarkestTheme ? 80 : 40) : 0}
+        color={isDarkTheme ? (isDarkestTheme ? '#ffffff' : '#aabbcc') : '#aabbcc'}
+        target-position={[0, 0, 0]}
+      />
     </>
   )
 }
@@ -272,7 +337,102 @@ function MouseFollowGroup({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function Scene({ settings, shadowSettings, themeMode = 'light' }: { settings: Settings; shadowSettings?: ShadowSettings; themeMode?: ThemeMode }) {
+// Scroll-driven scale wrapper — reads a mutable ref each frame for jitter-free interpolation
+function ScaleGroup({ children, gloveScaleRef }: { children: React.ReactNode; gloveScaleRef?: React.RefObject<number> }) {
+  const groupRef = useRef<THREE.Group>(null)
+  useFrame(() => {
+    if (!groupRef.current || !gloveScaleRef?.current) return
+    const s = gloveScaleRef.current
+    groupRef.current.scale.set(s, s, s)
+  })
+  return <group ref={groupRef}>{children}</group>
+}
+
+// Scroll-driven Y-axis rotation — turntable spin mapped to scroll position
+function ScrollRotationGroup({ children, gloveRotationRef }: { children: React.ReactNode; gloveRotationRef?: React.RefObject<number> }) {
+  const groupRef = useRef<THREE.Group>(null)
+  useFrame(() => {
+    if (!groupRef.current || !gloveRotationRef?.current) return
+    groupRef.current.rotation.y = gloveRotationRef.current
+  })
+  return <group ref={groupRef}>{children}</group>
+}
+
+// Lightformers inside <Environment> — uses refs + useFrame for dusk interpolation
+function DuskLightformers({ isDarkTheme, gloveDuskRef }: { isDarkTheme: boolean; gloveDuskRef?: React.RefObject<number> }) {
+  const lf1Ref = useRef<THREE.Mesh>(null)
+  const lf2Ref = useRef<THREE.Mesh>(null)
+  const lf3Ref = useRef<THREE.Mesh>(null)
+
+  const lfColors = useRef({
+    lf1Light: new THREE.Color('#ffffff'),
+    lf1Dark: new THREE.Color('#CC6633'),       // burnt terra cotta — warm top reflections
+    lf2Light: new THREE.Color('#ffffff'),
+    lf2Dark: new THREE.Color('#D8A8D8'),       // soft mauve — purple tint on left
+    lf3Light: new THREE.Color('#ffd700'),
+    lf3Dark: new THREE.Color('#FF9955'),       // coral-orange (gold → warm sunset)
+    tmp: new THREE.Color(),
+  })
+
+  useFrame(() => {
+    const t = gloveDuskRef?.current ?? 0
+    if (t === 0) return
+    const c = lfColors.current
+
+    if (lf1Ref.current) {
+      const mat = (lf1Ref.current as unknown as { material: THREE.MeshBasicMaterial }).material
+      mat.color.copy(c.tmp.lerpColors(c.lf1Light, c.lf1Dark, t))
+      const intensity = 4.0 + (1.5 - 4.0) * t     // 4.0 → 1.5
+      mat.color.multiplyScalar(intensity / 4.0)
+    }
+    if (lf2Ref.current) {
+      const mat = (lf2Ref.current as unknown as { material: THREE.MeshBasicMaterial }).material
+      mat.color.copy(c.tmp.lerpColors(c.lf2Light, c.lf2Dark, t))
+      const intensity = 2.0 + (0.8 - 2.0) * t     // 2.0 → 0.8
+      mat.color.multiplyScalar(intensity / 2.0)
+    }
+    if (lf3Ref.current) {
+      const mat = (lf3Ref.current as unknown as { material: THREE.MeshBasicMaterial }).material
+      mat.color.copy(c.tmp.lerpColors(c.lf3Light, c.lf3Dark, t))
+      const intensity = 1.0 + (2.0 - 1.0) * t     // 1.0 → 2.0 (INCREASES — warm accent)
+      mat.color.multiplyScalar(intensity / 1.0)
+    }
+  })
+
+  return (
+    <group rotation={[-Math.PI / 3, 0, 0]}>
+      <Lightformer
+        ref={lf1Ref}
+        form="circle"
+        intensity={isDarkTheme ? 2.5 : 4}
+        color={isDarkTheme ? '#99aacc' : '#ffffff'}
+        rotation-x={Math.PI / 2}
+        position={[0, 5, -9]}
+        scale={2}
+      />
+      <Lightformer
+        ref={lf2Ref}
+        form="circle"
+        intensity={isDarkTheme ? 1.2 : 2}
+        color={isDarkTheme ? '#7788bb' : '#ffffff'}
+        rotation-y={Math.PI / 2}
+        position={[-5, 1, -1]}
+        scale={2}
+      />
+      <Lightformer
+        ref={lf3Ref}
+        form="ring"
+        color={isDarkTheme ? '#5577aa' : '#ffd700'}
+        intensity={isDarkTheme ? 0.6 : 1}
+        rotation-y={Math.PI / 2}
+        position={[5, 2, 0]}
+        scale={3}
+      />
+    </group>
+  )
+}
+
+export function Scene({ settings, shadowSettings, themeMode = 'light', gloveScaleRef, gloveRotationRef, gloveDuskRef }: { settings: Settings; shadowSettings?: ShadowSettings; themeMode?: ThemeMode; gloveScaleRef?: React.RefObject<number>; gloveRotationRef?: React.RefObject<number>; gloveDuskRef?: React.RefObject<number> }) {
   const isDarkTheme = themeMode === 'dark' || themeMode === 'darkInverted'
   // Use shadow settings if provided, otherwise use defaults
   const lightPos: [number, number, number] = shadowSettings
@@ -305,11 +465,15 @@ export function Scene({ settings, shadowSettings, themeMode = 'light' }: { setti
         <Suspense fallback={null}>
           <ShadowMapUpdater />
 
-          <MouseFollowGroup>
-            <PhysicsWithPauseDetection>
-              <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} themeMode={themeMode} />
-            </PhysicsWithPauseDetection>
-          </MouseFollowGroup>
+          <ScaleGroup gloveScaleRef={gloveScaleRef}>
+            <ScrollRotationGroup gloveRotationRef={gloveRotationRef}>
+              <MouseFollowGroup>
+                <PhysicsWithPauseDetection>
+                  <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} themeMode={themeMode} gloveScaleRef={gloveScaleRef} />
+                </PhysicsWithPauseDetection>
+              </MouseFollowGroup>
+            </ScrollRotationGroup>
+          </ScaleGroup>
 
           <Lighting
             lightPos={lightPos}
@@ -320,36 +484,12 @@ export function Scene({ settings, shadowSettings, themeMode = 'light' }: { setti
             shadowBias={shadowBias}
             isDarkTheme={isDarkTheme}
             themeMode={themeMode}
+            gloveDuskRef={gloveDuskRef}
           />
 
           {/* Environment with custom lightformers for better reflections */}
           <Environment resolution={256}>
-            <group rotation={[-Math.PI / 3, 0, 0]}>
-              <Lightformer
-                form="circle"
-                intensity={isDarkTheme ? 2.5 : 4}
-                color={isDarkTheme ? '#99aacc' : '#ffffff'}
-                rotation-x={Math.PI / 2}
-                position={[0, 5, -9]}
-                scale={2}
-              />
-              <Lightformer
-                form="circle"
-                intensity={isDarkTheme ? 1.2 : 2}
-                color={isDarkTheme ? '#7788bb' : '#ffffff'}
-                rotation-y={Math.PI / 2}
-                position={[-5, 1, -1]}
-                scale={2}
-              />
-              <Lightformer
-                form="ring"
-                color={isDarkTheme ? '#5577aa' : '#ffd700'}
-                intensity={isDarkTheme ? 0.6 : 1}
-                rotation-y={Math.PI / 2}
-                position={[5, 2, 0]}
-                scale={3}
-              />
-            </group>
+            <DuskLightformers isDarkTheme={isDarkTheme} gloveDuskRef={gloveDuskRef} />
           </Environment>
         </Suspense>
       </Canvas>

@@ -155,8 +155,8 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     const handleScroll = () => {
       const wrapper = topCardsWrapperRef.current
       if (!wrapper) return
+
       const rect = wrapper.getBoundingClientRect()
-      // Scrolled past default cards → show mini tray
       if (!currentCompact && rect.bottom < -BUFFER) {
         currentCompact = true
         if (scrollContainerRef.current) {
@@ -164,14 +164,12 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
         }
         setCompactState(prev => prev === 'hidden' ? 'mini' : prev)
       }
-      // Scrolled back to default cards → hide everything
       else if (currentCompact && rect.bottom > BUFFER) {
         currentCompact = false
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollLeft = sharedScrollLeft.current
         }
         setCompactState('hidden')
-        // Clear any pending hover timeouts
         if (hoverTimeoutRef.current) { clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = null }
         if (leaveTimeoutRef.current) { clearTimeout(leaveTimeoutRef.current); leaveTimeoutRef.current = null }
       }
@@ -1299,7 +1297,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
               key="compact-bar"
               className="fixed top-0 left-0 right-0"
               style={{
-                zIndex: 20,
+                zIndex: 50,
                 display: 'flex',
                 justifyContent: 'center',
                 pointerEvents: 'none', // Let children handle pointer events

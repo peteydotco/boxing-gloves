@@ -317,6 +317,16 @@ canvas {
   }
 }
 
+.bottom-padding-responsive {
+  padding-bottom: 0.75rem; /* Narrow default: 12px */
+}
+
+@media (min-width: 1128px) {
+  .bottom-padding-responsive {
+    padding-bottom: 1.5rem; /* Wide: 24px */
+  }
+}
+
 .horizontal-padding-responsive {
   padding-left: 0.75rem; /* Narrow default: 12px */
   padding-right: 0.75rem;

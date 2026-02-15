@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, useEffect } from 'react'
+import { useRef, useCallback, useMemo, useEffect, type RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@react-three/rapier'
@@ -21,7 +21,7 @@ function createRopeGeometry(
 ): THREE.TubeGeometry {
   // If positions provided, create geometry at correct initial location
   // Otherwise create a minimal geometry that will be updated on first frame
-  const start = anchorPos ? new THREE.Vector3(anchorPos.x, anchorPos.y + 4, anchorPos.z) : new THREE.Vector3(0, 7.2, 0)
+  const start = anchorPos ? new THREE.Vector3(0, anchorPos.y + 4, 0) : new THREE.Vector3(0, 7.2, 0)
   const end = glovePos || new THREE.Vector3(0, 0.7, 0)
   const mid = new THREE.Vector3().lerpVectors(start, end, 0.5)
 
@@ -424,7 +424,7 @@ function DraggableGloveWithRope({
     // Start the rope well above the anchor (off-screen) so the shadow is one
     // continuous curve with no seam. The old separate shadow-extension cylinder
     // created a visible kink where it met the curved rope.
-    pts[0].set(anchorPos.x, anchorPos.y + 4, anchorPos.z)
+    pts[0].set(0, anchorPos.y + 4, 0)
     // Push control point to 2× sag so the curve's geometric midpoint matches t.mid
     pts[1].copy(anchorPos).lerp(t.gloveAttach, 0.5)
     pts[1].y -= sag * 2
@@ -721,14 +721,25 @@ function DraggableGloveWithRope({
 useGLTF.preload(leftGloveModelUrl, true)
 useGLTF.preload(rightGloveModelUrl, true)
 
-export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light' }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' }) {
+export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light', gloveScaleRef }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'; gloveScaleRef?: RefObject<number> }) {
+  const shadowMatRef = useRef<THREE.ShadowMaterial>(null)
+
+  // Fade shadow shortly after leaving hero — full at scale 1.15, gone by scale 1.11
+  // (~27% into scroll travel). Clamp so it stays at 0 for the rest.
+  useFrame(() => {
+    if (!shadowMatRef.current || !gloveScaleRef?.current) return
+    const FADE_END = 1.11   // shadow fully gone at this scale value
+    const t = Math.min(1, Math.max(0, (gloveScaleRef.current - FADE_END) / (1.15 - FADE_END)))
+    shadowMatRef.current.opacity = shadowOpacity * t
+  })
+
   return (
     <group>
       {/* Shadow plane behind gloves — centered on rope midpoint (anchor y=3.2, gloves ~y=0)
           Tall enough to catch rope shadows that extend above the viewport */}
       <mesh position={[0, 2, -2]} receiveShadow>
         <planeGeometry args={[20, 20]} />
-        <shadowMaterial opacity={shadowOpacity} transparent />
+        <shadowMaterial ref={shadowMatRef} opacity={shadowOpacity} transparent />
       </mesh>
 
       {/* Anchor point visual - hidden since it should be off-screen */}

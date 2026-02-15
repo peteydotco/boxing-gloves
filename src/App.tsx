@@ -19,10 +19,6 @@ import { gsap, ScrollTrigger } from './lib/gsap'
 function App() {
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const [isDesktop, setIsDesktop] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
-  })
-
   const [showCursor, setShowCursor] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.mobile : true
   })
@@ -64,7 +60,6 @@ function App() {
 
     const handleResize = () => {
       const w = window.innerWidth
-      setIsDesktop(w >= BREAKPOINTS.desktop)
       setShowCursor(w >= BREAKPOINTS.mobile)
       setIsMobile(w < BREAKPOINTS.tablet)
       setGraffitiScale(computeGraffitiScale(w))
@@ -83,9 +78,15 @@ function App() {
   const heroRef = useRef<HTMLElement>(null)
   const string4TriggerRef = useRef<HTMLDivElement>(null)
 
+  // Scroll-driven glove scale: starts large in hero, scrubs down as user scrolls into graffiti
+  const gloveScaleRef = useRef(1.15)
+  const gloveRotationRef = useRef(0)
+  const gloveDuskRef = useRef(0)  // 0 = full light, 1 = full dusk
+  const travelZoneRef = useRef<HTMLDivElement>(null)
+
   // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
-  const GRAFFITI_TILT = 0.5  // max degrees of rotation (very subtle)
-  const GRAFFITI_SHIFT = 2   // max px translate (barely perceptible)
+  const GRAFFITI_TILT = 2.0  // max degrees of rotation
+  const GRAFFITI_SHIFT = 5   // max px translate
   const graffitiSpring = { stiffness: 50, damping: 20, mass: 1 }
   const graffitiTiltTargetX = useMotionValue(0)
   const graffitiTiltTargetY = useMotionValue(0)
@@ -151,6 +152,50 @@ function App() {
       scrollRef.current = null
     }
   }, [])
+
+  // Scroll-driven glove scale (1.5→1.0) + rotation (0→360°).
+  // Both span the full travel zone for a very gradual, scroll-mapped effect.
+  useLayoutEffect(() => {
+    const zone = travelZoneRef.current
+    if (!zone) return
+
+    const ctx = gsap.context(() => {
+      gsap.to(gloveScaleRef, {
+        current: 1.0,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: zone,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.6,
+        },
+      })
+      gsap.to(gloveRotationRef, {
+        current: Math.PI * 2,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: zone,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.6,
+        },
+      })
+      // Dusk lighting — scrubs 0→1 over the second half of the travel zone
+      // so the shift begins as gloves approach the gradient dome.
+      gsap.to(gloveDuskRef, {
+        current: 1,
+        ease: 'power2.in',
+        scrollTrigger: {
+          trigger: zone,
+          start: 'center center',
+          end: 'bottom bottom',
+          scrub: 0.6,
+        },
+      })
+    })
+    return () => ctx.revert()
+  }, [])
+
 
   // Hardcoded shadow settings
   const shadowSettings = {
@@ -272,69 +317,89 @@ function App() {
           pointerEvents: 'none',
         }}
       />
-      {/* ===== Hero Section ===== */}
-      <section ref={heroRef} className="relative h-screen w-full flex-shrink-0" style={{ overflow: 'hidden' }}>
+      {/* ===== Gloves Travel Zone =====
+           Wraps the hero + graffiti spacer so the 3D canvas can stick (position: sticky)
+           for the entire scroll range, unpinning naturally when the wrapper ends. */}
+      <div ref={travelZoneRef} style={{ position: 'relative' }}>
 
-        {/* Desktop: 3D Scene */}
-        {isDesktop && (
+        {/* Sticky 3D Canvas — pinned at viewport top through the travel zone (tablet+).
+             z-30 sits above the gradient dome (z-20) so gloves remain visible. */}
+        {!isMobile && (
           <div
-            className="absolute inset-0"
-            style={{ zIndex: 10, pointerEvents: 'auto' }}
+            style={{
+              position: 'sticky',
+              top: 0,
+              height: '100vh',
+              width: '100%',
+              zIndex: 30,
+              pointerEvents: 'auto',
+            }}
           >
-            <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+            <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} gloveScaleRef={gloveScaleRef} gloveRotationRef={gloveRotationRef} gloveDuskRef={gloveDuskRef} />
           </div>
         )}
 
-        {/* Desktop: TopCards */}
-        {isDesktop && (
-          <div
-            className="absolute top-0 left-0 right-0"
-            style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 20 }}
-          >
-            <TopCards themeMode={themeMode} />
-          </div>
-        )}
-
-        {/* Mobile/Tablet: TopCards + 3D Scene inside hero */}
-        {!isDesktop && (
-          <>
-            <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
+        {/* ===== Hero Section =====
+             Tablet+: absolute-positioned so it doesn't add flow height to the travel zone
+             (flow height = sticky canvas + spacer only, giving maximum sticky travel).
+             Mobile: normal flow with Scene inside hero. */}
+        {/* ===== Hero Section ===== */}
+        <section
+          ref={heroRef}
+          className="relative h-screen w-full flex-shrink-0"
+          style={!isMobile ? { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 40, pointerEvents: 'none' } : undefined}
+        >
+          {/* Desktop: TopCards above canvas */}
+          {!isMobile ? (
+            <div
+              className="absolute top-0 left-0 right-0"
+              style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 40 }}
+            >
               <TopCards themeMode={themeMode} />
             </div>
-            <div
-              className="absolute inset-0"
-              style={{ zIndex: 10, pointerEvents: 'auto' }}
-            >
-              <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
-            </div>
-          </>
-        )}
+          ) : (
+            <>
+              <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
+                <TopCards themeMode={themeMode} />
+              </div>
+              <div
+                className="absolute inset-0"
+                style={{ zIndex: 10, pointerEvents: 'auto' }}
+              >
+                <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+              </div>
+            </>
+          )}
+        </section>
 
-      </section>
+        {/* Spacer — scroll through the graffiti while canvas stays pinned.
+             0.58 of SVG height so the gradient dome begins before the tail appears. */}
+        <div
+          aria-hidden
+          style={{
+            height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.58).toFixed(1)}vw - 32vw - 100vh)`,
+            position: 'relative',
+            pointerEvents: 'none',
+          }}
+        />
 
-      {/* Spacer — scroll through the graffiti before content resumes.
-           0.58 of SVG height so the gradient dome begins before the tail appears. */}
-      <div
-        aria-hidden
-        style={{
-          height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.58).toFixed(1)}vw - 32vw - 100vh)`,
-          position: 'relative',
-          pointerEvents: 'none',
-        }}
-      />
+        {/* ===== "And occasionally..." — 4th bio text, fixed at viewport center.
+             Reveal triggered by invisible div at 0.90 SVG height position.
+             Pins through gradient dome for handoff to "Live from SQSP..." lockup.
+             Inside the travel zone so the sticky canvas persists through the gradient. ===== */}
+        <AndOccasionallyText triggerRef={string4TriggerRef} />
 
-      {/* ===== "And occasionally..." — 4th bio text, fixed at viewport center.
-           Reveal triggered by invisible div at 0.90 SVG height position.
-           Pins through gradient dome for handoff to "Live from SQSP..." lockup. ===== */}
-      <AndOccasionallyText triggerRef={string4TriggerRef} />
+        {/* ===== Entry Gradient Transition =====
+             Inside the travel zone — its z-index: 20 covers the sticky canvas (z-10)
+             as the dome grows. The gloves unpin when this runway ends. */}
+        <GradientTransition
+          direction="enter"
+          src="/images/transition-entry.png"
+          className="relative"
+          style={{ zIndex: 20 }}
+        />
 
-      {/* ===== Entry Gradient Transition ===== */}
-      <GradientTransition
-        direction="enter"
-        src="/images/transition-entry.png"
-        className="relative"
-        style={{ zIndex: 20 }}
-      />
+      </div>
 
       {/* ===== Video Morph Section ===== */}
       <VideoMorphSection />
@@ -499,8 +564,16 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
     }
     if (!runway) return
 
-    // Find the VideoMorphSection — sibling after the gradient runway
-    const videoSection = runway.nextElementSibling as HTMLElement | null
+    // Find the VideoMorphSection — may be a sibling of the gradient's parent (travel zone)
+    // if the gradient was moved inside a wrapper for sticky scroll behavior.
+    let videoSection = runway.nextElementSibling as HTMLElement | null
+    if (!videoSection && runway.parentElement) {
+      videoSection = runway.parentElement.nextElementSibling as HTMLElement | null
+      // Skip 0-height / fixed siblings at the wrapper level too
+      while (videoSection && (videoSection.style.position === 'fixed' || videoSection.offsetHeight === 0)) {
+        videoSection = videoSection.nextElementSibling as HTMLElement | null
+      }
+    }
 
     // SplitText — words for reveal, chars for exit
     const split = SplitText.create(text, { type: 'chars' })

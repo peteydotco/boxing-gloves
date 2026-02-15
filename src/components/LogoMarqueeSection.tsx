@@ -2,8 +2,9 @@ import { BackgroundMarquee } from './BackgroundMarquee'
 import { motion } from 'framer-motion'
 
 const quoteLines = [
-  "He\u2019s made a lot of white",
-  "people a lot of money.",
+  "Delivering shareholder value",
+  "despite macroeconomic trends",
+  "since 1989.",
 ]
 
 export function LogoMarqueeSection() {
