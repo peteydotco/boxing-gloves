@@ -260,8 +260,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
 
   return (
     <button
-      data-cursor={previewVideo ? 'play' : 'morph'}
-      {...(!previewVideo && { 'data-cursor-radius': '10' })}
+      data-cursor="play"
       onClick={(e) => {
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
