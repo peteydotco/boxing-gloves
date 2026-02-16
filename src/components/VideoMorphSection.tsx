@@ -362,7 +362,7 @@ export function VideoMorphSection() {
                 } : {}),
               }}
             >
-              Live from SQSP
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '2px' }}>Live</span> from SQSP
             </motion.span>
 
             {/* Morph wrapper — loader → video */}
@@ -505,7 +505,7 @@ export function VideoMorphSection() {
                 } : {}),
               }}
             >
-              Circle Day 2025
+              Circle Day <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '2px' }}>2o25</span>
             </motion.span>
           </div>
 

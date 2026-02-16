@@ -406,36 +406,27 @@ function App() {
       <BioTextReveal
         top={`calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.45).toFixed(1)}vw)`}
         left="25px"
-        width="calc(5 * (100vw - 270px) / 12 + 80px)"
+        width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
         textAlign="left"
       >
-        <span style={{ display: 'block', paddingLeft: '0.5em' }}>Peter Rodriguez is</span>
-        <span style={{ display: 'block' }}>
-          a{' '}
-          <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
-            nuyorican
-          </span>{' '}
-          designer
-        </span>
-        <span style={{ display: 'block', paddingLeft: '1.5em' }}>solving hard problems</span>
-        <span style={{ display: 'block', paddingLeft: '2.5em' }}>with soft products.</span>
+        Peter Rodriguez is a{' '}
+        <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
+          nuyorican
+        </span>{' '}
+        designer solving hard problems with soft products.
       </BioTextReveal>
       {/* String 2 — right-aligned; right-aligns with col 12. Visible on tabletWide+ (≥1128). */}
       {isTabletWide && (
         <BioTextReveal
           top={`calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * bioFactor2).toFixed(1)}vw)`}
           right="25px"
-          width="calc(5 * (100vw - 270px) / 12 + 80px)"
-          textAlign="right"
+          width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+          textAlign="left"
         >
-          <span style={{ display: 'block' }}>Bringing over a decade of</span>
-          <span style={{ display: 'block', paddingRight: '2em' }}>insight, intuition & influence.</span>
-          <span style={{ display: 'block' }}>
-            Off the{' '}
-            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.08em' }}>DomE</span>
-            , to your{' '}
-            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.08em' }}>Chrome</span>.
-          </span>
+          Bringing over a decade of insight, intuition & influence. Off the{' '}
+          <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>DomE</span>
+          , to your{' '}
+          <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>Chrome</span>.
         </BioTextReveal>
       )}
       {/* String 3 — tabletWide+ (≥1128): left-aligned at col 1; narrower: right-aligned at col 12 */}
@@ -445,17 +436,11 @@ function App() {
           ? { left: '25px' }
           : { right: '25px' }
         )}
-        width="calc(5 * (100vw - 270px) / 12 + 80px)"
-        textAlign={isTabletWide ? 'left' : 'right'}
+        width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+        textAlign="left"
       >
-        <span style={{ display: 'block', paddingLeft: '2em' }}>Today he{'\u2019'}s shaping design</span>
-        <span style={{ display: 'block', paddingLeft: '1.5em' }}>for Squarespace{'\u2019'}s CMS with</span>
-        <span style={{ display: 'block', paddingLeft: '0.3em' }}>
-          <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.04em' }}>
-            usER-centerEd
-          </span>{' '}
-          AI tools.
-        </span>
+        <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>TOdAY,</span>{' '}
+        he{'\u2019'}s shaping design for Squarespace{'\u2019'}s CMS with human-centered AI tools.
       </BioTextReveal>
       {/* Invisible trigger for "And occasionally..." reveal — absolute at 1.05
            of SVG height so the SplitText fires well below bio string 3
@@ -686,9 +671,9 @@ function BioTextReveal({
         width,
         zIndex: 1,
         fontFamily: 'Inter',
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: 500,
-        lineHeight: '24px',
+        lineHeight: 1.4,
         letterSpacing: '-0.04em',
         color: '#0E0E0E',
         textAlign,
@@ -829,7 +814,7 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
           textAlign: 'center',
         }}
       >
-        And occasionally, he hops on stage...
+        And occasionally, he hops on the{' '}<span style={{ fontFamily: 'Fresh Marker', letterSpacing: '2px' }}>MIc</span>...
       </div>
     </>
   )

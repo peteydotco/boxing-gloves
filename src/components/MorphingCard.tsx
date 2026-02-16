@@ -708,16 +708,19 @@ interface DescriptionContainerProps {
 }
 
 function DescriptionContainer({ description, styles, isMobile = false, contentScale = 1 }: DescriptionContainerProps) {
-  // Scale font sizes proportionally — 24px canonical on desktop, 14px mobile
-  const fontSize = isMobile ? 14 : Math.round(24 * contentScale)
-  const lineHeight = isMobile ? 20 : Math.round(34 * contentScale)
+  // Canonical width at scale 1: 500px card - 48px padding = 452px
+  const canonicalWidth = 452
+  const scaledWidth = Math.round(canonicalWidth * contentScale)
+  // Scale font sizes proportionally
+  const fontSize = isMobile ? 14 : Math.round(18 * contentScale)
+  const lineHeight = isMobile ? 20 : Math.round(26 * contentScale)
 
   return (
     <div
       style={{
-        // Full width — spans across 3 columns (all available card content width)
-        width: '100%',
-        textAlign: 'left',
+        // Mobile: fill available width (container handles padding)
+        // Desktop: scale width proportionally with card
+        width: isMobile ? '100%' : `${scaledWidth}px`,
       }}
     >
       {description.map((paragraph, i) => (
@@ -730,7 +733,6 @@ function DescriptionContainer({ description, styles, isMobile = false, contentSc
             lineHeight: `${lineHeight}px`,
             letterSpacing: '0',
             color: styles.textColor,
-            textIndent: 0,
           }}
         >
           {paragraph}
