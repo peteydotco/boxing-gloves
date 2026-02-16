@@ -8,6 +8,7 @@
   --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-share-tech-mono: 'Share Tech Mono', ui-monospace, monospace;
   --font-dotgothic: 'DotGothic16', ui-monospace, monospace;
+  --font-fresh-marker: 'Fresh Marker', cursive;
 
   --breakpoint-tablet: 1024px;
 }
@@ -149,6 +150,21 @@
   --shadow-modal: 0 8px 30px rgba(0,0,0,0.6);
 }
 
+/* Video section dissolve — overrides Framer Motion inline styles.
+   .video-dissolve-ready is added by JS after first hide so the CSS transition
+   never interferes with Framer Motion's initial mount animation. */
+.video-dissolve-ready {
+  transition: opacity 0.6s ease-out, translate 0.6s ease-out;
+}
+.video-hidden-up {
+  opacity: 0 !important;
+  translate: 0 -100% !important;
+}
+.video-hidden-down {
+  opacity: 0 !important;
+  translate: 0 100% !important;
+}
+
 /* GT Pressura Fonts */
 @font-face {
   font-family: 'GT Pressura Mono';
@@ -226,10 +242,23 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+@font-face {
+  font-family: 'Fresh Marker';
+  src: url('/fonts/freshmarker.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+::selection {
+  background: #0E0E0E;
+  color: #FFFFFF;
 }
 
 html,

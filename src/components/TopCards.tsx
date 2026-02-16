@@ -1295,6 +1295,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
           {isCompact && !isExpanded && !isClosing && (
             <motion.div
               key="compact-bar"
+              data-compact-bar
               className="fixed top-0 left-0 right-0"
               style={{
                 zIndex: 50,
@@ -1304,16 +1305,16 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                 overflow: 'visible',
               }}
               initial={justClosedFromCompact.current
-                ? { y: 0, opacity: 1 }
-                : { y: -60, opacity: 0 }
+                ? { y: 0 }
+                : { y: '-100%' }
               }
-              animate={{ y: 0, opacity: 1 }}
-              exit={expandedFromCompact.current ? { opacity: 0 } : { y: -60, opacity: 0 }}
-              transition={justClosedFromCompact.current
+              animate={{ y: 0, transition: justClosedFromCompact.current
                 ? { duration: 0 }
-                : expandedFromCompact.current
-                  ? { opacity: { duration: 0.15, ease: 'easeOut' } }
-                  : signatureSpring
+                : { duration: 0.6, ease: [0.33, 1, 0.68, 1] }  // ease-out: decelerates in
+              }}
+              exit={expandedFromCompact.current
+                ? { y: 0, transition: { duration: 0 } }
+                : { y: '-100%', opacity: 0, transition: { duration: 0.4, ease: [0.33, 1, 0.68, 1] } }  // ease-out: fast start, decelerates off
               }
             >
               {/* Magnetic hit zone — invisible area around the mini tray that captures
@@ -1416,6 +1417,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
                     backgroundColor: isOverDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                    boxShadow: '0px 216px 60px 0px rgba(0,0,0,0), 0px 138px 55px 0px rgba(0,0,0,0.01), 0px 78px 47px 0px rgba(0,0,0,0.05), 0px 35px 35px 0px rgba(0,0,0,0.09), 0px 9px 19px 0px rgba(0,0,0,0.1)',
                     transition: 'background-color 0.4s ease',
                     // Magnetic: glass lags behind container (counter-displacement)
                     x: glassMagX,
@@ -1546,19 +1548,17 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                           WebkitBackdropFilter: (!isMiniTray && isCta) ? 'blur(8px)' : undefined,
                           transition: 'background-color 0.4s ease',
                         }}
-                        // When remounting after close-from-compact, start at mini dimensions
-                        // so pills don't spring from 0 → 28×8 (visible growth glitch).
-                        {...(justClosedFromCompact.current && {
-                          initial: {
-                            width: 28,
-                            height: 8,
-                            borderRadius: 44,
-                            backgroundColor: miniColors[card.variant] || miniColors.blue,
-                            paddingLeft: 0,
-                            paddingRight: 0,
-                            marginRight: isLastPill ? 0 : 4,
-                          },
-                        })}
+                        // Always start at mini dimensions so pills don't animate
+                        // their size on first mount (the container slide-in is enough).
+                        initial={{
+                          width: 28,
+                          height: 8,
+                          borderRadius: 44,
+                          backgroundColor: miniColors[card.variant] || miniColors.blue,
+                          paddingLeft: 0,
+                          paddingRight: 0,
+                          marginRight: isLastPill ? 0 : 4,
+                        }}
                         animate={{
                           width: isMiniTray ? 28 : expandedPillWidth,
                           height: isMiniTray ? 8 : 48,

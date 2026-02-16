@@ -8,7 +8,7 @@ const LIGHT_COLOR = 'rgba(255, 255, 255, 0.5)'
 const ICON_PARALLAX = 6
 
 // Max joystick nub offset during drag (px)
-const NUB_OFFSET = 10
+const NUB_OFFSET = 16
 
 export function CustomCursor() {
   const { x, y, rawX, rawY, width, height, borderRadius, opacity, isMorphed, isInverted, mode, isEnabled } = useCursorMorph()

@@ -299,6 +299,17 @@ export function useCursorMorph(): CursorMorphValues {
       // to an adjacent element transitions directly without flashing to default.
       defaultTimerRef.current = setTimeout(() => {
         defaultTimerRef.current = null
+
+        // Midpoint jump: instantly skip to halfway between current morphed size
+        // and the default circle, then let the spring settle the remaining half.
+        // This eliminates the dramatic large-shape-to-circle shrink animation.
+        const curW = width.get()
+        const curH = height.get()
+        const curR = borderRadius.get()
+        width.jump((curW + DEFAULT_SIZE) / 2)
+        height.jump((curH + DEFAULT_SIZE) / 2)
+        borderRadius.jump((curR + DEFAULT_SIZE / 2) / 2)
+
         updateMode('default')
         isMorphed.set(0)
         width.set(DEFAULT_SIZE)

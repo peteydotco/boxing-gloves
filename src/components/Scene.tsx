@@ -348,6 +348,16 @@ function ScaleGroup({ children, gloveScaleRef }: { children: React.ReactNode; gl
   return <group ref={groupRef}>{children}</group>
 }
 
+// Scroll-driven horizontal translate — zig-zag movement on sub-desktop viewports
+function HorizontalTranslateGroup({ children, gloveHorizontalRef }: { children: React.ReactNode; gloveHorizontalRef?: React.RefObject<number> }) {
+  const groupRef = useRef<THREE.Group>(null)
+  useFrame(() => {
+    if (!groupRef.current || !gloveHorizontalRef) return
+    groupRef.current.position.x = gloveHorizontalRef.current
+  })
+  return <group ref={groupRef}>{children}</group>
+}
+
 // Scroll-driven Y-axis rotation — turntable spin mapped to scroll position
 function ScrollRotationGroup({ children, gloveRotationRef }: { children: React.ReactNode; gloveRotationRef?: React.RefObject<number> }) {
   const groupRef = useRef<THREE.Group>(null)
@@ -432,7 +442,7 @@ function DuskLightformers({ isDarkTheme, gloveDuskRef }: { isDarkTheme: boolean;
   )
 }
 
-export function Scene({ settings, shadowSettings, themeMode = 'light', gloveScaleRef, gloveRotationRef, gloveDuskRef }: { settings: Settings; shadowSettings?: ShadowSettings; themeMode?: ThemeMode; gloveScaleRef?: React.RefObject<number>; gloveRotationRef?: React.RefObject<number>; gloveDuskRef?: React.RefObject<number> }) {
+export function Scene({ settings, shadowSettings, themeMode = 'light', gloveScaleRef, gloveRotationRef, gloveDuskRef, gloveHorizontalRef }: { settings: Settings; shadowSettings?: ShadowSettings; themeMode?: ThemeMode; gloveScaleRef?: React.RefObject<number>; gloveRotationRef?: React.RefObject<number>; gloveDuskRef?: React.RefObject<number>; gloveHorizontalRef?: React.RefObject<number> }) {
   const isDarkTheme = themeMode === 'dark' || themeMode === 'darkInverted'
   // Use shadow settings if provided, otherwise use defaults
   const lightPos: [number, number, number] = shadowSettings
@@ -466,13 +476,15 @@ export function Scene({ settings, shadowSettings, themeMode = 'light', gloveScal
           <ShadowMapUpdater />
 
           <ScaleGroup gloveScaleRef={gloveScaleRef}>
-            <ScrollRotationGroup gloveRotationRef={gloveRotationRef}>
-              <MouseFollowGroup>
-                <PhysicsWithPauseDetection>
-                  <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} themeMode={themeMode} gloveScaleRef={gloveScaleRef} />
-                </PhysicsWithPauseDetection>
-              </MouseFollowGroup>
-            </ScrollRotationGroup>
+            <HorizontalTranslateGroup gloveHorizontalRef={gloveHorizontalRef}>
+              <ScrollRotationGroup gloveRotationRef={gloveRotationRef}>
+                <MouseFollowGroup>
+                  <PhysicsWithPauseDetection>
+                    <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} themeMode={themeMode} gloveScaleRef={gloveScaleRef} />
+                  </PhysicsWithPauseDetection>
+                </MouseFollowGroup>
+              </ScrollRotationGroup>
+            </HorizontalTranslateGroup>
           </ScaleGroup>
 
           <Lighting

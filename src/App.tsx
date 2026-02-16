@@ -10,6 +10,7 @@ import { SelectedWorksHeader } from './components/SelectedWorksHeader'
 import { ProjectCardsGrid } from './components/ProjectCardsGrid'
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
+import { BottomBar } from './components/BottomBar'
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { BREAKPOINTS } from './constants'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
@@ -23,19 +24,19 @@ function App() {
     return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.mobile : true
   })
 
-  // Below tablet breakpoint (1024px) we use a shorter graffiti height
-  // to keep PETEY legible on narrower viewports.
+  // Below mobile breakpoint (768px) — non-sticky canvas, simplified scene.
   const [isMobile, setIsMobile] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.tablet : false
+    return typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.mobile : false
   })
 
-  // Graffiti scale factor — scales continuously below tabletWide (1128px) to prevent
-  // the SVG from being too large on narrower viewports.
-  // Above 1128: 1.0 (full size). Below 1128→768: interpolates from 1.0 → 0.667.
+  // Graffiti scale factor — on narrow viewports the SVG scales UP so PETEY
+  // stays optically centered behind the hero gloves.
+  // Desktop (≥1128): 1.0. Tablet (~1024): ~1.15. Mobile (≤768): 1.35.
+  // Interpolates smoothly between breakpoints.
   const computeGraffitiScale = (w: number) => {
     if (w >= BREAKPOINTS.tabletWide) return 1
-    if (w <= BREAKPOINTS.mobile) return 2 / 3
-    return 2 / 3 + (1 / 3) * (w - BREAKPOINTS.mobile) / (BREAKPOINTS.tabletWide - BREAKPOINTS.mobile)
+    if (w <= BREAKPOINTS.mobile) return 1.2
+    return 1.2 - 0.2 * (w - BREAKPOINTS.mobile) / (BREAKPOINTS.tabletWide - BREAKPOINTS.mobile)
   }
   const [graffitiScale, setGraffitiScale] = useState(() => {
     return typeof window !== 'undefined' ? computeGraffitiScale(window.innerWidth) : 1
@@ -61,7 +62,9 @@ function App() {
     const handleResize = () => {
       const w = window.innerWidth
       setShowCursor(w >= BREAKPOINTS.mobile)
-      setIsMobile(w < BREAKPOINTS.tablet)
+      setIsMobile(w < BREAKPOINTS.mobile)
+      setIsDesktop(w >= BREAKPOINTS.desktop)
+      setIsTabletWide(w >= BREAKPOINTS.tabletWide)
       setGraffitiScale(computeGraffitiScale(w))
     }
 
@@ -82,7 +85,9 @@ function App() {
   const gloveScaleRef = useRef(1.15)
   const gloveRotationRef = useRef(0)
   const gloveDuskRef = useRef(0)  // 0 = full light, 1 = full dusk
+  const gloveHorizontalRef = useRef(0)  // scroll-driven horizontal zig-zag (sub-desktop only)
   const travelZoneRef = useRef<HTMLDivElement>(null)
+  const stickyCanvasRef = useRef<HTMLDivElement>(null)
 
   // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
   const GRAFFITI_TILT = 2.0  // max degrees of rotation
@@ -196,6 +201,39 @@ function App() {
     return () => ctx.revert()
   }, [])
 
+  // Dissolve BottomBar + compact pill bar to 0% opacity during video section.
+  // Uses a CSS class with !important to override Framer Motion's inline opacity.
+  useLayoutEffect(() => {
+    const videoSection = document.querySelector('[data-section="video-morph"]')
+    if (!videoSection) return
+
+    const toggle = (hide: boolean) => {
+      const compact = document.querySelector('[data-compact-bar]')
+      const bottom = document.querySelector('[data-bottom-bar]')
+      if (hide) {
+        // Mark ready so CSS transition kicks in for both hide AND subsequent unhide
+        compact?.classList.add('video-dissolve-ready', 'video-hidden-up')
+        bottom?.classList.add('video-dissolve-ready', 'video-hidden-down')
+      } else {
+        // Remove hidden but keep dissolve-ready so the return animates
+        compact?.classList.remove('video-hidden-up')
+        bottom?.classList.remove('video-hidden-down')
+      }
+    }
+
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: videoSection,
+        start: 'top bottom',
+        end: 'bottom top',
+        onEnter: () => toggle(true),
+        onLeave: () => toggle(false),
+        onEnterBack: () => toggle(true),
+        onLeaveBack: () => toggle(false),
+      })
+    })
+    return () => ctx.revert()
+  }, [])
 
   // Hardcoded shadow settings
   const shadowSettings = {
@@ -229,10 +267,90 @@ function App() {
     ropeDamping: 0.92,
   }
 
+  // Graffiti vertical pull-up — responsive so bio text stays aligned with the SVG.
+  // Desktop (≥1440): -32vw. Sub-desktop (768–1439): -10vw. Mobile (<768): -5vw.
+  // Uses !isMobile && !isDesktop to catch the full 768–1439 range (isTablet only covers 1024–1439).
+  const [isDesktop, setIsDesktop] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
+  })
+  const [isTabletWide, setIsTabletWide] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.tabletWide : true
+  })
+  const graffitiPullUp = isMobile ? 5 : isDesktop ? 32 : 10  // in vw units
+
+  // Bio text vertical position factors (fraction of graffiti SVG height).
+  // Sub-desktop: 50% more gap between strings 2 & 3 for better legibility.
+  const bioFactor2 = isDesktop ? 0.60 : 0.675
+  const bioFactor3 = isDesktop ? 0.75 : 0.85
+
+  // Scroll-driven horizontal zig-zag — sub-desktop only (768–1439px).
+  // Gloves shift: right → left → right → center to weave between bio text strings.
+  useLayoutEffect(() => {
+    if (isDesktop || isMobile) {
+      gloveHorizontalRef.current = 0
+      return
+    }
+    const zone = travelZoneRef.current
+    if (!zone) return
+
+    const ctx = gsap.context(() => {
+      const shift = 1.0 // Three.js world units (~horizontal offset at fov 45, z=7)
+      gsap.fromTo(gloveHorizontalRef,
+        { current: 0 },
+        {
+          keyframes: [
+            { current: shift, duration: 0.33 },    // → right (during string 1)
+            { current: -shift, duration: 0.34 },   // → left (during string 3)
+            { current: 0, duration: 0.33 },         // → center (before gradient)
+          ],
+          ease: 'none',
+          scrollTrigger: {
+            trigger: zone,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 0.6,
+          },
+        }
+      )
+    })
+    return () => ctx.revert()
+  }, [isDesktop, isMobile])
+
+  // Toggle data-cursor-invert on the sticky canvas wrapper when the gradient
+  // dome visually covers the center of the viewport. The dome uses power3.in
+  // (scaleY = progress³), so scaleY ≈ 0.50 at ~79% of the 240vh runway.
+  // This makes the drag/grab cursor invert to white over the dark section.
+  useLayoutEffect(() => {
+    const canvasWrapper = stickyCanvasRef.current
+    const zone = travelZoneRef.current
+    if (!canvasWrapper || !zone) return
+
+    // Find the gradient runway — last child of travel zone with significant height
+    const children = Array.from(zone.children) as HTMLElement[]
+    const runway = children.find(
+      (el) => el.offsetHeight > window.innerHeight && el.style.position !== 'fixed'
+    )
+    if (!runway) return
+
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: runway,
+        start: '79% bottom',
+        end: 'bottom bottom',
+        onEnter: () => canvasWrapper.setAttribute('data-cursor-invert', ''),
+        onLeaveBack: () => canvasWrapper.removeAttribute('data-cursor-invert'),
+        onLeave: () => canvasWrapper.removeAttribute('data-cursor-invert'),
+        onEnterBack: () => canvasWrapper.setAttribute('data-cursor-invert', ''),
+      })
+    })
+    return () => ctx.revert()
+  }, [])
+
   return (
     <div
       ref={containerRef}
       className="relative w-full min-h-screen flex flex-col"
+      style={{ overflowX: 'clip' }}
     >
 
       {/* ===== PETEY Graffiti SVG — page-level background layer =====
@@ -243,7 +361,7 @@ function App() {
         style={{
           top: 0,
           left: 0,
-          width: '100vw',
+          width: '100%',
           zIndex: 0,
           overflow: 'hidden',
           opacity: 0.10,
@@ -260,7 +378,7 @@ function App() {
             // marginLeft auto-centers, then translateX nudges right
             marginLeft: `calc(50vw - ${((isMobile ? 116 : 130) * graffitiScale / 2).toFixed(1)}vw)`,
             translateX: '3%',
-            // Pull up so PETEY aligns behind the boxing gloves
+            // Pull up so PETEY aligns behind the boxing gloves.
             marginTop: '-32vw',
             rotateX: graffitiRotateX,
             rotateY: graffitiRotateY,
@@ -284,24 +402,61 @@ function App() {
            Separate from the graffiti wrapper so they aren't affected by its
            10% opacity. Each block uses GSAP SplitText for a word-by-word
            scroll-driven reveal, staggered as the user scrolls down the tail. */}
+      {/* String 1 — left-aligned; starts at col 1 */}
       <BioTextReveal
-        text="Peter Rodriguez is a nuyorican designer solving hard problems with soft products."
-        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.45).toFixed(1)}vw)`}
-        left="12vw"
-        width="clamp(260px, 22vw, 380px)"
-      />
+        top={`calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.45).toFixed(1)}vw)`}
+        left="25px"
+        width="calc(5 * (100vw - 270px) / 12 + 80px)"
+        textAlign="left"
+      >
+        <span style={{ display: 'block', paddingLeft: '0.5em' }}>Peter Rodriguez is</span>
+        <span style={{ display: 'block' }}>
+          a{' '}
+          <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.08em', textTransform: 'uppercase' as const }}>
+            nuyorican
+          </span>{' '}
+          designer
+        </span>
+        <span style={{ display: 'block', paddingLeft: '1.5em' }}>solving hard problems</span>
+        <span style={{ display: 'block', paddingLeft: '2.5em' }}>with soft products.</span>
+      </BioTextReveal>
+      {/* String 2 — right-aligned; right-aligns with col 12. Visible on tabletWide+ (≥1128). */}
+      {isTabletWide && (
+        <BioTextReveal
+          top={`calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * bioFactor2).toFixed(1)}vw)`}
+          right="25px"
+          width="calc(5 * (100vw - 270px) / 12 + 80px)"
+          textAlign="right"
+        >
+          <span style={{ display: 'block' }}>Bringing over a decade of</span>
+          <span style={{ display: 'block', paddingRight: '2em' }}>insight, intuition & influence.</span>
+          <span style={{ display: 'block' }}>
+            Off the{' '}
+            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.08em' }}>DomE</span>
+            , to your{' '}
+            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.08em' }}>Chrome</span>.
+          </span>
+        </BioTextReveal>
+      )}
+      {/* String 3 — tabletWide+ (≥1128): left-aligned at col 1; narrower: right-aligned at col 12 */}
       <BioTextReveal
-        text="Bringing over a decade of insight, intuition & influence – off the dome, to your chrome."
-        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.60).toFixed(1)}vw)`}
-        right="12vw"
-        width="clamp(320px, 28vw, 480px)"
-      />
-      <BioTextReveal
-        text={`Nowadays he\u2019s shaping the core experience of Squarespace\u2019s flagship website builder with design\u2011minded AI tools.`}
-        top={`calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.75).toFixed(1)}vw)`}
-        left="6vw"
-        width="clamp(280px, 26vw, 440px)"
-      />
+        top={`calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
+        {...(isTabletWide
+          ? { left: '25px' }
+          : { right: '25px' }
+        )}
+        width="calc(5 * (100vw - 270px) / 12 + 80px)"
+        textAlign={isTabletWide ? 'left' : 'right'}
+      >
+        <span style={{ display: 'block', paddingLeft: '2em' }}>Today he{'\u2019'}s shaping design</span>
+        <span style={{ display: 'block', paddingLeft: '1.5em' }}>for Squarespace{'\u2019'}s CMS with</span>
+        <span style={{ display: 'block', paddingLeft: '0.3em' }}>
+          <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.04em' }}>
+            usER-centerEd
+          </span>{' '}
+          AI tools.
+        </span>
+      </BioTextReveal>
       {/* Invisible trigger for "And occasionally..." reveal — absolute at 1.05
            of SVG height so the SplitText fires well below bio string 3
            without adding any document-flow space. */}
@@ -310,7 +465,7 @@ function App() {
         aria-hidden
         style={{
           position: 'absolute',
-          top: `calc(-32vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 1.05).toFixed(1)}vw)`,
+          top: `calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * (isDesktop ? 0.90 : 1.00)).toFixed(1)}vw)`,
           left: 0,
           width: '100%',
           height: '15vh',
@@ -326,6 +481,7 @@ function App() {
              z-30 sits above the gradient dome (z-20) so gloves remain visible. */}
         {!isMobile && (
           <div
+            ref={stickyCanvasRef}
             style={{
               position: 'sticky',
               top: 0,
@@ -335,7 +491,7 @@ function App() {
               pointerEvents: 'auto',
             }}
           >
-            <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} gloveScaleRef={gloveScaleRef} gloveRotationRef={gloveRotationRef} gloveDuskRef={gloveDuskRef} />
+            <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} gloveScaleRef={gloveScaleRef} gloveRotationRef={gloveRotationRef} gloveDuskRef={gloveDuskRef} gloveHorizontalRef={gloveHorizontalRef} />
           </div>
         )}
 
@@ -366,7 +522,7 @@ function App() {
                 className="absolute inset-0"
                 style={{ zIndex: 10, pointerEvents: 'auto' }}
               >
-                <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+                <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} gloveHorizontalRef={gloveHorizontalRef} />
               </div>
             </>
           )}
@@ -377,7 +533,7 @@ function App() {
         <div
           aria-hidden
           style={{
-            height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.58).toFixed(1)}vw - 32vw - 100vh)`,
+            height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.50).toFixed(1)}vw - ${graffitiPullUp}vw - 100vh)`,
             position: 'relative',
             pointerEvents: 'none',
           }}
@@ -401,8 +557,12 @@ function App() {
 
       </div>
 
-      {/* ===== Video Morph Section ===== */}
-      <VideoMorphSection />
+      {/* ===== Video Morph Section =====
+           marginTop: -1px closes a subpixel seam between the travel zone
+           bottom edge and the video section's dark background. */}
+      <div style={{ marginTop: -1 }}>
+        <VideoMorphSection />
+      </div>
 
       {/* ===== Exit Gradient Transition ===== */}
       <GradientTransition
@@ -426,6 +586,9 @@ function App() {
 
       {/* ===== Footer ===== */}
       <SiteFooter />
+
+      {/* ===== Bottom Bar — fixed status bar ===== */}
+      <BottomBar />
 
       {/* Custom cursor (tablet + desktop — useCursorMorph self-disables on pure touch devices) */}
       {showCursor && <CustomCursor />}
@@ -467,17 +630,19 @@ function App() {
 // Words start at autoAlpha: 0 + y: 12, and stagger in with scrub.
 
 function BioTextReveal({
-  text,
+  children,
   top,
   left,
   right,
   width,
+  textAlign = 'justify',
 }: {
-  text: string
+  children: React.ReactNode
   top: string
   left?: string
   right?: string
-  width: string
+  width?: string
+  textAlign?: 'justify' | 'right' | 'left'
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -520,17 +685,16 @@ function BioTextReveal({
         ...(right ? { right } : {}),
         width,
         zIndex: 1,
-        pointerEvents: 'none',
         fontFamily: 'Inter',
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: 500,
-        lineHeight: 1.4,
-        letterSpacing: '-0.02em',
+        lineHeight: '24px',
+        letterSpacing: '-0.04em',
         color: '#0E0E0E',
-        textAlign: 'justify',
+        textAlign,
       }}
     >
-      {text}
+      {children}
     </div>
   )
 }
@@ -577,19 +741,22 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
 
     // SplitText — words for reveal, chars for exit
     const split = SplitText.create(text, { type: 'chars' })
-    gsap.set(split.chars, { opacity: 0, y: 12 })
+    gsap.set(split.chars, { opacity: 0, y: 80 })
 
     const ctx = gsap.context(() => {
-      // ── Char reveal — triggered by invisible div at 0.90 SVG height ──
+      // ── Char reveal — triggered by gradient runway at ~91% scroll ──
+      // The dome uses power3.in (t³): scaleY = progress³.
+      // At 91% scroll → scaleY ≈ 0.75 (dome ¾ up the viewport).
+      // At 97% scroll → scaleY ≈ 0.91 (dome nearly full).
       gsap.to(split.chars, {
         opacity: 1,
         y: 0,
         ease: 'power2.out',
         stagger: { each: 0.03, from: 'edges' },
         scrollTrigger: {
-          trigger: trigger,
-          start: 'top 90%',
-          end: 'bottom 40%',
+          trigger: runway,
+          start: '91% bottom',
+          end: '97% bottom',
           scrub: 0.6,
         },
       })
@@ -643,13 +810,15 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
       {/* Fixed at viewport center — zero document flow */}
       <div
         ref={textRef}
+        data-cursor-invert=""
+        data-cursor-text=""
         style={{
           position: 'fixed',
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
           zIndex: 25,
-          pointerEvents: 'none',
+          pointerEvents: 'auto',
           whiteSpace: 'nowrap',
           fontFamily: 'Inter',
           fontSize: 24,
