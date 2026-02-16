@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react'
+import { IoMdArrowForward } from 'react-icons/io'
 import { BREAKPOINTS } from '../constants'
 import { useNycTime } from '../hooks/useNycTime'
 import { useStatusSchedule, ALL_STATUSES, getNextStatus, getNycDate } from '../hooks/useStatusSchedule'
@@ -8,7 +9,7 @@ import { gsap } from '../lib/gsap'
 const SLIDE_TRANSITION = 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)'
 
 export function BottomBar() {
-  const { hours, minutes, period, colonVisible } = useNycTime()
+  const { hours, minutes, period, timezone, colonVisible } = useNycTime()
   const currentStatus = useStatusSchedule()
   const weather = useNycWeather()
   const barRef = useRef<HTMLDivElement>(null)
@@ -38,23 +39,41 @@ export function BottomBar() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
-  // Scroll-driven fade out — dissolve to 0 as user scrolls past hero (first 100vh).
-  // Uses same easing as VideoMorphSection (power2.out, scrub 0.6).
+  // Entrance — slide up from below after TopCards stagger in.
+  // Uses autoAlpha (visibility + opacity) so it doesn't conflict with the
+  // scroll-driven opacity tween that takes over after entrance completes.
   useLayoutEffect(() => {
     const bar = barRef.current
     if (!bar) return
 
     const ctx = gsap.context(() => {
-      gsap.to(bar, {
-        opacity: 0,
+      // Start hidden and offset
+      gsap.set(bar, { autoAlpha: 0, y: 40 })
+
+      // Entrance animation
+      const entrance = gsap.to(bar, {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.5,
         ease: 'power2.out',
-        scrollTrigger: {
-          trigger: document.body,
-          start: 'top top',
-          end: '100vh top',
-          scrub: 0.6,
-        },
+        delay: 0.3,
       })
+
+      // Scroll-driven fade out — dissolve to 0 as user scrolls past hero.
+      // Uses fromTo so GSAP doesn't snapshot the pre-entrance opacity.
+      gsap.fromTo(bar,
+        { opacity: 1 },
+        {
+          opacity: 0,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: document.body,
+            start: 'top top',
+            end: '100vh top',
+            scrub: 0.6,
+          },
+        }
+      )
     })
 
     return () => ctx.revert()
@@ -95,11 +114,20 @@ export function BottomBar() {
   const fontSize = isMobile ? 15 : 18
 
   const status = ALL_STATUSES[statusIndex]
-  const statusText = isMobile ? status.shortText : status.text
+  const mobileShort = (status.shortText === 'Designing' || status.shortText === 'Teaching')
+    ? status.shortText + '...'
+    : status.shortText
+  const statusText = isMobile ? mobileShort : status.text
 
   // Next-status preview for hover slide-up
   const nextInfo = useMemo(() => getNextStatus(getNycDate()), [statusIndex])
-  const previewText = `${status.shortText} → ${nextInfo.status.shortText} in ${nextInfo.hoursUntil}h`
+  const previewText = (
+    <>
+      {status.shortText}
+      {' '}<IoMdArrowForward style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', position: 'relative', top: '-1px' }} />{' '}
+      {nextInfo.status.shortText} in {nextInfo.hoursUntil}h
+    </>
+  )
 
   // Location label — neighborhood per focus mode
   const locationLabels: Record<number, string> = {
@@ -140,7 +168,7 @@ export function BottomBar() {
         boxShadow: '0px 216px 60px 0px rgba(0,0,0,0), 0px 138px 55px 0px rgba(0,0,0,0.01), 0px 78px 47px 0px rgba(0,0,0,0.05), 0px 35px 35px 0px rgba(0,0,0,0.09), 0px 9px 19px 0px rgba(0,0,0,0.1)',
         padding: '0 20px 1px',
         fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-        fontWeight: 500,
+        fontWeight: 450,
         fontSize,
         color: '#262626',
         pointerEvents: 'auto',
@@ -160,11 +188,30 @@ export function BottomBar() {
         display: 'flex',
         alignItems: 'center',
         whiteSpace: 'nowrap',
+        opacity: (isMobile && hovered) ? 0 : 1,
+        transition: SLIDE_TRANSITION,
       }}>
+        {!isMobile && (weather.isDaytime ? (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
+            <circle cx="8" cy="8" r="3.5" stroke="#262626" strokeWidth="1.5"/>
+            <line x1="8" y1="0.5" x2="8" y2="2.5" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="8" y1="13.5" x2="8" y2="15.5" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="0.5" y1="8" x2="2.5" y2="8" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="13.5" y1="8" x2="15.5" y2="8" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="2.7" y1="2.7" x2="4.1" y2="4.1" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="11.9" y1="11.9" x2="13.3" y2="13.3" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="2.7" y1="13.3" x2="4.1" y2="11.9" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="11.9" y1="4.1" x2="13.3" y2="2.7" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
+            <path d="M6.5 1.5C6.5 1.5 6 4.5 7 7C8 9.5 11 11 13.5 10.5C12.5 13.5 9.5 15 6.5 14C3.5 13 1.5 9.5 2.5 6.5C3.5 3.5 6.5 1.5 6.5 1.5Z" stroke="#262626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        ))}
         <span>
           {hours}
           <span style={{ opacity: colonVisible ? 1 : 0, transition: 'opacity 0.15s ease' }}>:</span>
-          {minutes} {period}
+          {minutes} {period} {timezone}
         </span>
       </div>
 
@@ -189,16 +236,20 @@ export function BottomBar() {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            transform: hovered ? 'translateY(-20px)' : 'translateY(0)',
+            transform: hovered ? 'translateY(-32px)' : 'translateY(0)',
             opacity: hovered ? 0 : 1,
             transition: SLIDE_TRANSITION,
           }}
         >
-          <img
-            src={status.icon}
-            alt=""
-            style={{ width: isMobile ? 19 : 22, height: isMobile ? 19 : 22, flexShrink: 0 }}
-          />
+          {!isMobile && (
+            <div style={{ width: 20, height: 20, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img
+                src={status.icon}
+                alt=""
+                style={{ width: 20, height: 20 }}
+              />
+            </div>
+          )}
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {statusText}
           </span>
@@ -211,7 +262,7 @@ export function BottomBar() {
             position: 'absolute',
             display: 'flex',
             alignItems: 'center',
-            transform: hovered ? 'translateY(0)' : 'translateY(20px)',
+            transform: hovered ? 'translateY(0)' : 'translateY(32px)',
             opacity: hovered ? 1 : 0,
             transition: SLIDE_TRANSITION,
             pointerEvents: 'none',
@@ -232,7 +283,14 @@ export function BottomBar() {
         display: 'flex',
         alignItems: 'center',
         whiteSpace: 'nowrap',
+        opacity: (isMobile && hovered) ? 0 : 1,
+        transition: SLIDE_TRANSITION,
       }}>
+        {!isMobile && (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
+            <path d="M0.769144 5.95684L13.2691 0.191216C14.5973 -0.425972 15.6363 0.534966 15.0191 1.8709L9.26914 14.3084C8.68321 15.5897 6.97227 15.3318 6.96446 13.949L6.95664 8.33965C6.95664 8.26153 6.93321 8.23809 6.85508 8.23809L1.20664 8.21465C-0.137106 8.20684 -0.465231 6.52715 0.769144 5.95684ZM2.70664 6.7459L7.71446 6.71465C8.20664 6.70684 8.46446 6.97247 8.45664 7.44903L8.42539 12.4725C8.42539 12.5037 8.45664 12.5037 8.47227 12.4725L13.316 1.92559C13.3473 1.86309 13.316 1.84747 13.2613 1.86309L2.69883 6.69122C2.65977 6.70684 2.66758 6.7459 2.70664 6.7459Z" fill="#262626"/>
+          </svg>
+        )}
         {weather.loading ? (
           <span style={{ opacity: 0.4 }}>{locationLabel}</span>
         ) : (

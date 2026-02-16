@@ -14,6 +14,8 @@ const GRID_GUTTER = 20
 const GRID_COLS = 12
 
 const computeGridWidth = (vw: number) => {
+  // Mobile: full viewport width, no margins
+  if (vw < 768) return vw
   const videoCols = vw <= 1028 ? 12 : 8
   const contentArea = vw - 2 * GRID_MARGIN
   const colWidth = (contentArea - (GRID_COLS - 1) * GRID_GUTTER) / GRID_COLS
@@ -33,6 +35,7 @@ export function VideoMorphSection() {
     return typeof window !== 'undefined' ? window.innerWidth : 1440
   })
 
+  const isMobile = viewportWidth < BREAKPOINTS.mobile
   const isNarrow = viewportWidth < BREAKPOINTS.tablet
   const isCompactVideo = viewportWidth <= 1028
 
@@ -62,12 +65,15 @@ export function VideoMorphSection() {
   const loaderOpacity = useTransform(morphProgress, [0, 0.05], [1, 0])
   const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(255,255,255,0)', 'rgba(255,255,255,1)'])
 
-  // Compact label slide: start tight next to loader, slide out to twoColOffset
+  // Compact label slide: start tight next to loader, slide out to twoColOffset.
+  // On mobile, labels stay put (no offset) so the expanding video covers them.
   const LABEL_START_GAP = 11 + 24
   const labelLeftX = useTransform(morphProgress, (v: number) => {
+    if (isMobile) return -LABEL_START_GAP
     return -(LABEL_START_GAP + (twoColOffset - LABEL_START_GAP) * v)
   })
   const labelRightX = useTransform(morphProgress, (v: number) => {
+    if (isMobile) return LABEL_START_GAP
     return LABEL_START_GAP + (twoColOffset - LABEL_START_GAP) * v
   })
 
@@ -340,7 +346,7 @@ export function VideoMorphSection() {
               gap: isCompactVideo ? 0 : 24,
               flexDirection: (isNarrow && !isCompactVideo) ? 'column' : 'row',
               width: '100vw',
-              padding: '0 25px',
+              padding: isMobile ? 0 : '0 25px',
               boxSizing: 'border-box',
               position: 'relative',
             }}

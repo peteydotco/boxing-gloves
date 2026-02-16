@@ -442,7 +442,7 @@ function DuskLightformers({ isDarkTheme, gloveDuskRef }: { isDarkTheme: boolean;
   )
 }
 
-export function Scene({ settings, shadowSettings, themeMode = 'light', gloveScaleRef, gloveRotationRef, gloveDuskRef, gloveHorizontalRef }: { settings: Settings; shadowSettings?: ShadowSettings; themeMode?: ThemeMode; gloveScaleRef?: React.RefObject<number>; gloveRotationRef?: React.RefObject<number>; gloveDuskRef?: React.RefObject<number>; gloveHorizontalRef?: React.RefObject<number> }) {
+export function Scene({ settings, shadowSettings, themeMode = 'light', gloveScaleRef, gloveRotationRef, gloveDuskRef, gloveHorizontalRef, gloveLeftRotRef, gloveRightRotRef }: { settings: Settings; shadowSettings?: ShadowSettings; themeMode?: ThemeMode; gloveScaleRef?: React.RefObject<number>; gloveRotationRef?: React.RefObject<number>; gloveDuskRef?: React.RefObject<number>; gloveHorizontalRef?: React.RefObject<number>; gloveLeftRotRef?: React.RefObject<number>; gloveRightRotRef?: React.RefObject<number> }) {
   const isDarkTheme = themeMode === 'dark' || themeMode === 'darkInverted'
   // Use shadow settings if provided, otherwise use defaults
   const lightPos: [number, number, number] = shadowSettings
@@ -480,7 +480,7 @@ export function Scene({ settings, shadowSettings, themeMode = 'light', gloveScal
               <ScrollRotationGroup gloveRotationRef={gloveRotationRef}>
                 <MouseFollowGroup>
                   <PhysicsWithPauseDetection>
-                    <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} themeMode={themeMode} gloveScaleRef={gloveScaleRef} />
+                    <HangingSpheres settings={settings} shadowOpacity={shadowOpacity} themeMode={themeMode} gloveScaleRef={gloveScaleRef} gloveLeftRotRef={gloveLeftRotRef} gloveRightRotRef={gloveRightRotRef} />
                   </PhysicsWithPauseDetection>
                 </MouseFollowGroup>
               </ScrollRotationGroup>

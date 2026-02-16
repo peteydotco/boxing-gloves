@@ -83,7 +83,9 @@ function App() {
 
   // Scroll-driven glove scale: starts large in hero, scrubs down as user scrolls into graffiti
   const gloveScaleRef = useRef(1.15)
-  const gloveRotationRef = useRef(0)
+  const gloveRotationRef = useRef(0)       // legacy full-spin (still used for desktop)
+  const gloveLeftRotRef = useRef(0)        // per-glove Y rotation — left glove
+  const gloveRightRotRef = useRef(0)       // per-glove Y rotation — right glove
   const gloveDuskRef = useRef(0)  // 0 = full light, 1 = full dusk
   const gloveHorizontalRef = useRef(0)  // scroll-driven horizontal zig-zag (sub-desktop only)
   const travelZoneRef = useRef<HTMLDivElement>(null)
@@ -283,10 +285,10 @@ function App() {
   const bioFactor2 = isDesktop ? 0.60 : 0.675
   const bioFactor3 = isDesktop ? 0.75 : 0.85
 
-  // Scroll-driven horizontal zig-zag — sub-desktop only (768–1439px).
+  // Scroll-driven horizontal zig-zag — tablet+ (≥768px).
   // Gloves shift: right → left → right → center to weave between bio text strings.
   useLayoutEffect(() => {
-    if (isDesktop || isMobile) {
+    if (isMobile) {
       gloveHorizontalRef.current = 0
       return
     }
@@ -312,9 +314,55 @@ function App() {
           },
         }
       )
+
+      // Per-glove Y rotation — alternating "face the viewer" during zig-zag.
+      // Right glove faces viewer during zig-right, left glove during zag-left.
+      const faceAngle = Math.PI * 0.75  // ~135° — strong turn to show front face
+
+      // Right glove: rotate during zig-right (phase 1), neutral otherwise
+      gsap.fromTo(gloveRightRotRef,
+        { current: 0 },
+        {
+          keyframes: [
+            { current: faceAngle, duration: 0.25 },    // face viewer during zig right
+            { current: faceAngle, duration: 0.08 },     // hold briefly
+            { current: 0, duration: 0.25 },              // return as zag begins
+            { current: 0, duration: 0.08 },              // hold at neutral
+            { current: 0, duration: 0.34 },              // stay neutral through resolve
+          ],
+          ease: 'none',
+          scrollTrigger: {
+            trigger: zone,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 0.6,
+          },
+        }
+      )
+
+      // Left glove: neutral during zig-right, rotate during zag-left (phase 2)
+      gsap.fromTo(gloveLeftRotRef,
+        { current: 0 },
+        {
+          keyframes: [
+            { current: 0, duration: 0.33 },               // stay neutral during zig right
+            { current: -faceAngle, duration: 0.25 },      // face viewer during zag left
+            { current: -faceAngle, duration: 0.08 },      // hold briefly
+            { current: 0, duration: 0.25 },                // return to neutral
+            { current: 0, duration: 0.09 },                // hold through resolve
+          ],
+          ease: 'none',
+          scrollTrigger: {
+            trigger: zone,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 0.6,
+          },
+        }
+      )
     })
     return () => ctx.revert()
-  }, [isDesktop, isMobile])
+  }, [isMobile])
 
   // Toggle data-cursor-invert on the sticky canvas wrapper when the gradient
   // dome visually covers the center of the viewport. The dome uses power3.in
@@ -355,189 +403,207 @@ function App() {
 
       {/* ===== PETEY Graffiti SVG — page-level background layer =====
            Positioned absolutely from the App root, scrolls with the page.
-           overflow: hidden contains the oversized SVG within the viewport. */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          top: 0,
-          left: 0,
-          width: '100%',
-          zIndex: 0,
-          overflow: 'hidden',
-          opacity: 0.10,
-        }}
-      >
-        <motion.div
+           overflow: hidden contains the oversized SVG within the viewport.
+           Hidden on mobile — hero cuts straight to entry gradient. */}
+      {!isMobile && (
+        <div
+          className="absolute pointer-events-none"
           style={{
-            // Width-driven sizing — slightly clipped on left and right.
-            // Height follows from the 538:1185.79 aspect ratio.
-            width: `${(isMobile ? 116 : 130) * graffitiScale}vw`,
-            height: 'auto',
-            aspectRatio: '538 / 1185.79',
-            // Center horizontally with slight rightward offset:
-            // marginLeft auto-centers, then translateX nudges right
-            marginLeft: `calc(50vw - ${((isMobile ? 116 : 130) * graffitiScale / 2).toFixed(1)}vw)`,
-            translateX: '3%',
-            // Pull up so PETEY aligns behind the boxing gloves.
-            marginTop: '-32vw',
-            rotateX: graffitiRotateX,
-            rotateY: graffitiRotateY,
-            x: graffitiX,
-            y: graffitiY,
-            perspective: 1200,
+            top: 0,
+            left: 0,
+            width: '100%',
+            zIndex: 0,
+            overflow: 'hidden',
+            opacity: 0.10,
           }}
         >
-          <PeteyGraffitiSvg
+          <motion.div
             style={{
-              width: '100%',
-              height: '100%',
-              display: 'block',
+              width: `${130 * graffitiScale}vw`,
+              height: 'auto',
+              aspectRatio: '538 / 1185.79',
+              marginLeft: `calc(50vw - ${(130 * graffitiScale / 2).toFixed(1)}vw)`,
+              translateX: '3%',
+              marginTop: '-32vw',
+              rotateX: graffitiRotateX,
+              rotateY: graffitiRotateY,
+              x: graffitiX,
+              y: graffitiY,
+              perspective: 1200,
             }}
-          />
+          >
+            <PeteyGraffitiSvg
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'block',
+              }}
+            />
 
-        </motion.div>
-      </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* ===== Bio text — positioned along the graffiti tail =====
            Separate from the graffiti wrapper so they aren't affected by its
            10% opacity. Each block uses GSAP SplitText for a word-by-word
-           scroll-driven reveal, staggered as the user scrolls down the tail. */}
-      {/* String 1 — left-aligned; starts at col 1 */}
-      <BioTextReveal
-        top={`calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.45).toFixed(1)}vw)`}
-        left="25px"
-        width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
-        textAlign="left"
-      >
-        Peter Rodriguez is a{' '}
-        <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
-          nuyorican
-        </span>{' '}
-        designer solving hard problems with soft products.
-      </BioTextReveal>
-      {/* String 2 — right-aligned; right-aligns with col 12. Visible on tabletWide+ (≥1128). */}
-      {isTabletWide && (
-        <BioTextReveal
-          top={`calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * bioFactor2).toFixed(1)}vw)`}
-          right="25px"
-          width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
-          textAlign="left"
-        >
-          Bringing over a decade of insight, intuition & influence. Off the{' '}
-          <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>DomE</span>
-          , to your{' '}
-          <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>Chrome</span>.
-        </BioTextReveal>
+           scroll-driven reveal, staggered as the user scrolls down the tail.
+           Hidden on mobile (no graffiti tail to attach to). */}
+      {!isMobile && (
+        <>
+          {/* String 1 — left-aligned; starts at col 1 */}
+          <BioTextReveal
+            top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * 0.45).toFixed(1)}vw)`}
+            left="25px"
+            width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+            textAlign="left"
+          >
+            Peter Rodriguez is a{' '}
+            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
+              nuyorican
+            </span>{' '}
+            designer solving hard problems with soft products.
+          </BioTextReveal>
+          {/* String 2 — right-aligned; right-aligns with col 12. Visible on tabletWide+ (≥1128). */}
+          {isTabletWide && (
+            <BioTextReveal
+              top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor2).toFixed(1)}vw)`}
+              right="25px"
+              width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+              textAlign="left"
+            >
+              Bringing over a decade of insight, intuition & influence. Off the{' '}
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>DomE</span>
+              , to your{' '}
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>Chrome</span>.
+            </BioTextReveal>
+          )}
+          {/* Strings 3 & 4 — tabletWide+ (≥1128): split into two flanking strings */}
+          {isTabletWide ? (
+            <>
+              {/* String 3 — left-aligned, flanks gloves on the left */}
+              <BioTextReveal
+                top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
+                left="25px"
+                width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+                textAlign="left"
+              >
+                <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px' }}>NoWADays</span>
+                , he{'\u2019'}s shaping design
+              </BioTextReveal>
+              {/* String 4 — right-aligned, flanks gloves on the right */}
+              <BioTextReveal
+                top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
+                right="25px"
+                width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+                textAlign="left"
+              >
+                for Squarespace{'\u2019'}s site builder.
+              </BioTextReveal>
+            </>
+          ) : (
+            /* Tablet (768–1127): single string, right-aligned */
+            <BioTextReveal
+              top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
+              right="25px"
+              width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+              textAlign="left"
+            >
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px' }}>NoWADays</span>
+              , he{'\u2019'}s shaping design for Squarespace{'\u2019'}s site builder.
+            </BioTextReveal>
+          )}
+          {/* Invisible trigger for "And occasionally..." reveal */}
+          <div
+            ref={string4TriggerRef}
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: `calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * (isDesktop ? 0.90 : 1.00)).toFixed(1)}vw)`,
+              left: 0,
+              width: '100%',
+              height: '15vh',
+              pointerEvents: 'none',
+            }}
+          />
+        </>
       )}
-      {/* String 3 — tabletWide+ (≥1128): left-aligned at col 1; narrower: right-aligned at col 12 */}
-      <BioTextReveal
-        top={`calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
-        {...(isTabletWide
-          ? { left: '25px' }
-          : { right: '25px' }
-        )}
-        width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
-        textAlign="left"
-      >
-        <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>TOdAY,</span>{' '}
-        he{'\u2019'}s shaping design for Squarespace{'\u2019'}s CMS with human-centered AI tools.
-      </BioTextReveal>
-      {/* Invisible trigger for "And occasionally..." reveal — absolute at 1.05
-           of SVG height so the SplitText fires well below bio string 3
-           without adding any document-flow space. */}
-      <div
-        ref={string4TriggerRef}
-        aria-hidden
-        style={{
-          position: 'absolute',
-          top: `calc(${-graffitiPullUp}vw + ${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * (isDesktop ? 0.90 : 1.00)).toFixed(1)}vw)`,
-          left: 0,
-          width: '100%',
-          height: '15vh',
-          pointerEvents: 'none',
-        }}
-      />
       {/* ===== Gloves Travel Zone =====
            Wraps the hero + graffiti spacer so the 3D canvas can stick (position: sticky)
            for the entire scroll range, unpinning naturally when the wrapper ends. */}
       <div ref={travelZoneRef} style={{ position: 'relative' }}>
 
-        {/* Sticky 3D Canvas — pinned at viewport top through the travel zone (tablet+).
-             z-30 sits above the gradient dome (z-20) so gloves remain visible. */}
-        {!isMobile && (
-          <div
-            ref={stickyCanvasRef}
-            style={{
-              position: 'sticky',
-              top: 0,
-              height: '100vh',
-              width: '100%',
-              zIndex: 30,
-              pointerEvents: 'auto',
-            }}
-          >
-            <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} gloveScaleRef={gloveScaleRef} gloveRotationRef={gloveRotationRef} gloveDuskRef={gloveDuskRef} gloveHorizontalRef={gloveHorizontalRef} />
-          </div>
-        )}
+        {/* Sticky 3D Canvas — pinned at viewport top through the travel zone.
+             z-30 sits above the gradient dome (z-20) so gloves remain visible.
+             On mobile: same sticky behavior so gloves pin through the gradient. */}
+        <div
+          ref={stickyCanvasRef}
+          style={{
+            position: 'sticky',
+            top: 0,
+            height: '100vh',
+            width: '100%',
+            zIndex: 30,
+            pointerEvents: 'auto',
+          }}
+        >
+          <Scene
+            settings={settings}
+            shadowSettings={shadowSettings}
+            themeMode={themeMode}
+            gloveHorizontalRef={gloveHorizontalRef}
+            gloveDuskRef={gloveDuskRef}
+            {...(!isMobile && { gloveScaleRef, gloveRotationRef, gloveLeftRotRef, gloveRightRotRef })}
+          />
+        </div>
 
         {/* ===== Hero Section =====
-             Tablet+: absolute-positioned so it doesn't add flow height to the travel zone
-             (flow height = sticky canvas + spacer only, giving maximum sticky travel).
-             Mobile: normal flow with Scene inside hero. */}
-        {/* ===== Hero Section ===== */}
+             Absolute-positioned so it doesn't add flow height to the travel zone
+             (flow height = sticky canvas + spacer only, giving maximum sticky travel). */}
         <section
           ref={heroRef}
           className="relative h-screen w-full flex-shrink-0"
-          style={!isMobile ? { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 40, pointerEvents: 'none' } : undefined}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 40, pointerEvents: 'none' }}
         >
-          {/* Desktop: TopCards above canvas */}
-          {!isMobile ? (
-            <div
-              className="absolute top-0 left-0 right-0"
-              style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 40 }}
-            >
-              <TopCards themeMode={themeMode} />
-            </div>
-          ) : (
-            <>
-              <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
-                <TopCards themeMode={themeMode} />
-              </div>
-              <div
-                className="absolute inset-0"
-                style={{ zIndex: 10, pointerEvents: 'auto' }}
-              >
-                <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} gloveHorizontalRef={gloveHorizontalRef} />
-              </div>
-            </>
-          )}
+          <div
+            className="absolute top-0 left-0 right-0"
+            style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 40 }}
+          >
+            <TopCards themeMode={themeMode} introStagger />
+          </div>
         </section>
 
         {/* Spacer — scroll through the graffiti while canvas stays pinned.
-             0.58 of SVG height so the gradient dome begins before the tail appears. */}
-        <div
-          aria-hidden
-          style={{
-            height: `calc(${((isMobile ? 116 : 130) * graffitiScale * (1185.79 / 538) * 0.50).toFixed(1)}vw - ${graffitiPullUp}vw - 100vh)`,
-            position: 'relative',
-            pointerEvents: 'none',
-          }}
-        />
+             0.50 of SVG height so the gradient dome begins before the tail appears.
+             Hidden on mobile (no graffiti scroll-out). */}
+        {!isMobile && (
+          <div
+            aria-hidden
+            style={{
+              height: `calc(${(130 * graffitiScale * (1185.79 / 538) * 0.50).toFixed(1)}vw - ${graffitiPullUp}vw - 100vh)`,
+              position: 'relative',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
 
         {/* ===== "And occasionally..." — 4th bio text, fixed at viewport center.
              Reveal triggered by invisible div at 0.90 SVG height position.
              Pins through gradient dome for handoff to "Live from SQSP..." lockup.
-             Inside the travel zone so the sticky canvas persists through the gradient. ===== */}
-        <AndOccasionallyText triggerRef={string4TriggerRef} />
+             Inside the travel zone so the sticky canvas persists through the gradient.
+             Hidden on mobile. ===== */}
+        {!isMobile && <AndOccasionallyText triggerRef={string4TriggerRef} />}
 
         {/* ===== Entry Gradient Transition =====
              Inside the travel zone — its z-index: 20 covers the sticky canvas (z-10)
-             as the dome grows. The gloves unpin when this runway ends. */}
+             as the dome grows. The gloves unpin when this runway ends.
+             Mobile: negative margin pulls runway up so the dome starts growing
+             while the hero is still in view (seamless overlap). */}
         <GradientTransition
           direction="enter"
           src="/images/transition-entry.png"
           className="relative"
-          style={{ zIndex: 20 }}
+          style={{ zIndex: 20, ...(isMobile ? { marginTop: '-100vh' } : {}) }}
         />
 
       </div>
@@ -640,6 +706,7 @@ function BioTextReveal({
     gsap.set(split.words, { autoAlpha: 0, y: 12 })
 
     const ctx = gsap.context(() => {
+      // Word-by-word reveal
       gsap.to(split.words, {
         autoAlpha: 1,
         y: 0,
@@ -650,6 +717,18 @@ function BioTextReveal({
           start: 'top 90%',
           end: 'bottom 40%',
           scrub: 0.6,
+        },
+      })
+
+      // Parallax — container drifts up as page scrolls
+      gsap.to(el, {
+        y: -60,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: el,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
         },
       })
     })

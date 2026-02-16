@@ -1088,9 +1088,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                   initial={introStagger ? { y: -30, opacity: 0 } : false}
                   animate={{ y: 0, opacity: 1 }}
                   transition={introStagger ? {
-                    type: 'spring',
-                    stiffness: 300,
-                    damping: 30,
+                    ...signatureSpring,
                     delay: vi * 0.08,
                   } : { duration: 0 }}
                   style={{

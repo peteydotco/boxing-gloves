@@ -7,17 +7,28 @@ const hourMinFormatter = new Intl.DateTimeFormat('en-US', {
   hour12: true,
 })
 
-function getNycTimeParts(): { hours: string; minutes: string; period: string } {
+const tzFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  timeZoneName: 'short',
+})
+
+function getNycTimeParts(): { hours: string; minutes: string; period: string; timezone: string } {
   const formatted = hourMinFormatter.format(new Date()) // e.g. "03:09 PM"
   const [hm, period] = formatted.split(' ')
   const [hours, minutes] = hm.split(':')
-  return { hours, minutes, period }
+
+  // Extract timezone abbreviation — "EST" or "EDT"
+  const tzFormatted = tzFormatter.format(new Date()) // e.g. "2/16/2026, EST"
+  const timezone = tzFormatted.split(' ').pop() ?? 'EST'
+
+  return { hours, minutes, period, timezone }
 }
 
 export interface NycTime {
   hours: string
   minutes: string
   period: string
+  timezone: string
   colonVisible: boolean
 }
 

@@ -102,6 +102,7 @@ function DraggableGloveWithRope({
   themeMode = 'light',
   modelUrl,
   yRotation = Math.PI,
+  scrollRotRef,
 }: {
   anchorOffset: [number, number, number]
   settings: Settings
@@ -109,6 +110,7 @@ function DraggableGloveWithRope({
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' // Theme mode for color adjustments
   modelUrl: string // URL to the glove GLB model
   yRotation?: number // Initial Y-axis rotation in radians
+  scrollRotRef?: RefObject<number> // Per-glove scroll-driven Y rotation
 }) {
   const gloveRef = useRef<RapierRigidBody>(null)
   const tubeRef = useRef<THREE.Mesh>(null)
@@ -146,6 +148,7 @@ function DraggableGloveWithRope({
     threeQuarter: new THREE.Vector3(),
   })
   const tempQuat = useRef(new THREE.Quaternion())
+  const scrollQuat = useRef(new THREE.Quaternion()) // Reusable quat for scroll-driven rotation
 
   // This glove's anchor point - memoized to prevent recreation
   const anchorPos = useMemo(() => new THREE.Vector3(
@@ -277,6 +280,19 @@ function DraggableGloveWithRope({
       // Update the visual group position and rotation
       visualGroupRef.current.position.copy(visualPosition.current!)
       visualGroupRef.current.quaternion.copy(visualRotation.current!)
+
+      // Compose scroll-driven per-glove rotation on top of physics rotation,
+      // and push glove outward to prevent clipping during the turn.
+      if (scrollRotRef?.current) {
+        const rot = scrollRotRef.current
+        scrollQuat.current.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, rot)
+        visualGroupRef.current.quaternion.multiply(scrollQuat.current)
+
+        // Spread apart — push outward proportional to rotation magnitude
+        const spread = Math.abs(rot) / (Math.PI * 0.75) * 0.35 // up to 0.35 units at full rotation
+        const sign = isLeftGlove ? -1 : 1
+        visualGroupRef.current.position.x += sign * spread
+      }
 
       t.toGlove.copy(t.gloveCenter).sub(anchorPos)
       const distance = t.toGlove.length()
@@ -721,7 +737,7 @@ function DraggableGloveWithRope({
 useGLTF.preload(leftGloveModelUrl, true)
 useGLTF.preload(rightGloveModelUrl, true)
 
-export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light', gloveScaleRef }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'; gloveScaleRef?: RefObject<number> }) {
+export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light', gloveScaleRef, gloveLeftRotRef, gloveRightRotRef }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'; gloveScaleRef?: RefObject<number>; gloveLeftRotRef?: RefObject<number>; gloveRightRotRef?: RefObject<number> }) {
   const shadowMatRef = useRef<THREE.ShadowMaterial>(null)
 
   // Fade shadow shortly after leaving hero — full at scale 1.15, gone by scale 1.11
@@ -748,13 +764,14 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
         <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
       </mesh>
 
-      {/* Left glove - offset left and slightly forward, drops slightly after right */}
+      {/* Left glove - offset left and slightly forward, drops after right */}
       <DraggableGloveWithRope
         anchorOffset={[-0.4, 0, 0.15]}
-        dropDelay={100}
+        dropDelay={700}
         themeMode={themeMode}
         modelUrl={leftGloveModelUrl}
         yRotation={Math.PI + Math.PI / 6 - Math.PI / 4}
+        scrollRotRef={gloveLeftRotRef}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.25,
@@ -764,9 +781,11 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
       {/* Right glove - offset right and slightly back, with extended cord */}
       <DraggableGloveWithRope
         anchorOffset={[0.4, 0, -0.15]}
+        dropDelay={600}
         themeMode={themeMode}
         modelUrl={rightGloveModelUrl}
         yRotation={Math.PI + (45 * Math.PI / 180)}
+        scrollRotRef={gloveRightRotRef}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.7,
