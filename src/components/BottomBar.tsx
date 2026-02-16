@@ -51,7 +51,7 @@ export function BottomBar() {
       gsap.set(bar, { autoAlpha: 0, y: 40 })
 
       // Entrance animation
-      const entrance = gsap.to(bar, {
+      gsap.to(bar, {
         autoAlpha: 1,
         y: 0,
         duration: 0.5,
@@ -191,7 +191,7 @@ export function BottomBar() {
         opacity: (isMobile && hovered) ? 0 : 1,
         transition: SLIDE_TRANSITION,
       }}>
-        {!isMobile && (weather.isDaytime ? (
+        {isWide && (weather.isDaytime ? (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
             <circle cx="8" cy="8" r="3.5" stroke="#262626" strokeWidth="1.5"/>
             <line x1="8" y1="0.5" x2="8" y2="2.5" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
@@ -241,7 +241,7 @@ export function BottomBar() {
             transition: SLIDE_TRANSITION,
           }}
         >
-          {!isMobile && (
+          {isWide && (
             <div style={{ width: 20, height: 20, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <img
                 src={status.icon}
@@ -286,7 +286,7 @@ export function BottomBar() {
         opacity: (isMobile && hovered) ? 0 : 1,
         transition: SLIDE_TRANSITION,
       }}>
-        {!isMobile && (
+        {isWide && (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
             <path d="M0.769144 5.95684L13.2691 0.191216C14.5973 -0.425972 15.6363 0.534966 15.0191 1.8709L9.26914 14.3084C8.68321 15.5897 6.97227 15.3318 6.96446 13.949L6.95664 8.33965C6.95664 8.26153 6.93321 8.23809 6.85508 8.23809L1.20664 8.21465C-0.137106 8.20684 -0.465231 6.52715 0.769144 5.95684ZM2.70664 6.7459L7.71446 6.71465C8.20664 6.70684 8.46446 6.97247 8.45664 7.44903L8.42539 12.4725C8.42539 12.5037 8.45664 12.5037 8.47227 12.4725L13.316 1.92559C13.3473 1.86309 13.316 1.84747 13.2613 1.86309L2.69883 6.69122C2.65977 6.70684 2.66758 6.7459 2.70664 6.7459Z" fill="#262626"/>
           </svg>
