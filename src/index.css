@@ -297,7 +297,7 @@ body {
 }
 
 canvas {
-  touch-action: none;
+  touch-action: manipulation;
 }
 
 /* Hide scrollbar for horizontal scroll on mobile */

@@ -106,10 +106,7 @@ export function BottomBar() {
   const fontSize = isMobile ? 15 : 18
 
   const status = ALL_STATUSES[statusIndex]
-  const mobileShort = (status.shortText === 'Designing' || status.shortText === 'Teaching')
-    ? status.shortText + '...'
-    : status.shortText
-  const statusText = isMobile ? mobileShort : status.text
+  const statusText = isMobile ? status.shortText : status.text
 
   // Next-status preview for hover slide-up
   const nextInfo = useMemo(() => getNextStatus(getNycDate()), [statusIndex])
@@ -128,7 +125,7 @@ export function BottomBar() {
     2: 'Brooklyn',      // Dad mode
     3: 'Brooklyn',      // DND / Sleeping
   }
-  const locationLabel = locationLabels[statusIndex] ?? 'New York'
+  const locationLabel = !isWide ? 'NYC' : (locationLabels[statusIndex] ?? 'New York')
 
   return (
     <div
@@ -160,7 +157,7 @@ export function BottomBar() {
         boxShadow: '0px 216px 60px 0px rgba(0,0,0,0), 0px 138px 55px 0px rgba(0,0,0,0.01), 0px 78px 47px 0px rgba(0,0,0,0.05), 0px 35px 35px 0px rgba(0,0,0,0.09), 0px 9px 19px 0px rgba(0,0,0,0.1)',
         padding: '0 20px 1px',
         fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-        fontWeight: 450,
+        fontWeight: 500,
         fontSize,
         color: '#262626',
         pointerEvents: 'auto',
@@ -203,7 +200,7 @@ export function BottomBar() {
         <span>
           {hours}
           <span style={{ opacity: colonVisible ? 1 : 0, transition: 'opacity 0.15s ease' }}>:</span>
-          {minutes} {period} {timezone}
+          {minutes} {period}{isWide && ` ${timezone}`}
         </span>
       </div>
 

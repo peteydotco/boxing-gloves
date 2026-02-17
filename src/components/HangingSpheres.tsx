@@ -128,6 +128,7 @@ function DraggableGloveWithRope({
   const dropDelayElapsed = useRef(dropDelay === 0)
   const dropStartTime = useRef<number | null>(null)
   const dragEndTime = useRef<number>(0) // Timestamp when drag ended, for post-drag settle
+  const touchMoveBlocker = useRef<((e: TouchEvent) => void) | null>(null)
 
   // Reusable Vector3 objects to avoid garbage collection in useFrame
   const tempVec = useRef({
@@ -188,6 +189,17 @@ function DraggableGloveWithRope({
       ropeGeometry.dispose()
     }
   }, [ropeGeometry])
+
+  // Cleanup touchmove blocker if component unmounts during drag
+  useEffect(() => {
+    const domElement = gl.domElement
+    return () => {
+      if (touchMoveBlocker.current) {
+        domElement.removeEventListener('touchmove', touchMoveBlocker.current)
+        touchMoveBlocker.current = null
+      }
+    }
+  }, [gl])
 
   // Start gloves above the anchor point for drop-in animation
   const gloveStartPosition = useMemo((): [number, number, number] => [
@@ -457,6 +469,10 @@ function DraggableGloveWithRope({
     isDragging.current = true
     velocityHistory.current = []
 
+    // Suppress native scroll while dragging a glove (non-passive to allow preventDefault)
+    touchMoveBlocker.current = (te: TouchEvent) => te.preventDefault()
+    gl.domElement.addEventListener('touchmove', touchMoveBlocker.current, { passive: false })
+
     const pos = gloveRef.current.translation()
     const glovePos = new THREE.Vector3(pos.x, pos.y, pos.z)
     lastPosition.current.copy(glovePos)
@@ -508,6 +524,13 @@ function DraggableGloveWithRope({
     if (!isDragging.current || !gloveRef.current) return
 
     isDragging.current = false
+
+    // Restore native scroll
+    if (touchMoveBlocker.current) {
+      gl.domElement.removeEventListener('touchmove', touchMoveBlocker.current)
+      touchMoveBlocker.current = null
+    }
+
     ;(gl.domElement as HTMLElement).style.cursor = 'none'
     gl.domElement.setAttribute('data-cursor', 'grab')
     ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
