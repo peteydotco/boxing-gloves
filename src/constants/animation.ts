@@ -1,35 +1,39 @@
 // Animation spring configurations for Framer Motion
 
-// Spring for card container position - smooth ease with subtle settle
-export const positionSpring = {
+// Signature spring — the default curve for all UI motion
+// mass: 1, stiffness: 320, damping: 40
+export const signatureSpring = {
   type: 'spring' as const,
-  stiffness: 280,
-  damping: 32,
+  stiffness: 320,
+  damping: 40,
   mass: 1,
 }
+
+// Spring for card container position — uses signature curve
+export const positionSpring = { ...signatureSpring }
 
 // Bouncier spring for stacked cards' rotation - subtle overshoot
 export const stackedRotationSpring = {
   type: 'spring' as const,
-  stiffness: 250,
-  damping: 22,
-  mass: 1,
-}
-
-// Bouncy spring for card navigation - subtle overshoot for satisfying settle
-export const ctaEntranceSpring = {
-  type: 'spring' as const,
-  stiffness: 300,
-  damping: 28,
-  mass: 1,
-}
-
-// Critically damped spring for mobile collapse - smooth settle, no bounce
-export const mobileCollapseSpring = {
-  type: 'spring' as const,
   stiffness: 300,
   damping: 30,
   mass: 1,
+}
+
+// Spring for card open + carousel nav — fast with playful springback
+export const ctaEntranceSpring = {
+  type: 'spring' as const,
+  stiffness: 400,
+  damping: 35,
+  mass: 0.9,
+}
+
+// Spring for card close / collapse — fast snap-back with subtle bounce
+export const mobileCollapseSpring = {
+  type: 'spring' as const,
+  stiffness: 600,
+  damping: 36,
+  mass: 0.7,
 }
 
 // Faster critically damped spring for internal content (fonts, padding)
@@ -63,16 +67,36 @@ export const tugTrackingSpring = {
   mass: 0.5,
 }
 
+// Custom cursor — stiff position tracking (glued to pointer, minimal lag)
+export const cursorFollowSpring = {
+  stiffness: 800,
+  damping: 60,
+  mass: 0.3,
+}
+
+// Custom cursor — morph snap (satisfying organic snap onto target elements)
+export const cursorMorphSpring = {
+  stiffness: 400,
+  damping: 35,
+  mass: 0.8,
+}
+
+// iPadOS-style pointer lift effect configuration
+export const POINTER_LIFT = {
+  parallaxMax: 2.5,   // max px foreground children shift
+  liftScale: 1.005,   // scale factor when morphed onto element
+}
+
 // Carousel tuning configuration
 export const CAROUSEL_CONFIG = {
   dragThreshold: 50,
   normalDragMultiplier: 1.0,
-  boundaryDragMultiplier: 1.8,
+  boundaryDragMultiplier: 1.6,
   momentumMultiplier: 8,
-  velocityDecay: 0.70,
+  velocityDecay: 0.82,
   parallaxMultiplier: 0.20,
-  boundaryVelocityScale: 2.5,
-  normalVelocityScale: 0.5,
+  boundaryVelocityScale: 0.8,
+  normalVelocityScale: 0.25,
   enableBoundarySpringBack: false,
   springBackMultiplier: 0,
 }

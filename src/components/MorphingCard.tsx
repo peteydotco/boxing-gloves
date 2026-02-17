@@ -1,15 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
-import { SlPlus } from 'react-icons/sl'
 import { RiPushpinLine } from 'react-icons/ri'
 import { CiPlay1 } from 'react-icons/ci'
 import { FiExternalLink, FiPlay, FiCalendar, FiMail } from 'react-icons/fi'
 import { SiApplemusic } from 'react-icons/si'
+import { IoMdArrowForward } from 'react-icons/io'
 import React from 'react'
 import type { CardData, VariantStyle, ThemeMode } from '../types'
 import { variantStylesLight, getVariantStyles } from '../constants/themes'
+import { BREAKPOINTS } from '../constants/breakpoints'
 import { AddNewRoleContent } from './AddNewRoleContent'
 import {
+  signatureSpring,
   positionSpring,
   stackedRotationSpring,
   ctaEntranceSpring,
@@ -39,6 +41,9 @@ interface MorphingCardProps {
   zIndexOverride?: number
   useBouncyTransition?: boolean
   isFocused?: boolean // True when this card is the currently focused card in the carousel
+  initialBorderRadius?: number // 44 from compact pill, 16 from normal collapsed
+  expandedFromCompact?: boolean // True when card was opened from compact pill bar
+  isOverDark?: boolean // True when compact bar is over the dark video section (CTA colors flip)
 }
 
 const iconMap = {
@@ -58,16 +63,17 @@ interface HighlightButtonProps {
   styles: VariantStyle
   onHighlightClick?: (label: string) => void
   isMobile?: boolean
+  contentScale?: number // Scale factor for tablet/shallow viewports
 }
 
-function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false }: HighlightButtonProps) {
+function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false, contentScale = 1 }: HighlightButtonProps) {
   const [isHovered, setIsHovered] = useState(false)
 
-  // Mobile: 0.85x scale (54px vs 72px desktop)
-  const circleSize = isMobile ? 54 : 72
-  const borderWidth = isMobile ? 3 : 3
-  const shadowSize = isMobile ? 3 : 5
-  const labelSize = isMobile ? '11px' : '12px'
+  // Mobile: fixed 48px, Desktop/Tablet: scale from canonical 68px
+  const circleSize = isMobile ? 48 : Math.round(68 * contentScale)
+  const borderWidth = isMobile ? 3 : Math.max(2, Math.round(3 * contentScale))
+  const shadowSize = isMobile ? 3 : Math.round(4 * contentScale)
+  const labelSize = isMobile ? '11px' : `${Math.round(11 * contentScale)}px`
 
   // On hover, thumbnail+white stroke scales to cover the dark outer stroke
   // Scale factor: (circleSize + shadowSize*2) / circleSize
@@ -75,6 +81,8 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
 
   return (
     <button
+      data-cursor="morph"
+      data-cursor-radius={isMobile ? '24' : `${Math.round(34 * contentScale)}`}
       onClick={(e) => {
         e.stopPropagation()
         if (highlight.href) {
@@ -83,7 +91,7 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
         onHighlightClick?.(highlight.label)
       }}
       className="flex flex-col items-center cursor-pointer"
-      style={{ gap: isMobile ? '6px' : '10px' }}
+      style={{ gap: isMobile ? '6px' : `${Math.round(8 * contentScale)}px` }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -127,15 +135,15 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
           {highlight.image ? (
             <img src={highlight.image} alt={highlight.label} loading="lazy" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-[11px] font-pressura-mono uppercase" style={{ color: styles.textColor }}>
+            <span className="text-[11px] uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, color: styles.textColor }}>
               {highlight.label.slice(0, 4)}
             </span>
           )}
         </motion.div>
       </div>
       <span
-        className="font-pressura-mono uppercase"
-        style={{ fontSize: labelSize, lineHeight: '100%', color: styles.textColor }}
+        className="uppercase"
+        style={{ fontFamily: 'DotGothic16', fontWeight: 400, fontSize: labelSize, lineHeight: '100%', letterSpacing: '0.12em', color: styles.textColor }}
       >
         {highlight.label}
       </span>
@@ -160,9 +168,10 @@ interface ReflectionsCardProps {
   previewFrames?: string[] // Array of preview frame images for slideshow
   previewVideo?: string // Video file for autoplay thumbnail (webm/mp4)
   isActive?: boolean // Only run slideshow when card is focused/expanded
+  contentScale?: number // Scale factor for tablet/shallow viewports
 }
 
-function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false, chip, previewFrames, previewVideo, isActive = true }: ReflectionsCardProps) {
+function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false, chip, previewFrames, previewVideo, isActive = true, contentScale = 1 }: ReflectionsCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -251,21 +260,22 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
 
   return (
     <button
+      data-cursor="play"
       onClick={(e) => {
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
       }}
-      className="w-full rounded-[8px] overflow-hidden relative cursor-pointer"
+      className="w-full rounded-[10px] overflow-hidden relative cursor-pointer"
       style={{
         backgroundColor: getBackgroundColor(),
-        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
+        boxShadow: 'none',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Inner stroke overlay on video container */}
       <div
-        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+        className="absolute inset-0 rounded-[10px] pointer-events-none z-10"
         style={{
           boxShadow: isInvertedWhite
             ? 'inset 0 0 0 1px rgba(0,0,0,0.06)'
@@ -279,21 +289,21 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
       <motion.div
         className="overflow-hidden relative"
         style={{
-          marginLeft: isMobile ? '10px' : '14px',
-          marginRight: isMobile ? '10px' : '14px',
-          marginTop: isMobile ? '10px' : '14px',
-          marginBottom: isMobile ? '10px' : '14px',
-          width: isMobile ? 'calc(100% - 20px)' : 'calc(100% - 28px)',
-          borderRadius: '6px',
+          marginLeft: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
+          marginRight: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
+          marginTop: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
+          marginBottom: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
+          width: isMobile ? 'calc(100% - 20px)' : `calc(100% - ${Math.round(28 * contentScale)}px)`,
+          borderRadius: `${Math.round(6 * contentScale)}px`,
           transformOrigin: 'center center',
-          border: `${isMobile ? 3 : 3}px solid rgba(255,255,255,0.9)`,
+          border: `${isMobile ? 3 : Math.max(2, Math.round(3 * contentScale))}px solid rgba(255,255,255,0.9)`,
         }}
         initial={isMobile ? false : { scale: 0.25, opacity: 0 }}
         animate={{
           scale: isHovered ? 1.03 : 1,
           opacity: 1,
           transition: isMobile ? hoverTransition : {
-            scale: { type: 'spring', stiffness: 300, damping: 20 },
+            scale: signatureSpring,
             opacity: { duration: 0.2, ease: 'easeOut' }
           }
         }}
@@ -357,42 +367,44 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
         {/* Chip badge - bottom left */}
         {chip && (
           <div
-            className="absolute pointer-events-none flex items-center rounded-[4px]"
+            className="absolute pointer-events-none flex items-center rounded-[6px]"
             style={{
-              bottom: isMobile ? '8px' : '10px',
-              left: isMobile ? '8px' : '10px',
-              gap: isMobile ? '6px' : '7px',
+              bottom: isMobile ? '8px' : `${Math.round(10 * contentScale)}px`,
+              left: isMobile ? '8px' : `${Math.round(10 * contentScale)}px`,
+              gap: isMobile ? '6px' : `${Math.round(7 * contentScale)}px`,
               backgroundColor: 'rgba(255,255,255,0.95)',
-              paddingTop: isMobile ? '4px' : '5px',
-              paddingBottom: isMobile ? '4px' : '5px',
-              paddingLeft: isMobile ? '8px' : '10px',
-              paddingRight: isMobile ? '10px' : '12px',
+              paddingTop: isMobile ? '4px' : `${Math.round(5 * contentScale)}px`,
+              paddingBottom: isMobile ? '4px' : `${Math.round(5 * contentScale)}px`,
+              paddingLeft: isMobile ? '8px' : `${Math.round(10 * contentScale)}px`,
+              paddingRight: isMobile ? '10px' : `${Math.round(12 * contentScale)}px`,
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}
           >
             {chip.icon === 'slides' ? (
-              <svg width={isMobile ? 14 : 16} height={isMobile ? 14 : 16} viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width={isMobile ? 14 : Math.round(16 * contentScale)} height={isMobile ? 14 : Math.round(16 * contentScale)} viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path fillRule="evenodd" clipRule="evenodd" d="M21.6667 4.79171H8.33333V7.70837H21.6667V4.79171ZM23.125 4.79171V7.70837H26.0417V5.52087C26.0417 5.32749 25.9648 5.14202 25.8281 5.00528C25.6914 4.86853 25.5059 4.79171 25.3125 4.79171H23.125ZM4.6875 4.79171H6.875V7.70837H3.95833V5.52087C3.95833 5.32749 4.03516 5.14202 4.1719 5.00528C4.30865 4.86853 4.49411 4.79171 4.6875 4.79171ZM26.0417 9.16671H3.95833V24.4792C3.95833 24.6726 4.03516 24.8581 4.1719 24.9948C4.30865 25.1316 4.49411 25.2084 4.6875 25.2084H25.3125C25.5059 25.2084 25.6914 25.1316 25.8281 24.9948C25.9648 24.8581 26.0417 24.6726 26.0417 24.4792V9.16671ZM4.6875 3.33337C4.10734 3.33337 3.55094 3.56384 3.1407 3.97408C2.73047 4.38431 2.5 4.94071 2.5 5.52087V24.4792C2.5 25.0594 2.73047 25.6158 3.1407 26.026C3.55094 26.4362 4.10734 26.6667 4.6875 26.6667H25.3125C25.8927 26.6667 26.4491 26.4362 26.8593 26.026C27.2695 25.6158 27.5 25.0594 27.5 24.4792V5.52087C27.5 4.94071 27.2695 4.38431 26.8593 3.97408C26.4491 3.56384 25.8927 3.33337 25.3125 3.33337H4.6875ZM17.2765 18.0436L17.5171 17.8934L18.1515 17.4967C18.2039 17.4639 18.2471 17.4184 18.2771 17.3643C18.3071 17.3102 18.3228 17.2494 18.3228 17.1875C18.3228 17.1257 18.3071 17.0649 18.2771 17.0108C18.2471 16.9567 18.2039 16.9111 18.1515 16.8784L17.5171 16.4817L17.2765 16.3315L17.2706 16.3271L14.2708 14.4532L14.246 14.4386L13.8654 14.1994L13.3696 13.8903C13.3144 13.8559 13.2511 13.837 13.1861 13.8354C13.1212 13.8338 13.057 13.8496 13.0002 13.8811C12.9434 13.9126 12.896 13.9587 12.863 14.0147C12.83 14.0707 12.8126 14.1344 12.8125 14.1994V20.1757C12.8124 20.2409 12.8298 20.3049 12.8629 20.3611C12.896 20.4172 12.9435 20.4635 13.0005 20.4951C13.0576 20.5267 13.122 20.5424 13.1872 20.5406C13.2523 20.5388 13.3158 20.5195 13.371 20.4848L13.8654 20.1757L14.2446 19.938L14.2708 19.9219L17.2706 18.048L17.2765 18.0436ZM18.9244 15.6417L14.1425 12.6536C13.8666 12.4813 13.5496 12.386 13.2244 12.3776C12.8992 12.3691 12.5777 12.4478 12.2932 12.6056C12.0087 12.7633 11.7716 12.9943 11.6065 13.2745C11.4414 13.5548 11.3542 13.8741 11.3542 14.1994V20.1757C11.3542 20.501 11.4414 20.8203 11.6065 21.1006C11.7716 21.3808 12.0087 21.6118 12.2932 21.7695C12.5777 21.9272 12.8992 22.006 13.2244 21.9975C13.5496 21.9891 13.8666 21.8938 14.1425 21.7215L18.9244 18.7334C19.1866 18.5695 19.4028 18.3417 19.5526 18.0712C19.7025 17.8008 19.7812 17.4967 19.7812 17.1875C19.7812 16.8784 19.7025 16.5743 19.5526 16.3038C19.4028 16.0334 19.1866 15.8056 18.9244 15.6417Z" fill="#000000"/>
               </svg>
             ) : (
-              <CiPlay1 style={{ width: isMobile ? '14px' : '16px', height: isMobile ? '14px' : '16px', color: '#000000' }} />
+              <CiPlay1 style={{ width: isMobile ? '14px' : `${Math.round(16 * contentScale)}px`, height: isMobile ? '14px' : `${Math.round(16 * contentScale)}px`, color: '#000000' }} />
             )}
             <span
-              className="uppercase font-pressura-mono leading-[100%]"
+              className="uppercase leading-[100%]"
               style={{
+                fontFamily: 'Inter',
+                fontWeight: 500,
                 color: '#000000',
-                fontSize: isMobile ? '11px' : '12px',
+                fontSize: isMobile ? '11px' : `${Math.round(12 * contentScale)}px`,
               }}
             >
               {chip.text}
             </span>
           </div>
         )}
-        {/* Inner stroke overlay on thumbnail */}
+        {/* Outer stroke overlay on thumbnail */}
         <div
-          className="absolute inset-0 rounded-[4px] pointer-events-none"
+          className="absolute inset-0 rounded-[6px] pointer-events-none"
           style={{
-            boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.08)',
           }}
         />
       </motion.div>
@@ -413,9 +425,10 @@ interface NowPlayingCardProps {
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'
   variant?: 'blue' | 'white' | 'red' | 'cta'
   isMobile?: boolean
+  contentScale?: number // Scale factor for tablet/shallow viewports
 }
 
-function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }: NowPlayingCardProps) {
+function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, contentScale = 1 }: NowPlayingCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const isDark = themeMode === 'dark' || themeMode === 'darkInverted'
   // White variant in dark theme has light bg, needs dark text
@@ -443,10 +456,10 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
       }}
-      className="w-full rounded-[8px] overflow-hidden relative cursor-pointer"
+      className="w-full rounded-[10px] overflow-hidden relative cursor-pointer"
       style={{
         backgroundColor: getBackgroundColor(),
-        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
+        boxShadow: 'none',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -454,7 +467,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
     >
       {/* Inner stroke overlay */}
       <div
-        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+        className="absolute inset-0 rounded-[10px] pointer-events-none z-10"
         style={{
           boxShadow: (variant === 'white' && (themeMode === 'dark' || themeMode === 'darkInverted'))
             ? 'inset 0 0 0 1px rgba(0,0,0,0.06)'
@@ -466,28 +479,46 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
 
       {/* Content area - match Highlights container height */}
       <div
-        className="flex items-center gap-3"
+        data-cursor-parallax=""
+        className="relative flex items-center gap-3"
         style={{
-          paddingLeft: isMobile ? '10px' : '14px',
-          paddingRight: isMobile ? '10px' : '14px',
-          paddingTop: isMobile ? '14px' : '14px',
-          paddingBottom: isMobile ? '12px' : '14px',
-          minHeight: isMobile ? 'auto' : '140px',
+          paddingLeft: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
+          paddingRight: isMobile ? '10px' : `${Math.round(14 * contentScale)}px`,
+          paddingTop: isMobile ? '14px' : `${Math.round(14 * contentScale)}px`,
+          paddingBottom: isMobile ? '12px' : `${Math.round(14 * contentScale)}px`,
+          minHeight: isMobile ? 'auto' : `${Math.round(140 * contentScale)}px`,
         }}
       >
+        {/* Apple Music icon - top right */}
+        <div
+          className="absolute flex items-center justify-center"
+          style={{
+            top: isMobile ? '10px' : `${Math.round(12 * contentScale)}px`,
+            right: isMobile ? '10px' : `${Math.round(12 * contentScale)}px`,
+            width: isMobile ? '22px' : `${Math.round(28 * contentScale)}px`,
+            height: isMobile ? '22px' : `${Math.round(28 * contentScale)}px`,
+          }}
+        >
+          <SiApplemusic
+            size={isMobile ? 20 : Math.round(24 * contentScale)}
+            color={isInvertedWhite ? 'rgba(26,26,46,0.6)' : 'rgba(255,255,255,0.6)'}
+          />
+        </div>
+
         {/* Album art - larger size to match Highlights section height */}
         <motion.div
+          data-cursor="play-circle"
           className="shrink-0 rounded-[6px] overflow-hidden relative"
           style={{
-            width: isMobile ? '65px' : '112px',
-            height: isMobile ? '65px' : '112px',
+            width: isMobile ? '65px' : `${Math.round(112 * contentScale)}px`,
+            height: isMobile ? '65px' : `${Math.round(112 * contentScale)}px`,
           }}
           initial={isMobile ? false : { scale: 0.25, opacity: 0 }}
           animate={{
             scale: isHovered ? 1.03 : 1,
             opacity: 1,
             transition: isMobile ? hoverTransition : {
-              scale: { type: 'spring', stiffness: 300, damping: 20 },
+              scale: signatureSpring,
               opacity: { duration: 0.2, ease: 'easeOut' }
             }
           }}
@@ -514,9 +545,11 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
         <div className="flex flex-col items-start flex-1 min-w-0">
           {/* Label */}
           <span
-            className="font-pressura-mono uppercase"
+            className="uppercase"
             style={{
-              fontSize: isMobile ? '10px' : '11px',
+              fontFamily: 'Inter',
+              fontWeight: 500,
+              fontSize: isMobile ? '10px' : `${Math.round(11 * contentScale)}px`,
               letterSpacing: '0.33px',
               color: isInvertedWhite ? 'rgba(26,26,46,0.6)' : 'rgba(255,255,255,0.6)',
               lineHeight: '1.2',
@@ -526,44 +559,32 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false }
           </span>
           {/* Song title */}
           <span
-            className="font-pressura truncate w-full text-left"
+            className="truncate w-full text-left"
             style={{
-              fontSize: isMobile ? '14px' : '19px',
+              fontFamily: 'Inter',
+              fontWeight: 500,
+              fontSize: isMobile ? '14px' : `${Math.round(19 * contentScale)}px`,
               color: isInvertedWhite ? 'rgba(26,26,46,1)' : '#FFFFFF',
               lineHeight: '1.3',
-              marginTop: isMobile ? '2px' : '4px',
+              marginTop: isMobile ? '2px' : `${Math.round(4 * contentScale)}px`,
             }}
           >
             {card.songTitle}
           </span>
           {/* Artist */}
           <span
-            className="font-pressura-ext truncate w-full text-left"
+            className="truncate w-full text-left"
             style={{
-              fontWeight: 350,
-              fontSize: isMobile ? '12px' : '15px',
+              fontFamily: 'Inter',
+              fontWeight: 400,
+              fontSize: isMobile ? '12px' : `${Math.round(15 * contentScale)}px`,
               color: isInvertedWhite ? 'rgba(26,26,46,0.7)' : 'rgba(255,255,255,0.75)',
               lineHeight: '1.3',
-              marginTop: isMobile ? '1px' : '2px',
+              marginTop: isMobile ? '1px' : `${Math.round(2 * contentScale)}px`,
             }}
           >
             {card.artist}
           </span>
-        </div>
-
-        {/* Apple Music icon */}
-        <div
-          className="shrink-0 flex items-center justify-center"
-          style={{
-            width: isMobile ? '22px' : '28px',
-            height: isMobile ? '22px' : '28px',
-            marginLeft: '-8px',
-          }}
-        >
-          <SiApplemusic
-            size={isMobile ? 20 : 24}
-            color={isInvertedWhite ? 'rgba(26,26,46,0.6)' : 'rgba(255,255,255,0.6)'}
-          />
         </div>
       </div>
     </motion.button>
@@ -580,45 +601,47 @@ interface HighlightsContainerProps {
   styles: typeof variantStylesLight.blue
   onHighlightClick?: (label: string) => void
   isMobile?: boolean
+  contentScale?: number // Scale factor for tablet/shallow viewports
 }
 
-function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = false }: HighlightsContainerProps) {
+function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = false, contentScale = 1 }: HighlightsContainerProps) {
   // Calculate the stacked offset for each item - they start collapsed at x=0 with slight stagger
   const stackOffset = 8 // Each item offset by 8px when stacked
-  const gap = isMobile ? 12 : 16
+  // Spacing value used for stacked animation calculation (items slide in from stacked position)
+  const animationSpacing = isMobile ? 12 : Math.round(16 * contentScale)
 
   return (
     <div
-      className="w-full rounded-[8px] overflow-hidden relative"
+      className="w-full rounded-[10px] overflow-hidden relative"
       style={{
         backgroundColor: styles.highlightShadow,
-        boxShadow: '0 2px 0 0 rgba(0,0,0,0.2)',
+        boxShadow: 'none',
       }}
     >
       {/* Inner stroke overlay */}
       <div
-        className="absolute inset-0 rounded-[8px] pointer-events-none z-10"
+        className="absolute inset-0 rounded-[10px] pointer-events-none z-10"
         style={{
           boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
         }}
       />
 
       {/* Highlights content area - items fan out from stacked position */}
+      {/* 5 items: use justify-evenly for uniform spacing */}
+      {/* 4 or fewer items: use gap + center for tighter grouping */}
       <div
-        className="flex justify-center"
+        className={`flex ${highlights.length >= 5 ? 'justify-evenly' : 'justify-center'}`}
         style={{
-          gap,
-          paddingLeft: isMobile ? '10px' : '14px',
-          paddingRight: isMobile ? '10px' : '14px',
-          paddingTop: isMobile ? '14px' : '28px',
-          paddingBottom: isMobile ? '12px' : '28px',
+          gap: highlights.length >= 5 ? undefined : (isMobile ? 12 : Math.round(16 * contentScale)),
+          paddingTop: isMobile ? '14px' : `${Math.round(28 * contentScale)}px`,
+          paddingBottom: isMobile ? '12px' : `${Math.round(24 * contentScale)}px`,
         }}
       >
         {highlights.map((highlight, i) => {
           // Calculate how far left each item needs to move to reach its stacked position
           // Item 0 stays at 0, item 1 moves left by (1 * gap - 1 * stackOffset), etc.
           // This creates a stacked effect where items overlap but are slightly offset
-          const stackedX = -(i * gap) + (i * stackOffset)
+          const stackedX = -(i * animationSpacing) + (i * stackOffset)
           // Base delay so fan-out starts after the section is visible, plus stagger per item
           const baseDelay = 0.2
           const itemDelay = baseDelay + i * 0.04
@@ -633,14 +656,14 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
                 x: 0,
                 opacity: 1,
                 transition: {
-                  x: { type: 'spring', stiffness: 300, damping: 24, delay: itemDelay },
+                  x: { ...signatureSpring, delay: itemDelay },
                   opacity: { duration: 0.15, ease: 'easeOut', delay: itemDelay }
                 }
               } : {
                 scale: 1,
                 opacity: 1,
                 transition: {
-                  scale: { type: 'spring', stiffness: 300, damping: 20, delay: itemDelay },
+                  scale: { ...signatureSpring, delay: itemDelay },
                   opacity: { duration: 0.2, ease: 'easeOut', delay: itemDelay }
                 }
               }}
@@ -648,14 +671,14 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
                 x: stackedX,
                 opacity: 0,
                 transition: {
-                  x: { type: 'spring', stiffness: 400, damping: 35 },
+                  x: contentSpring,
                   opacity: { duration: 0.1, ease: 'easeIn' }
                 }
               } : {
                 scale: 0.25,
                 opacity: 0,
                 transition: {
-                  scale: { type: 'spring', stiffness: 400, damping: 30 },
+                  scale: contentSpring,
                   opacity: { duration: 0.1, ease: 'easeIn' }
                 }
               }}
@@ -665,6 +688,7 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
                 styles={styles}
                 onHighlightClick={onHighlightClick}
                 isMobile={isMobile}
+                contentScale={contentScale}
               />
             </motion.div>
           )
@@ -687,8 +711,8 @@ function DescriptionContainer({ description, styles, isMobile = false, contentSc
   const canonicalWidth = 452
   const scaledWidth = Math.round(canonicalWidth * contentScale)
   // Scale font sizes proportionally
-  const fontSize = isMobile ? 15 : Math.round(18 * contentScale)
-  const lineHeight = isMobile ? 21 : Math.round(24 * contentScale)
+  const fontSize = isMobile ? 14 : Math.round(18 * contentScale)
+  const lineHeight = isMobile ? 20 : Math.round(26 * contentScale)
 
   return (
     <div
@@ -701,11 +725,12 @@ function DescriptionContainer({ description, styles, isMobile = false, contentSc
       {description.map((paragraph, i) => (
         <p
           key={i}
-          className="font-pressura-ext"
           style={{
-            fontWeight: 350,
+            fontFamily: 'Inter',
+            fontWeight: 300,
             fontSize: `${fontSize}px`,
             lineHeight: `${lineHeight}px`,
+            letterSpacing: '0',
             color: styles.textColor,
           }}
         >
@@ -737,6 +762,9 @@ export function MorphingCard({
   zIndexOverride,
   useBouncyTransition = false,
   isFocused = true,
+  initialBorderRadius = 16,
+  expandedFromCompact = false,
+  isOverDark = false,
 }: MorphingCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
@@ -765,8 +793,8 @@ export function MorphingCard({
   const defaultBorderColor = styles.border
   const spotlightGradient = (isHovered && hasPointer)
     ? card.variant === 'cta'
-      ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(230, 230, 232, 0.6) 15%, ${defaultBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
-      : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 1) 0%, rgba(200, 210, 230, 0.8) 15%, ${defaultBorderColor} 35%, rgba(140, 140, 150, 0.3) 55%, rgba(120, 120, 130, 0.35) 100%)`
+      ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(230, 230, 232, 0.35) 15%, ${defaultBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
+      : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(200, 210, 230, 0.45) 15%, ${defaultBorderColor} 35%, rgba(140, 140, 150, 0.3) 55%, rgba(120, 120, 130, 0.35) 100%)`
     : 'none'
 
   const label = mobileLabel || card.label
@@ -788,25 +816,25 @@ export function MorphingCard({
         <div className="flex items-center justify-between p-4" style={{ padding: '16px 20px' }}>
           <div className="flex flex-col gap-1">
             <span
-              className="font-pressura-mono uppercase tracking-wider"
-              style={{ fontSize: '12px', letterSpacing: '0.36px', color: styles.secondaryText }}
+              style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 500, lineHeight: '15px', letterSpacing: '0.01em', color: styles.secondaryText }}
             >
               {card.label}
             </span>
             <span
-              className="font-pressura-mono uppercase tracking-wide"
-              style={{ fontSize: '22px', fontWeight: 400, letterSpacing: '0.44px', color: styles.textColor }}
+              style={{ fontFamily: 'Inter', fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', color: styles.textColor }}
             >
               {card.title}
             </span>
           </div>
           <span
-            className="font-pressura-mono uppercase"
+            className="uppercase"
             style={{
-              fontSize: '14px',
-              letterSpacing: '0.42px',
+              fontFamily: 'DotGothic16',
+              fontSize: '12px',
+              fontWeight: 400,
+              lineHeight: '100%',
               color: styles.secondaryText,
-              padding: '4px 8px',
+              padding: '4.5px 8px 3.5px',
               backgroundColor: styles.badgeBg,
               borderRadius: 4,
             }}
@@ -824,15 +852,31 @@ export function MorphingCard({
   // Extract content scale from expandedPosition (for shallow viewport scaling)
   const contentScale = expandedPosition.scale ?? 1
 
+  // Override CTA styles for expanded state — collapsed uses transparent bg + gray text,
+  // but expanded needs solid white bg + dark text (original values)
+  const expandedStyles = card.variant === 'cta' ? {
+    ...styles,
+    bg: '#FFFFFF',
+    textColor: '#8E8E8E',
+    ctaTitleColor: '#8E8E8E',
+    border: 'rgba(0,0,0,0.05)',
+    badgeBg: 'rgba(0,0,0,0.08)',
+  } : styles
+
   // If expanded with collapsedPosition, this is a portal card that animates from collapsed to expanded
   if (isExpanded && collapsedPosition) {
     return (
       <motion.div
         ref={cardRef}
         className="fixed overflow-hidden"
+        // Non-CTA cards have rich/dark backgrounds — invert cursor to light variant
+        {...(card.variant !== 'cta' ? { 'data-cursor-invert': '' } : {})}
+        // Suppress i-beam text cursor on expanded card content (read-only text).
+        // The CTA "Add a role..." input is a real <input> which uses native caret, not TEXT_NODE.
+        data-cursor-no-text=""
         style={{
-          backgroundColor: styles.bg,
-          color: styles.textColor,
+          backgroundColor: expandedStyles.bg,
+          color: expandedStyles.textColor,
           zIndex: zIndexOverride ?? 9999,
           pointerEvents: isStacked ? 'none' : 'auto',
           // Parallax offset applied via Framer Motion's x property for real-time velocity response
@@ -840,13 +884,22 @@ export function MorphingCard({
           // Swipe-down offset for dismiss gesture feedback
           y: swipeDownOffset,
           transformOrigin: 'center center',
+          // CTA: overflow visible so the SVG dashed border stroke isn't clipped.
+          // From compact: blur is handled by the ghost overlay (not the portal).
+          // From default: portal provides its own backdropFilter blur.
+          // (non-CTA cards need overflow:hidden for content clipping during expand/collapse)
+          ...(card.variant === 'cta' && expandedFromCompact
+            ? { overflow: 'visible' as const }
+            : card.variant === 'cta'
+              ? { backdropFilter: 'blur(8px)', overflow: 'visible' as const }
+              : {}),
         }}
         initial={{
           top: Math.round(collapsedPosition.top),
           left: Math.round(collapsedPosition.left),
           width: Math.round(collapsedPosition.width),
           height: Math.round(collapsedPosition.height),
-          borderRadius: 16,
+          borderRadius: initialBorderRadius,
           rotate: 0,
           scale: 1,
         }}
@@ -860,22 +913,55 @@ export function MorphingCard({
           scale: stackedScale,
         }}
         exit={{
-          top: Math.round((exitPosition ?? collapsedPosition).top),
-          left: Math.round((exitPosition ?? collapsedPosition).left),
-          width: Math.round((exitPosition ?? collapsedPosition).width),
-          height: Math.round((exitPosition ?? collapsedPosition).height),
-          borderRadius: 16,
+          // When returning to compact pill, use exact fractional values (no rounding) so the portal's
+          // final frame pixel-perfectly matches the real compact bar that replaces it on unmount
+          top: expandedFromCompact
+            ? (exitPosition ?? collapsedPosition).top
+            : Math.round((exitPosition ?? collapsedPosition).top),
+          left: expandedFromCompact
+            ? (exitPosition ?? collapsedPosition).left
+            : Math.round((exitPosition ?? collapsedPosition).left),
+          width: expandedFromCompact
+            ? (exitPosition ?? collapsedPosition).width
+            : Math.round((exitPosition ?? collapsedPosition).width),
+          height: expandedFromCompact
+            ? (exitPosition ?? collapsedPosition).height
+            : Math.round((exitPosition ?? collapsedPosition).height),
+          borderRadius: initialBorderRadius,
           rotate: 0,
           scale: 1,
-          transition: {
-            top: mobileCollapseSpring,
-            left: mobileCollapseSpring,
-            width: mobileCollapseSpring,
-            height: mobileCollapseSpring,
-            borderRadius: mobileCollapseSpring,
-            rotate: mobileCollapseSpring,
-            scale: mobileCollapseSpring,
-          },
+          boxShadow: 'none',
+          // Transition bg to match collapsed/compact pill appearance on unmount.
+          // CTA compact: portal bg goes transparent so the ghost's own backdropFilter blur
+          // sees through to the page (ghost provides the semi-transparent bg + blur).
+          ...(expandedFromCompact && card.variant === 'cta'
+            ? { backgroundColor: 'transparent' }
+            : (expandedFromCompact || card.variant === 'cta')
+              ? { backgroundColor: styles.bg }
+              : {}),
+          transition: (() => {
+            // Compact-close uses a fast tween: no overshoot, no long settling tail.
+            // A spring's overdamped mode converges slowly in the last few pixels (340ms tail),
+            // which leaves a visible blob near the mini tray. A 200ms ease-out tween
+            // reaches the target cleanly and triggers onExitComplete promptly.
+            const collapseTween = { type: 'tween' as const, duration: 0.2, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] as [number, number, number, number] }
+            const collapseTransition = expandedFromCompact
+              ? collapseTween
+              : mobileCollapseSpring
+            return {
+              top: collapseTransition,
+              left: collapseTransition,
+              width: collapseTransition,
+              height: collapseTransition,
+              borderRadius: collapseTransition,
+              rotate: collapseTransition,
+              scale: collapseTransition,
+              boxShadow: { duration: 0.4, ease: 'easeOut' },
+              backgroundColor: expandedFromCompact && card.variant === 'cta'
+                ? { duration: 0.1, ease: 'easeOut' }
+                : { duration: 0.2, ease: 'easeOut' },
+            }
+          })(),
         }}
         transition={{
           // Position - use bouncy spring for carousel nav AND for exit (collapse) animation
@@ -907,11 +993,41 @@ export function MorphingCard({
           style={{
             border: `1px solid ${styles.expandedBorder}`,
           }}
-          initial={{ borderRadius: 16 }}
-          animate={{ borderRadius: 20 }}
-          exit={{ borderRadius: 16 }}
-          transition={contentSpring}
+          initial={{ borderRadius: initialBorderRadius }}
+          animate={{ borderRadius: 20, opacity: 1 }}
+          exit={{
+            borderRadius: expandedFromCompact ? 44 : 16,
+            // When expandedFromCompact or CTA, fade out — the ghost has its own border
+            ...((expandedFromCompact || card.variant === 'cta') ? { opacity: 0 } : {}),
+          }}
+          transition={{
+            ...contentSpring,
+            opacity: { duration: 0 },
+          }}
         />
+
+        {/* CTA: SVG dashed border — hidden when expanded, appears instantly on normal collapse exit */}
+        {/* When expandedFromCompact, the ghost overlay provides its own rx=24 dashed border instead */}
+        {card.variant === 'cta' && !expandedFromCompact && (
+          <motion.svg
+            className="absolute pointer-events-none"
+            style={{ inset: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'visible' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 1 }}
+            transition={{ opacity: { duration: 0 } }}
+          >
+            <rect
+              x="0" y="0" width="100%" height="100%"
+              rx="16" ry="16"
+              fill="none"
+              stroke={styles.border}
+              strokeWidth="2.5"
+              strokeDasharray="12 8"
+              strokeLinecap="round"
+            />
+          </motion.svg>
+        )}
 
         {/* Spotlight hover effects - reduced opacity for expanded cards */}
         {/* Fill spotlight - subtle light following cursor */}
@@ -941,17 +1057,19 @@ export function MorphingCard({
         {/* On mobile, this becomes a scrollable container for all content */}
         {/* On desktop/tablet, uses flexbox with space-between for auto-spacing between clusters (toggleable via Leva) */}
         <motion.div
-          className={`absolute inset-0 flex flex-col ${(typeof window !== 'undefined' && window.innerWidth < 768) ? 'mobile-card-scroll' : 'justify-between'}`}
+          className={`absolute inset-0 flex flex-col ${(typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 'mobile-card-scroll' : 'justify-between'}`}
           style={{
-            overflowY: (typeof window !== 'undefined' && window.innerWidth < 768) ? 'auto' : 'hidden',
+            overflowY: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 'auto' : 'hidden',
             overflowX: 'hidden',
             WebkitOverflowScrolling: 'touch',
           }}
-          initial={{ padding: compactCta ? '10px 10px 20px 12px' : '10px 10px 20px 20px' }}
-          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < 768) ? '18px 14px 16px 16px' : (typeof window !== 'undefined' && window.innerWidth < 1024) ? '16px 16px 18px 18px' : '22px 22px 24px 24px' }}
+          initial={{ padding: compactCta ? '18px 10px 19px 12px' : '18px 10px 19px 20px' }}
+          animate={{ padding: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? '24px 14px 16px 16px' : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? '24px 24px 18px 24px' : '24px 22px 24px 24px' }}
           exit={{
-            padding: compactCta ? '10px 10px 20px 12px' : '10px 10px 20px 20px',
-            transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] } },
+            ...(expandedFromCompact
+              ? { opacity: 0, transition: { opacity: { duration: 0.06, ease: 'easeOut' } } }
+              : { padding: compactCta ? '18px 10px 19px 12px' : '18px 10px 19px 20px',
+                  transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }),
           }}
           transition={contentSpring}
           onTouchStart={(e) => {
@@ -966,7 +1084,7 @@ export function MorphingCard({
           onTouchMove={(e) => {
             // On mobile, detect swipe direction to decide whether to allow vertical scroll
             // or let horizontal swipe propagate to parent for card navigation
-            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            if (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) {
               const target = e.currentTarget as HTMLElement
               const startX = parseFloat(target.dataset.touchStartX || '0')
               const startY = parseFloat(target.dataset.touchStartY || '0')
@@ -1000,8 +1118,8 @@ export function MorphingCard({
             }
           }}
           onTouchEnd={(e) => {
-            // On mobile, check for swipe-down-to-dismiss
-            if (typeof window !== 'undefined' && window.innerWidth < 768) {
+            // On mobile & tablet, check for swipe-down-to-dismiss
+            if (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) {
               const target = e.currentTarget as HTMLElement
               const startY = parseFloat(target.dataset.touchStartY || '0')
               const scrollTopAtStart = parseFloat(target.dataset.scrollTopAtStart || '0')
@@ -1023,84 +1141,97 @@ export function MorphingCard({
           {card.variant === 'cta' ? (
             <AddNewRoleContent
               onClose={onClose}
-              isMobile={compactCta || (typeof window !== 'undefined' && window.innerWidth < 768)}
+              isMobile={compactCta || (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile)}
               hideShortcut={hideShortcut}
               shortcut={card.shortcut}
               contentScale={contentScale}
               isFocused={isFocused}
-              styles={styles}
+              styles={expandedStyles}
+              emailCopied={emailCopied}
+              expandedFromCompact={expandedFromCompact}
+              compactLabel={card.compactLabel || card.label}
             />
           ) : (
           <>
+          {/* Shortcut badge - absolutely positioned at top right, animates position with padding */}
+          {/* Separate from the text cluster to match collapsed card structure */}
+          <motion.div
+            data-cursor="morph"
+            data-cursor-radius="20"
+            onClick={(e) => {
+              e.stopPropagation()
+              onClose()
+            }}
+            className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
+            style={{ backgroundColor: styles.badgeBg }}
+            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: hideShortcut ? 0 : 1 }}
+            animate={{ right: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 14 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, top: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: hideShortcut ? 0 : 1 }}
+            exit={{
+              right: 10,
+              top: 10,
+              paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px',
+              opacity: (hideShortcut || expandedFromCompact) ? 0 : 1,
+              transition: expandedFromCompact
+                ? { opacity: { duration: 0.08, ease: 'easeOut' } }
+                : undefined,
+            }}
+            transition={contentSpring}
+          >
+            {/* Badge text - same size as collapsed card */}
+            <div
+              className="uppercase leading-[100%] relative text-[12px]"
+              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.12em', top: '-0.5px' }}
+            >
+              {/* ESC text - absolutely positioned, fades in when expanded */}
+              <motion.span
+                className="absolute inset-0 flex items-center justify-center"
+                style={{ color: styles.textColor }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: hideShortcut ? 0 : 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.12, ease: 'easeOut' }}
+              >
+                ESC
+              </motion.span>
+              {/* Shortcut text - provides layout, fades out when expanded */}
+              <motion.span
+                style={{ color: styles.textColor }}
+                initial={{ opacity: 1 }}
+                animate={{ opacity: hideShortcut ? 1 : 0 }}
+                exit={{ opacity: 1 }}
+                transition={{ duration: 0.12, ease: 'easeOut' }}
+              >
+                {card.shortcut}
+              </motion.span>
+            </div>
+          </motion.div>
+
           {/* TOP CLUSTER: Header + Title + Date Range */}
           {/* This cluster stays at the top of the card */}
-          {/* flex flex-col gap-[0px] matches collapsed card layout to prevent 1px jump on exit */}
-          <div className="flex-shrink-0 flex flex-col gap-[0px]">
-            {/* Header row with morphing label - uses same copy as collapsed card */}
-            <div className="flex items-start justify-between w-full relative">
-              <motion.div
-                className="font-pressura leading-normal text-left uppercase"
-                style={{ color: styles.textColor, fontSize: '12px', letterSpacing: '0.39px', fontWeight: 400, transformOrigin: 'top left', whiteSpace: 'nowrap' }}
-                initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
-                animate={{ scale: 14 / 12, marginTop: '1px', opacity: 1 }}
-                exit={{
-                  scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1,
-                  transition: {
-                    scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-                    marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-                    ...(compactCta ? { opacity: { duration: 0.1, ease: 'easeOut' } } : {}),
-                  },
-                }}
-                transition={contentSpring}
-              >
-                {label}
-              </motion.div>
-
-              {/* Shortcut badge - morphs between ESC (expanded) and shortcut key (collapsed) */}
-              {/* Always render during exit animation to prevent blinking */}
-              {/* When hideShortcut (mobile), remove from layout entirely to match collapsed card which doesn't render it */}
-              <motion.div
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onClose()
-                }}
-                className="flex items-center justify-center rounded-full shrink-0 cursor-pointer"
-                style={{ backgroundColor: styles.badgeBg, ...(hideShortcut ? { position: 'absolute' as const, right: 0, top: 0 } : {}) }}
-                initial={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
-                animate={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '16px', paddingRight: '16px', opacity: hideShortcut ? 0 : 1 }}
-                // Show badge during exit animation so shortcut animates back (but not on mobile where hideShortcut is true)
-                exit={{ paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: hideShortcut ? 0 : 1 }}
-                transition={contentSpring}
-              >
-                {/* Badge text - same size as collapsed card */}
-                <div
-                  className="uppercase font-pressura-mono leading-[100%] relative text-[12px]"
-                  style={{ top: '-1px' }}
-                >
-                  {/* ESC text - absolutely positioned, fades in when expanded */}
-                  <motion.span
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{ color: styles.textColor }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: hideShortcut ? 0 : 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.12, ease: 'easeOut' }}
-                  >
-                    ESC
-                  </motion.span>
-                  {/* Shortcut text - provides layout, fades out when expanded */}
-                  <motion.span
-                    style={{ color: styles.textColor }}
-                    initial={{ opacity: 1 }}
-                    animate={{ opacity: hideShortcut ? 1 : 0 }}
-                    exit={{ opacity: 1 }}
-                    transition={{ duration: 0.12, ease: 'easeOut' }}
-                  >
-                    {card.shortcut}
-                  </motion.span>
-                </div>
-              </motion.div>
-            </div>
+          {/* flex flex-col gap-[5px] matches collapsed card layout to prevent jump on exit */}
+          <motion.div
+            className="flex-shrink-0 flex flex-col"
+            style={{ gap: 5 }}
+            exit={undefined}
+          >
+            {/* Label - morphs from collapsed to expanded */}
+            <motion.div
+              className="text-left"
+              style={{ fontFamily: 'Inter', color: styles.textColor, fontSize: '12px', fontWeight: 500, lineHeight: '15px', letterSpacing: '0.01em', transformOrigin: 'top left', whiteSpace: 'nowrap', overflow: 'hidden' }}
+              initial={{ scale: 1, opacity: 1 }}
+              animate={{ scale: 14 / 12, opacity: 1 }}
+              exit={{
+                scale: 1,
+                opacity: compactCta ? 0 : 1,
+                transition: {
+                  scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+                  ...(compactCta ? { opacity: { duration: 0.15, ease: 'easeOut' } } : {}),
+                },
+              }}
+              transition={contentSpring}
+            >
+              {label}
+            </motion.div>
 
             {/* Morphing title - scales proportionally from collapsed to expanded */}
             {/* Uses transform scale instead of fontSize to prevent text reflow during transition */}
@@ -1108,15 +1239,19 @@ export function MorphingCard({
             {/* Mobile uses smaller scale (26/18) to fit within narrower container */}
             {/* For compactCta (mobile CTA), fade out quickly on exit since collapsed state has different layout */}
             <motion.div
-              className="leading-normal text-left w-full uppercase font-pressura"
-              style={{ color: styles.textColor, transformOrigin: 'top left', letterSpacing: '-0.3px', fontSize: '18px', whiteSpace: 'nowrap' }}
-              initial={{ scale: 1, marginTop: '0px', opacity: 1 }}
-              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < 768) ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < 1024) ? 28 / 18 : 32 / 18, marginTop: '4px', opacity: 1 }}
+              className="text-left w-full"
+              style={{ fontFamily: 'Inter', color: styles.textColor, transformOrigin: 'top left', fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative' }}
+              initial={{ scale: 1, marginTop: '-4px', marginLeft: '0px', opacity: 1 }}
+              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 28 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 30 / 18 : 34 / 18, marginTop: '1px', marginLeft: '-1px', opacity: 1 }}
               exit={{
-                scale: 1, marginTop: '0px', opacity: compactCta ? 0 : 1,
+                scale: 1,
+                marginTop: '-4px',
+                marginLeft: '0px',
+                opacity: compactCta ? 0 : 1,
                 transition: {
-                  scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-                  marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+                  scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+                  marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+                  marginLeft: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
                   ...(compactCta ? { opacity: { duration: 0.1, ease: 'easeOut' } } : {}),
                 },
               }}
@@ -1127,15 +1262,16 @@ export function MorphingCard({
 
             {/* Date Range - part of top cluster */}
             {(() => {
-              const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768
-              const isTabletViewport = typeof window !== 'undefined' && window.innerWidth >= 768 && window.innerWidth < 1024
+              const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile
+              const isTabletViewport = typeof window !== 'undefined' && window.innerWidth >= BREAKPOINTS.mobile && window.innerWidth < BREAKPOINTS.desktop
               return expandedContent.dateRange && (
                 <motion.p
-                  className="font-pressura-ext"
                   style={{
-                    fontWeight: 350,
-                    fontSize: isMobileViewport ? '15px' : isTabletViewport ? '16px' : '19px',
-                    lineHeight: isMobileViewport ? '21px' : isTabletViewport ? '22px' : '25px',
+                    fontFamily: 'Inter',
+                    fontWeight: 400,
+                    fontSize: isMobileViewport ? '14px' : isTabletViewport ? '16px' : '18px',
+                    lineHeight: isMobileViewport ? '20px' : isTabletViewport ? '22px' : '26px',
+                    letterSpacing: '-0.01em',
                     color: styles.textColor,
                     marginTop: isMobileViewport ? '20px' : isTabletViewport ? '16px' : '28px',
                   }}
@@ -1147,7 +1283,7 @@ export function MorphingCard({
                   {expandedContent.dateRange.includes('→') ? (
                     <>
                       {expandedContent.dateRange.split('→')[0]}
-                      <span style={{ position: 'relative', top: '-1px' }}>→</span>
+                      <IoMdArrowForward style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', position: 'relative', top: '-1px' }} />
                       {expandedContent.dateRange.split('→')[1]}
                     </>
                   ) : (
@@ -1156,12 +1292,12 @@ export function MorphingCard({
                 </motion.p>
               )
             })()}
-          </div>
+          </motion.div>
 
           {/* MOBILE ONLY: Description + Bottom content in a separate structure */}
           {/* Date Range + Description + Bottom Content - fades in */}
           {(() => {
-            const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768
+            const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile
 
             // Mobile layout uses different structure
             if (!isMobileViewport) return null
@@ -1195,11 +1331,13 @@ export function MorphingCard({
                     {/* Pinned label - shown once when any pinned content exists (matching desktop) */}
                     {(expandedContent.highlights?.length || expandedContent.nowPlayingCard || expandedContent.reflectionsCard) && (
                       <motion.p
-                        className="font-pressura-ext flex items-center gap-2"
+                        className="flex items-center gap-2"
                         style={{
-                          fontWeight: 350,
-                          fontSize: '15px',
-                          lineHeight: '21px',
+                          fontFamily: 'Inter',
+                          fontWeight: 400,
+                          fontSize: '14px',
+                          lineHeight: '20px',
+                          letterSpacing: '-0.01em',
                           color: styles.textColor,
                           opacity: 0.9,
                         }}
@@ -1207,8 +1345,8 @@ export function MorphingCard({
                         animate={{ opacity: 0.9, transition: { opacity: { duration: 0.2, ease: 'easeOut', delay: 0.12 } } }}
                         exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeIn', delay: 0.1 } } }}
                       >
-                        <RiPushpinLine style={{ width: '14px', height: '14px', transform: 'scaleX(-1)' }} />
-                        <span style={{ marginLeft: '-1px' }}>Pinned highlights</span>
+                        <RiPushpinLine style={{ width: '12px', height: '12px', transform: 'scaleX(-1)' }} />
+                        <span style={{ marginLeft: '-1px' }}>Pinned</span>
                       </motion.p>
                     )}
 
@@ -1288,6 +1426,8 @@ export function MorphingCard({
                             return (
                               <button
                                 key={i}
+                                data-cursor="morph"
+                                data-cursor-radius="5"
                                 onClick={(e) => e.stopPropagation()}
                                 className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
                                 style={{
@@ -1299,7 +1439,7 @@ export function MorphingCard({
                                 }}
                               >
                                 {Icon && <Icon className="w-5 h-5" />}
-                                <span className="text-[18px] font-pressura uppercase" style={{ letterSpacing: '-0.8px' }}>
+                                <span data-cursor-parallax="" className="text-[18px] uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '-0.01em' }}>
                                   {action.label}
                                 </span>
                               </button>
@@ -1314,22 +1454,26 @@ export function MorphingCard({
             )
           })()}
 
-          {/* DESKTOP ONLY: Middle cluster (description) + Bottom cluster (pinned content) */}
+          {/* DESKTOP/TABLET: Middle cluster (description) + Bottom cluster (pinned content) */}
           {/* Uses flexbox space-between layout for auto-spacing between top/middle/bottom */}
-          {typeof window !== 'undefined' && window.innerWidth >= 768 && (() => {
-            const isTablet = typeof window !== 'undefined' && window.innerWidth < 1024
+          {/* Content scales proportionally with card dimensions via contentScale */}
+          {typeof window !== 'undefined' && window.innerWidth >= BREAKPOINTS.mobile && (() => {
             return (
             <>
-              {/* MIDDLE CLUSTER: Description - takes remaining space and centers vertically */}
-              <div className="flex-1 flex items-center">
+              {/* MIDDLE CLUSTER: Description - takes remaining space, vertically centered */}
+              <div
+                className="flex items-center"
+                style={{ flex: '1 1 0%' }}
+              >
                 <motion.div
+                  style={{ marginTop: `${Math.round(28 * contentScale)}px`, marginBottom: `${Math.round(28 * contentScale)}px` }}
                   initial={{ opacity: 0, y: -12 }}
                   animate={{
                     opacity: 1,
                     y: 0,
                     transition: {
                       opacity: { duration: 0.2, ease: 'easeOut', delay: 0.08 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.08 }
+                      y: { ...contentSpring, delay: 0.08 }
                     }
                   }}
                   exit={{ opacity: 0, y: -8, transition: { duration: 0.1, ease: 'easeIn' } }}
@@ -1337,8 +1481,8 @@ export function MorphingCard({
                   <DescriptionContainer
                     description={expandedContent.description}
                     styles={styles}
-                    isMobile={isTablet}
-                    contentScale={isTablet ? 1 : contentScale}
+                    isMobile={false}
+                    contentScale={contentScale}
                   />
                 </motion.div>
               </div>
@@ -1347,22 +1491,29 @@ export function MorphingCard({
               <motion.div
                 className="flex flex-col flex-shrink-0"
                 style={{
-                  gap: isTablet ? '12px' : '16px',
+                  gap: `${Math.round(16 * contentScale)}px`,
+                  overflow: 'hidden',
                 }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0, transition: { opacity: { duration: 0.1, ease: 'easeOut' } } }}
+                exit={{
+                  opacity: 0,
+                  transition: { opacity: { duration: 0.1, ease: 'easeOut' } },
+                }}
               >
               {/* Pinned highlights label - shown when any pinned content exists */}
               {(expandedContent.highlights?.length || expandedContent.nowPlayingCard || expandedContent.reflectionsCard) && (
                 <motion.p
-                  className="font-pressura-ext flex items-center gap-2"
+                  className="flex items-center"
                   style={{
-                    fontWeight: 350,
-                    fontSize: isTablet ? '15px' : '18px',
-                    lineHeight: isTablet ? '21px' : '24px',
+                    fontFamily: 'Inter',
+                    fontWeight: 400,
+                    fontSize: `${Math.round(18 * contentScale)}px`,
+                    lineHeight: `${Math.round(26 * contentScale)}px`,
+                    letterSpacing: '-0.01em',
                     color: styles.textColor,
                     opacity: 0.9,
+                    gap: `${Math.round(8 * contentScale)}px`,
                   }}
                   initial={{ opacity: 0, y: -8 }}
                   animate={{
@@ -1370,13 +1521,13 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.2, ease: 'easeOut', delay: 0.12 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.12 }
+                      y: { ...contentSpring, delay: 0.12 }
                     }
                   }}
                   exit={{ opacity: 0, y: -4, transition: { duration: 0.1, ease: 'easeIn', delay: 0.1 } }}
                 >
-                  <RiPushpinLine style={{ width: isTablet ? '14px' : '16px', height: isTablet ? '14px' : '16px', transform: 'scaleX(-1)' }} />
-                  <span style={{ marginLeft: '-1px' }}>Pinned highlights</span>
+                  <RiPushpinLine style={{ width: `${Math.round(16 * contentScale)}px`, height: `${Math.round(16 * contentScale)}px`, transform: 'scaleX(-1)' }} />
+                  <span style={{ marginLeft: '-1px' }}>Pinned</span>
                 </motion.p>
               )}
 
@@ -1389,7 +1540,7 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.25, ease: 'easeOut', delay: 0.18 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.18 }
+                      y: { ...contentSpring, delay: 0.18 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.08 } }}
@@ -1398,7 +1549,8 @@ export function MorphingCard({
                     highlights={expandedContent.highlights}
                     styles={styles}
                     onHighlightClick={onHighlightClick}
-                    isMobile={isTablet}
+                    isMobile={false}
+                    contentScale={contentScale}
                   />
                 </motion.div>
               )}
@@ -1412,7 +1564,7 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.25, ease: 'easeOut', delay: 0.24 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.24 }
+                      y: { ...contentSpring, delay: 0.24 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.05 } }}
@@ -1422,7 +1574,8 @@ export function MorphingCard({
                     styles={styles}
                     themeMode={themeMode}
                     variant={card.variant}
-                    isMobile={isTablet}
+                    isMobile={false}
+                    contentScale={contentScale}
                   />
                 </motion.div>
               )}
@@ -1436,7 +1589,7 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.25, ease: 'easeOut', delay: 0.30 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.30 }
+                      y: { ...contentSpring, delay: 0.30 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn', delay: 0.02 } }}
@@ -1445,7 +1598,8 @@ export function MorphingCard({
                     card={expandedContent.reflectionsCard}
                     themeMode={themeMode}
                     variant={card.variant}
-                    isMobile={isTablet}
+                    isMobile={false}
+                    contentScale={contentScale}
                     chip={
                       card.variant === 'blue'
                         ? { icon: 'slides', text: '35 Slides' }
@@ -1471,31 +1625,37 @@ export function MorphingCard({
                     y: 0,
                     transition: {
                       opacity: { duration: 0.25, ease: 'easeOut', delay: 0.36 },
-                      y: { type: 'spring', stiffness: 400, damping: 35, delay: 0.36 }
+                      y: { ...contentSpring, delay: 0.36 }
                     }
                   }}
                   exit={{ opacity: 0, y: -6, transition: { duration: 0.1, ease: 'easeIn' } }}
                 >
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col" style={{ gap: `${Math.round(12 * contentScale)}px` }}>
                     {expandedContent.actions.map((action, i) => {
                       const Icon = action.icon ? iconMap[action.icon] : null
                       const isPrimary = action.primary
+                      const buttonHeight = Math.round(65 * contentScale)
+                      const iconSize = Math.round(20 * contentScale)
+                      const fontSize = Math.round(20 * contentScale)
 
                       return (
                         <button
                           key={i}
+                          data-cursor="morph"
+                          data-cursor-radius="5"
                           onClick={(e) => e.stopPropagation()}
-                          className="flex items-center justify-center gap-3 rounded-[5px] relative overflow-hidden"
+                          className="flex items-center justify-center rounded-[5px] relative overflow-hidden"
                           style={{
                             width: '100%',
-                            height: isTablet ? '48px' : '65px',
+                            height: `${buttonHeight}px`,
+                            gap: `${Math.round(12 * contentScale)}px`,
                             backgroundColor: isPrimary ? styles.primaryButtonBg : styles.secondaryButtonBg,
                             color: isPrimary ? styles.primaryButtonText : styles.secondaryButtonText,
                             borderBottom: `2px solid ${isPrimary ? styles.primaryButtonBorder : styles.secondaryButtonBorder}`,
                           }}
                         >
-                          {Icon && <Icon className={isTablet ? 'w-4 h-4' : 'w-5 h-5'} />}
-                          <span className={`${isTablet ? 'text-[16px]' : 'text-[20px]'} font-pressura uppercase`} style={{ letterSpacing: '-0.8px' }}>
+                          {Icon && <Icon style={{ width: `${iconSize}px`, height: `${iconSize}px` }} />}
+                          <span data-cursor-parallax="" className="uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '-0.01em', fontSize: `${fontSize}px` }}>
                             {action.label}
                           </span>
                         </button>
@@ -1514,25 +1674,47 @@ export function MorphingCard({
 
         </motion.div>
 
-        {/* Mobile CTA: Collapsed content overlay - fades in during exit animation */}
-        {compactCta && (
+        {/* Non-CTA compact ghost removed: close-from-compact now targets mini tray (28×8px bare
+            colored pills with no text/badge/border), so the card's own exit backgroundColor
+            handles the visual match. The old ghost showed expanded-compact-bar labels + borders
+            that don't exist at mini-tray size. */}
+
+        {/* CTA compact pill ghost — fades in during exit to match the mini tray CTA pill.
+            Uses mini-tray-sized border params (rx=4, thin stroke, small dashes) since the
+            exit target is the 28×8px mini pill, not the expanded compact pill. */}
+        {expandedFromCompact && card.variant === 'cta' && (() => {
+          const ghostBorderColor = isOverDark ? 'rgba(255,255,255,0.4)' : '#cacaca'
+          const ghostBg = isOverDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.36)'
+          return (
           <motion.div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-1 pointer-events-none"
-            style={{ padding: '10px 10px 20px 12px' }}
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              borderRadius: 44,
+              backgroundColor: ghostBg,
+              boxSizing: 'border-box',
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 0 }}
             exit={{ opacity: 1 }}
-            transition={{ opacity: { duration: 0.15, delay: 0.05 } }}
+            transition={{ opacity: { duration: 0.12, ease: 'easeIn', delay: 0.12 } }}
           >
-            <div
-              className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-center uppercase"
-              style={{ color: styles.textColor }}
+            <svg
+              className="absolute pointer-events-none"
+              style={{ inset: 0, width: '100%', height: '100%', overflow: 'visible' }}
             >
-              Add Role
-            </div>
-            <SlPlus className="w-5 h-5" style={{ color: styles.textColor }} />
+              <rect
+                x="0" y="0" width="100%" height="100%"
+                rx="4" ry="4"
+                fill="none"
+                stroke={ghostBorderColor}
+                strokeWidth="1.5"
+                strokeDasharray="3 2.5"
+                strokeLinecap="round"
+              />
+            </svg>
           </motion.div>
-        )}
+          )
+        })()}
 
       </motion.div>
     )
@@ -1542,12 +1724,16 @@ export function MorphingCard({
   return (
     <motion.div
       ref={cardRef}
+      data-cursor="morph-only"
+      data-cursor-radius="16"
       className="rounded-[16px] overflow-hidden cursor-pointer relative"
       style={{
         backgroundColor: styles.bg,
         color: styles.textColor,
         width: '100%',
         height: 'auto',
+        ...(card.variant === 'cta' ? { backdropFilter: 'blur(8px)', overflow: 'visible' as const } : {}),
+        boxShadow: 'none',
       }}
       animate={{
         scale: isHovered ? 1.02 : 1,
@@ -1555,14 +1741,14 @@ export function MorphingCard({
       transition={hoverTransition}
       onClick={() => {
         // On mobile, clear hover state when clicking to expand
-        if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        if (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) {
           setIsHovered(false)
         }
         onClick()
       }}
       onMouseEnter={() => {
         // Only enable hover on desktop
-        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        if (typeof window !== 'undefined' && window.innerWidth >= BREAKPOINTS.mobile) {
           setIsHovered(true)
         }
       }}
@@ -1570,13 +1756,28 @@ export function MorphingCard({
       onMouseLeave={() => setIsHovered(false)}
       whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
     >
-      {/* Border */}
-      <div
-        className="absolute inset-0 rounded-[16px] pointer-events-none"
-        style={{
-          border: `1px solid ${styles.border}`,
-        }}
-      />
+      {/* Border — CTA uses SVG dashed stroke (dash:12, gap:8, round caps) to match Figma */}
+      {card.variant === 'cta' ? (
+        <svg
+          className="absolute pointer-events-none"
+          style={{ inset: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'visible' }}
+        >
+          <rect
+            x="0" y="0" width="100%" height="100%"
+            rx="16" ry="16"
+            fill="none"
+            stroke={styles.border}
+            strokeWidth="2.5"
+            strokeDasharray="12 8"
+            strokeLinecap="round"
+          />
+        </svg>
+      ) : (
+        <div
+          className="absolute inset-0 rounded-[16px] pointer-events-none"
+          style={{ border: `1px solid ${styles.border}` }}
+        />
+      )}
 
       {/* Spotlight hover effects */}
       <div
@@ -1587,155 +1788,161 @@ export function MorphingCard({
           transition: 'opacity 0.4s ease-out',
         }}
       />
-      <div
-        className="absolute inset-0 rounded-[16px] pointer-events-none"
-        style={{
-          background: spotlightGradient,
-          mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
-          maskComposite: 'exclude',
-          WebkitMaskComposite: 'xor',
-          padding: '1px',
-          opacity: isHovered ? 1 : 0,
-          transition: 'opacity 0.4s ease-out',
-        }}
-      />
+      {/* Border spotlight — skip for CTA (clashes with dotted SVG border) */}
+      {card.variant !== 'cta' && (
+        <div
+          className="absolute rounded-[15px] pointer-events-none"
+          style={{
+            top: '1px',
+            left: '1px',
+            right: '1px',
+            bottom: '1px',
+            background: spotlightGradient,
+            mask: `linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)`,
+            maskComposite: 'exclude',
+            WebkitMaskComposite: 'xor',
+            padding: '1px',
+            opacity: isHovered ? 1 : 0,
+            transition: 'opacity 0.4s ease-out',
+          }}
+        />
+      )}
+
+      {/* Badge - positioned absolutely in top right, OUTSIDE the padded container */}
+      {!compactCta && !hideShortcut && !expandedFromCompact && (
+        <div
+          className="absolute"
+          style={{
+            top: '10px',
+            right: '10px',
+            transform: (isHovered && !isExpanded) ? 'translateY(-20px)' : 'translateY(0)',
+            opacity: (isHovered && !isExpanded) ? 0 : 1,
+            transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
+            zIndex: 10,
+          }}
+        >
+          {card.variant === 'cta' ? (
+            // CTA badge with animated width for email copied toast
+            <motion.div
+              className="flex items-center justify-center rounded-full shrink-0 overflow-hidden"
+              style={{ backgroundColor: styles.badgeBg, padding: '4px 4px' }}
+              initial={false}
+              animate={{
+                width: emailCopied ? 116 : 46,
+              }}
+              transition={signatureSpring}
+            >
+              <div
+                className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
+                style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px' }}
+              >
+                {emailCopied ? 'Email Copied' : (
+                  card.shortcut
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            // Regular badge with padding-based sizing
+            <div
+              className="flex items-center justify-center rounded-full shrink-0"
+              style={{ padding: '4px 8px', backgroundColor: styles.badgeBg }}
+            >
+              <div className="text-[12px] uppercase leading-[100%]" style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px' }}>
+                {card.shortcut}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Collapsed content with hover slide effect */}
       <div
-        className="overflow-hidden"
-        style={{ padding: compactCta ? '10px 10px 20px 12px' : '10px 10px 20px 20px' }}
+        className="overflow-hidden h-full relative"
+        style={{ padding: compactCta ? '18px 10px 19px 12px' : '18px 10px 19px 20px' }}
       >
         {compactCta ? (
-          <div className="flex flex-col items-center justify-center gap-1 w-full" style={{ minHeight: '47px' }}>
+          <div data-cursor-parallax="" className="flex flex-col items-center justify-center w-full h-full">
             <AnimatePresence mode="wait">
               <motion.div
                 key={emailCopied ? 'copied' : 'add'}
-                className="text-[12px] tracking-[0.36px] font-pressura-mono leading-normal text-center uppercase"
+                className="text-[12px] text-center"
+                style={{ fontFamily: 'Inter', fontWeight: 500, lineHeight: '15px', letterSpacing: '-0.01em' }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
               >
-                {emailCopied ? 'Email Copied' : 'Add Role'}
-              </motion.div>
-            </AnimatePresence>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={emailCopied ? 'check' : 'plus'}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15 }}
-              >
-                {emailCopied ? (
-                  <span className="text-[20px] leading-none" style={{ color: styles.textColor }}>✓</span>
-                ) : (
-                  <SlPlus className="w-5 h-5" style={{ color: styles.textColor }} />
-                )}
+                {emailCopied ? 'Email Copied' : 'Add a role...'}
               </motion.div>
             </AnimatePresence>
           </div>
         ) : (
-          <div className="flex flex-col gap-[0px] w-full relative">
-            {/* Label row - slides up and fades on hover */}
-            <div
-              className="flex items-start justify-between w-full"
-              style={{
-                transform: (isHovered && !isExpanded) ? 'translateY(-20px)' : 'translateY(0)',
-                opacity: (isHovered && !isExpanded) ? 0 : 1,
-                transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
-              }}
-            >
-              <div className="text-[12px] tracking-[0.39px] font-pressura leading-normal text-left uppercase" style={{ fontWeight: 400 }}>
+          <>
+            {/* Role + Title cluster - top aligned to match expanded card exit state */}
+            <div data-cursor-parallax="" className="flex flex-col gap-[5px] w-full relative">
+              {/* Label - slides up and fades on hover */}
+              <div
+                className="text-[12px] text-left"
+                style={{
+                  fontFamily: 'Inter',
+                  fontWeight: 500,
+                  lineHeight: '15px',
+                  letterSpacing: '0.01em',
+                  transform: (isHovered && !isExpanded) ? 'translateY(-20px)' : 'translateY(0)',
+                  opacity: (isHovered && !isExpanded) ? 0 : 1,
+                  transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
+                }}
+              >
                 {label}
               </div>
-              {!hideShortcut && (
-                card.variant === 'cta' ? (
-                  // CTA badge with animated width for email copied toast
-                  <motion.div
-                    className="flex items-center justify-center rounded-full shrink-0 overflow-hidden"
-                    style={{ backgroundColor: styles.badgeBg, padding: '4px 0' }}
-                    initial={false}
-                    animate={{
-                      width: emailCopied ? 108 : 44,
-                    }}
-                    transition={{ type: 'spring', stiffness: 350, damping: 28 }}
-                  >
-                    <div
-                      className="text-[12px] uppercase font-pressura-mono leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
-                      style={{ position: 'relative', top: '-1px' }}
-                    >
-                      {emailCopied ? (
-                        <>
-                          <span style={{ position: 'relative', top: '0.5px' }}>✓</span>
-                          <span>Email Copied</span>
-                        </>
-                      ) : (
-                        card.shortcut
-                      )}
-                    </div>
-                  </motion.div>
+
+              {/* Title - slides up to label position on hover */}
+              <div
+                className="text-left w-full"
+                style={{
+                  fontFamily: 'Inter',
+                  fontSize: '18px',
+                  fontWeight: 500,
+                  lineHeight: '24px',
+                  letterSpacing: '-0.01em',
+                  marginTop: '-4px',
+                  transform: (isHovered && !isExpanded) ? 'translateY(-21px)' : 'translateY(0)',
+                  transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
+                  color: card.variant === 'cta' ? (styles as typeof variantStylesLight.cta).ctaTitleColor : undefined,
+                }}
+              >
+                {card.title}
+              </div>
+
+              {/* Date range - slides up from below on hover, hidden initially */}
+              <div
+                className="text-left absolute pointer-events-none"
+                style={{
+                  fontFamily: 'Inter',
+                  bottom: -19.5,
+                  left: 0,
+                  fontWeight: 400,
+                  fontSize: '14px',
+                  lineHeight: '18px',
+                  letterSpacing: '-0.01em',
+                  transform: (isHovered && !isExpanded) ? 'translateY(-19px)' : 'translateY(0)',
+                  opacity: (isHovered && !isExpanded) ? 1 : 0,
+                  transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
+                  color: card.variant === 'cta' ? styles.textColor : undefined,
+                }}
+              >
+                {expandedContent.dateRange.includes('→') ? (
+                  <>
+                    {expandedContent.dateRange.split('→')[0]}
+                    <IoMdArrowForward style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', position: 'relative', top: '-1px' }} />
+                    {expandedContent.dateRange.split('→')[1]}
+                  </>
                 ) : (
-                  // Regular badge with padding-based sizing
-                  <div
-                    className="flex items-center justify-center rounded-full shrink-0"
-                    style={{ padding: '4px 12px', backgroundColor: styles.badgeBg }}
-                  >
-                    <div className="text-[12px] uppercase font-pressura-mono leading-[100%]" style={{ position: 'relative', top: '-1px' }}>
-                      {card.shortcut}
-                    </div>
-                  </div>
-                )
-              )}
+                  expandedContent.dateRange
+                )}
+              </div>
             </div>
-
-            {/* Title - slides up to label position on hover */}
-            <div
-              className={`text-[18px] leading-normal text-left w-full uppercase ${card.variant === 'cta' ? 'font-pressura-light' : 'font-pressura'}`}
-              style={{
-                transform: (isHovered && !isExpanded) ? 'translateY(-20px)' : 'translateY(0)',
-                transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
-                color: card.variant === 'cta' ? (styles as typeof variantStylesLight.cta).ctaTitleColor : undefined,
-                letterSpacing: '-0.3px',
-              }}
-            >
-  {card.variant === 'cta' ? (
-                <span className="flex items-center gap-3">
-                  <SlPlus className="w-5 h-5" style={{ color: (styles as typeof variantStylesLight.cta).ctaTitleColor }} />
-                  {card.title}
-                </span>
-              ) : (
-                card.title
-              )}
-            </div>
-
-            {/* Date range - slides up from below on hover, hidden initially */}
-            <div
-              className="font-pressura-ext text-left absolute pointer-events-none"
-              style={{
-                bottom: -29,
-                left: 0,
-                fontWeight: 350,
-                fontSize: '14px',
-                lineHeight: '18px',
-                letterSpacing: '-0.3px',
-                transform: (isHovered && !isExpanded) ? 'translateY(-25px)' : 'translateY(0)',
-                opacity: (isHovered && !isExpanded) ? 1 : 0,
-                transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
-                color: card.variant === 'cta' ? styles.textColor : undefined,
-              }}
-            >
-{expandedContent.dateRange.includes('→') ? (
-                <>
-                  {expandedContent.dateRange.split('→')[0]}
-                  <span style={{ position: 'relative', top: '-1px' }}>→</span>
-                  {expandedContent.dateRange.split('→')[1]}
-                </>
-              ) : (
-                expandedContent.dateRange
-              )}
-            </div>
-          </div>
+          </>
         )}
       </div>
     </motion.div>

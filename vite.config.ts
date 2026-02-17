@@ -14,6 +14,7 @@ export default defineConfig({
           'three-vendor': ['three', '@react-three/fiber', '@react-three/drei'],
           'physics': ['@react-three/rapier'],
           'motion': ['framer-motion'],
+          'gsap': ['gsap'],
         },
       },
     },

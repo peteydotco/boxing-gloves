@@ -1,429 +1,281 @@
 import { Scene, mousePositionRef } from './components/Scene'
+import { CustomCursor } from './components/CustomCursor'
 import { TopCards } from './components/TopCards'
-import { PeteLogo } from './components/PeteLogo'
-import { LeftBioSvg } from './components/LeftBioSvg'
-import { RightBioSvg } from './components/RightBioSvg'
-import { BackgroundMarquee } from './components/BackgroundMarquee'
-import { StackedBlades } from './components/StackedBlades'
-import { StageBackground } from './components/StageBackground'
-import { StagesContainer } from './components/StagesContainer'
-import { PersistentNav } from './components/PersistentNav'
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
+import { VideoMorphSection } from './components/VideoMorphSection'
+import { GradientTransition } from './components/GradientTransition'
 
-// Hook to detect when a font is loaded
-function useFontReady(fontFamily: string) {
-  const [isReady, setIsReady] = useState(false)
+import { PeteyGraffitiSvg } from './components/PeteyGraffitiSvg'
+import { SplitText } from './lib/gsap'
 
-  useEffect(() => {
-    if (document.fonts) {
-      document.fonts.ready.then(() => {
-        const loaded = document.fonts.check(`16px "${fontFamily}"`)
-        setIsReady(loaded)
-        if (!loaded) {
-          document.fonts.load(`16px "${fontFamily}"`).then(() => setIsReady(true))
-        }
-      })
-    } else {
-      // Fallback for browsers without Font Loading API
-      const timeout = setTimeout(() => setIsReady(true), 100)
-      return () => clearTimeout(timeout)
-    }
-  }, [fontFamily])
 
-  return isReady
-}
-
-// Theme presets for quick toggling (cycles: light → inverted → dark → darkInverted)
-const themes = {
-  light: {
-    bgColor: '#FFFFFF',
-    spotlightOuter: 'rgba(224,224,224,0.65)',
-    spotlightInverted: false,
-    marqueeColor: '#E0E0E0',
-    textColor: 'rgba(0, 0, 0, 0.44)',
-    logoFill: '#1A1A2E',
-    bioFill: '#000000',
-    bioOpacity: 0.55,
-  },
-  inverted: {
-    bgColor: '#E0E0E0',
-    spotlightOuter: 'rgba(255,255,255,0.65)',
-    spotlightInverted: false,
-    marqueeColor: '#FFFFFF',
-    textColor: 'rgba(0, 0, 0, 0.5)',
-    logoFill: '#1A1A2E',
-    bioFill: '#000000',
-    bioOpacity: 0.55,
-  },
-  dark: {
-    bgColor: '#0E0E16', // ink-850 (cool-biased)
-    spotlightOuter: 'rgba(14,14,22,0.65)',
-    spotlightInverted: false,
-    marqueeColor: 'rgba(255,255,255,0.08)',
-    textColor: 'rgba(255, 255, 255, 0.6)',
-    logoFill: '#FFFFFF',
-    bioFill: '#FFFFFF',
-    bioOpacity: 0.55,
-  },
-  darkInverted: {
-    bgColor: '#0A0A10', // ink-900 (cool-biased)
-    spotlightOuter: 'rgba(10,10,16,0.65)', // Match bg color on periphery
-    spotlightInverted: true, // Darkest at edges, lighter at center
-    marqueeColor: '#1A1A2E', // ink-800 (cool-biased, visible on near-black)
-    textColor: 'rgba(255, 255, 255, 0.6)',
-    logoFill: '#FFFFFF',
-    bioFill: '#FFFFFF',
-    bioOpacity: 0.55,
-  },
-}
-
-// View modes: 'hero' is the landing page, 'stages' is the selected work section
-type ViewMode = 'hero' | 'stages'
-
-// Transition phases for blade animation
-type TransitionPhase = 'idle' | 'expanding' | 'complete' | 'collapsing'
+import { LogoMarqueeSection } from './components/LogoMarqueeSection'
+import { SiteFooter } from './components/SiteFooter'
+import { BottomBar } from './components/BottomBar'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { BREAKPOINTS } from './constants'
+import { motion, useMotionValue, useSpring } from 'framer-motion'
+import LocomotiveScroll from 'locomotive-scroll'
+import { gsap, ScrollTrigger } from './lib/gsap'
 
 function App() {
-  // Ref for the main container - used as event source for Canvas
-  // This allows mouse events to be captured even when over TopCards
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Current view mode
-  const [viewMode, setViewMode] = useState<ViewMode>('hero')
-
-  // Active stage index (which stage to show when in stages view)
-  const [activeStageIndex, setActiveStageIndex] = useState(0)
-
-  // Transition animation phase
-  const [transitionPhase, setTransitionPhase] = useState<TransitionPhase>('idle')
-
-  // Zoomed nav mode - when true, stage scales down and TopCards become visible
-  const [isZoomedNav, setIsZoomedNav] = useState(false)
-
-  // Scroll tug offset — blades rise/dip proportionally during trackpad swipes, decay smoothly when released
-  // MotionValue bypasses React re-renders: updates go straight to Framer Motion → DOM
-  const tugOffsetMV = useMotionValue(0)
-  const tugState = useRef({
-    position: 0,            // Signed position in delta-units: positive = upward tug, negative = downward
-    lastEventTime: 0,       // Timestamp of last wheel event (for decay delay)
-    rafId: null as number | null, // Active rAF handle for decay loop
-    isDecaying: false,       // Whether decay loop is running
+  const [showCursor, setShowCursor] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.mobile : true
   })
 
-  // mousePosition state is only for 2D UI elements (spotlight, marquee)
-  // Scene reads from mousePositionRef directly to avoid re-renders
-  const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 })
-  const [isDesktop, setIsDesktop] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
-  })
+  // Below mobile breakpoint (768px) — non-sticky canvas, simplified scene.
   const [isMobile, setIsMobile] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth < 768 : false
+    return typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.mobile : false
   })
-  const [nycTime, setNycTime] = useState(() => {
-    const now = new Date()
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    }).format(now)
+
+  // Graffiti scale factor — on narrow viewports the SVG scales UP so PETEY
+  // stays optically centered behind the hero gloves.
+  // Desktop (≥1128): 1.0. Tablet (~1024): ~1.15. Mobile (≤768): 1.35.
+  // Interpolates smoothly between breakpoints.
+  const computeGraffitiScale = (w: number) => {
+    if (w >= BREAKPOINTS.tabletWide) return 1
+    if (w <= BREAKPOINTS.mobile) return 1.2
+    return 1.2 - 0.2 * (w - BREAKPOINTS.mobile) / (BREAKPOINTS.tabletWide - BREAKPOINTS.mobile)
+  }
+  const [graffitiScale, setGraffitiScale] = useState(() => {
+    return typeof window !== 'undefined' ? computeGraffitiScale(window.innerWidth) : 1
   })
-  const [colonVisible, setColonVisible] = useState(true)
-  const [themeMode, setThemeMode] = useState<'light' | 'inverted' | 'dark' | 'darkInverted'>('light')
-  const theme = themes[themeMode]
 
-  // Wait for GT Pressura Mono font to load before showing text
-  const fontReady = useFontReady('GT Pressura Mono')
+  const [isDesktop, setIsDesktop] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
+  })
+  const [isTabletWide, setIsTabletWide] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.tabletWide : true
+  })
 
-  // Sync data-theme attribute on <html> for CSS mode overrides
-  useEffect(() => {
-    const root = document.documentElement
-    if (themeMode === 'dark') {
-      root.setAttribute('data-theme', 'dark')
-    } else if (themeMode === 'darkInverted') {
-      root.setAttribute('data-theme', 'darker')
-    } else {
-      root.removeAttribute('data-theme')
-    }
-  }, [themeMode])
+  const themeMode = 'light' as const
 
-  // Cycle through themes: light → inverted → dark → darkInverted → light
-  const cycleTheme = useCallback(() => {
-    setThemeMode(current => {
-      if (current === 'light') return 'inverted'
-      if (current === 'inverted') return 'dark'
-      if (current === 'dark') return 'darkInverted'
-      return 'light'
-    })
-  }, [])
-
-  // Navigate to a specific stage with transition animation
-  const navigateToStage = useCallback((stageIndex: number) => {
-    // Set the target stage before animation starts
-    setActiveStageIndex(stageIndex)
-    // Start the expanding animation
-    setTransitionPhase('expanding')
-    // After animation completes, switch to stages view
-    // Spring with stiffness:200, damping:30, mass:1 settles in ~700ms
-    setTimeout(() => {
-      setViewMode('stages')
-      setTransitionPhase('complete')
-      // Keep complete phase until blade 0 fully covers viewport
-      setTimeout(() => {
-        setTransitionPhase('idle')
-      }, 300)
-    }, 700)
-  }, [])
-
-  // Navigate back to hero view with collapse animation
-  const navigateToHero = useCallback(() => {
-    // Exit zoomed nav if active
-    setIsZoomedNav(false)
-    // Start the collapsing animation (blade shrinks back)
-    setTransitionPhase('collapsing')
-    // Switch view immediately so blades are visible
-    setViewMode('hero')
-    // After animation completes, reset to idle
-    setTimeout(() => {
-      setTransitionPhase('idle')
-    }, 450)
-  }, [])
-
-  // Handle logo click - toggles zoomed nav in stages, cycles theme in hero
-  const handleLogoClick = useCallback(() => {
-    if (viewMode === 'stages') {
-      setIsZoomedNav(!isZoomedNav)
-    } else {
-      cycleTheme()
-    }
-  }, [viewMode, isZoomedNav, cycleTheme])
-
-  // Exit zoomed nav mode (clicking the scaled stage)
-  const exitZoomedNav = useCallback(() => {
-    setIsZoomedNav(false)
+  // Debug grid overlay — toggle with "G" key
+  const [showGrid, setShowGrid] = useState(false)
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Ignore when typing in inputs
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+    if (e.key === 'g' || e.key === 'G') setShowGrid(prev => !prev)
   }, [])
 
   useEffect(() => {
-    // Use requestAnimationFrame to batch mouse updates and prevent re-render storms
-    let rafId: number | null = null
-    let pendingX = 0.5
-    let pendingY = 0.5
-
     const handleMouseMove = (e: MouseEvent) => {
-      // Normalize mouse position to 0-1 range
-      pendingX = e.clientX / window.innerWidth
-      pendingY = e.clientY / window.innerHeight
-      // Update ref for Scene immediately (no re-render)
-      mousePositionRef.current = { x: pendingX, y: pendingY }
-
-      // Batch state updates with RAF to prevent excessive re-renders
-      if (rafId === null) {
-        rafId = requestAnimationFrame(() => {
-          setMousePosition({ x: pendingX, y: pendingY })
-          rafId = null
-        })
-      }
+      const x = e.clientX / window.innerWidth
+      const y = e.clientY / window.innerHeight
+      mousePositionRef.current = { x, y }
     }
 
     const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024)
-      setIsMobile(window.innerWidth < 768)
+      const w = window.innerWidth
+      setShowCursor(w >= BREAKPOINTS.mobile)
+      setIsMobile(w < BREAKPOINTS.mobile)
+      setIsDesktop(w >= BREAKPOINTS.desktop)
+      setIsTabletWide(w >= BREAKPOINTS.tabletWide)
+      setGraffitiScale(computeGraffitiScale(w))
     }
 
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('resize', handleResize)
+    window.addEventListener('keydown', handleKeyDown)
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('resize', handleResize)
-      if (rafId !== null) cancelAnimationFrame(rafId)
+      window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [])
+  }, [handleKeyDown])
 
-  // Wheel navigation to stages from hero (scrolls to stage 0 by default)
-  // Continuous tracking: every trackpad delta feeds a signed position that maps to tugOffset
-  // Strong single gesture (deltaY >= 30) or sustained accumulation (>= 90) triggers navigation
-  const wheelState = useRef({ lastTime: 0, lastNavTime: 0 })
+  const heroRef = useRef<HTMLElement>(null)
+  const string4TriggerRef = useRef<HTMLDivElement>(null)
+
+  // Scroll-driven glove scale: starts large in hero, scrubs down as user scrolls into graffiti
+  const gloveScaleRef = useRef(1.15)
+  const gloveRotationRef = useRef(0)       // legacy full-spin (still used for desktop)
+  const gloveLeftRotRef = useRef(0)        // per-glove Y rotation — left glove
+  const gloveRightRotRef = useRef(0)       // per-glove Y rotation — right glove
+  const gloveDuskRef = useRef(0)  // 0 = full light, 1 = full dusk
+  const gloveHorizontalRef = useRef(0)  // scroll-driven horizontal zig-zag (sub-desktop only)
+  const travelZoneRef = useRef<HTMLDivElement>(null)
+  const stickyCanvasRef = useRef<HTMLDivElement>(null)
+
+  // Graffiti parallax — perspective tilt + subtle translate driven by cursor position
+  const GRAFFITI_TILT = 2.0  // max degrees of rotation
+  const GRAFFITI_SHIFT = 5   // max px translate
+  const graffitiSpring = { stiffness: 50, damping: 20, mass: 1 }
+  const graffitiTiltTargetX = useMotionValue(0)
+  const graffitiTiltTargetY = useMotionValue(0)
+  const graffitiShiftTargetX = useMotionValue(0)
+  const graffitiShiftTargetY = useMotionValue(0)
+  const graffitiRotateX = useSpring(graffitiTiltTargetX, graffitiSpring)
+  const graffitiRotateY = useSpring(graffitiTiltTargetY, graffitiSpring)
+  const graffitiX = useSpring(graffitiShiftTargetX, graffitiSpring)
+  const graffitiY = useSpring(graffitiShiftTargetY, graffitiSpring)
+
   useEffect(() => {
-    if (viewMode !== 'hero') return
+    let raf = 0
+    const tick = () => {
+      const { x, y } = mousePositionRef.current
+      // Tilt: cursor right → rotateY positive (surface turns toward cursor)
+      graffitiTiltTargetY.set((x - 0.5) * GRAFFITI_TILT * 2)
+      // Tilt: cursor down → rotateX negative (top tilts away)
+      graffitiTiltTargetX.set((y - 0.5) * -GRAFFITI_TILT * 2)
+      // Subtle translate opposite to cursor for parallax depth
+      graffitiShiftTargetX.set((x - 0.5) * -GRAFFITI_SHIFT * 2)
+      graffitiShiftTargetY.set((y - 0.5) * -GRAFFITI_SHIFT * 2)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [graffitiTiltTargetX, graffitiTiltTargetY, graffitiShiftTargetX, graffitiShiftTargetY])
 
-    const MAX_UP_POSITION = 120       // Max accumulated upward position (delta-units)
-    const MAX_DOWN_POSITION = 40      // Max accumulated downward position (absolute)
-    const MAX_TUG_PX = 15             // Max upward visual displacement (px)
-    const MAX_DOWN_TUG_PX = 6         // Max downward visual displacement (px, subtler)
-    const NAVIGATE_VIA_TUG_THRESHOLD = 90
-    const DECAY_RATE = 0.75           // Per-frame multiplier (~12 frames to near-zero)
-    const DECAY_START_DELAY = 40      // ms of silence before decay begins
-    const POSITION_DEAD_ZONE = 0.8    // Snap to zero below this absolute position
+  // Initialize Locomotive Scroll (smooth scrolling + data-scroll detection)
+  // Store instance so we can stop/start it when TopCards modal is active
+  const scrollRef = useRef<LocomotiveScroll | null>(null)
 
-    // Bidirectional ease-out mapping: signed position → signed tug pixels
-    const positionToTug = (position: number): number => {
-      if (position >= 0) {
-        const t = Math.min(position / MAX_UP_POSITION, 1)
-        const eased = 1 - Math.pow(1 - t, 2.5)
-        return eased * MAX_TUG_PX
+  useEffect(() => {
+    const scroll = new LocomotiveScroll({
+      lenisOptions: {
+        lerp: 0.09,
+        duration: 1.3,
+        smoothWheel: true,
+        syncTouch: false,
+      },
+    })
+    scrollRef.current = scroll
+
+    // Sync GSAP ScrollTrigger with Lenis — Lenis uses native scroll,
+    // so ScrollTrigger reads window.scrollY directly. We just need to
+    // tell it to re-check on every Lenis tick for frame-accurate sync.
+    scroll.lenisInstance?.on('scroll', ScrollTrigger.update)
+
+    // Watch for TopCards expanded state to freeze/resume page scroll
+    const observer = new MutationObserver(() => {
+      const expanded = document.documentElement.hasAttribute('data-topcards-expanded')
+      if (expanded) {
+        scroll.stop()
       } else {
-        const t = Math.min(Math.abs(position) / MAX_DOWN_POSITION, 1)
-        const eased = 1 - Math.pow(1 - t, 2.5)
-        return -(eased * MAX_DOWN_TUG_PX)
+        scroll.start()
       }
-    }
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-topcards-expanded'] })
 
-    const resetTugState = () => {
-      const ts = tugState.current
-      ts.position = 0
-      ts.isDecaying = false
-      if (ts.rafId) { cancelAnimationFrame(ts.rafId); ts.rafId = null }
-      tugOffsetMV.set(0)
-    }
-
-    // rAF decay loop — smoothly drains position toward zero after input stops
-    const startDecayLoop = () => {
-      const ts = tugState.current
-      if (ts.isDecaying) return
-      ts.isDecaying = true
-
-      const tick = () => {
-        const elapsed = Date.now() - ts.lastEventTime
-        if (elapsed < DECAY_START_DELAY) {
-          // Still receiving input, keep waiting
-          ts.rafId = requestAnimationFrame(tick)
-          return
-        }
-
-        // Apply decay
-        ts.position *= DECAY_RATE
-
-        if (Math.abs(ts.position) < POSITION_DEAD_ZONE) {
-          // Close enough — snap to zero and stop
-          ts.position = 0
-          tugOffsetMV.set(0)
-          ts.isDecaying = false
-          ts.rafId = null
-          return
-        }
-
-        tugOffsetMV.set(positionToTug(ts.position))
-        ts.rafId = requestAnimationFrame(tick)
-      }
-
-      ts.rafId = requestAnimationFrame(tick)
-    }
-
-    const handleWheel = (e: WheelEvent) => {
-      // Skip if TopCards are expanded (they handle their own scroll)
-      if (document.documentElement.hasAttribute('data-topcards-expanded')) {
-        return
-      }
-
-      // Only handle vertical scroll — ignore horizontal swipes
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
-      const delta = e.deltaY
-
-      const now = Date.now()
-      const state = wheelState.current
-      const timeSinceLastNav = now - state.lastNavTime
-
-      // Require cooldown after navigation
-      if (timeSinceLastNav < 800) return
-
-      // NAVIGATE ZONE: single strong downward scroll triggers full transition
-      if (delta >= 30) {
-        resetTugState()
-        state.lastNavTime = now
-        navigateToStage(0)
-        return
-      }
-
-      // CONTINUOUS TUG: every delta feeds signed position (no noise filter)
-      const ts = tugState.current
-
-      // Per-event friction: drain position toward zero between events
-      // This prevents inertia scroll (macOS keeps firing decreasing deltas after finger lifts)
-      // from holding the tug in place. Downward tug drains faster since it's meant to be fleeting.
-      const elapsed = now - ts.lastEventTime
-      if (elapsed > 0 && ts.position !== 0) {
-        const frames = elapsed / 16.67 // Approximate frames elapsed
-        const friction = ts.position < 0 ? 0.60 : 0.82 // Downward drains faster
-        ts.position *= Math.pow(friction, frames)
-        if (Math.abs(ts.position) < POSITION_DEAD_ZONE) ts.position = 0
-      }
-
-      ts.position = Math.max(-MAX_DOWN_POSITION, Math.min(ts.position + delta, MAX_UP_POSITION))
-
-      // Check if sustained upward tug triggers navigation
-      if (ts.position >= NAVIGATE_VIA_TUG_THRESHOLD) {
-        resetTugState()
-        state.lastNavTime = now
-        navigateToStage(0)
-        return
-      }
-
-      // Update visual tug offset
-      tugOffsetMV.set(positionToTug(ts.position))
-
-      ts.lastEventTime = now
-      startDecayLoop()
-    }
-
-    window.addEventListener('wheel', handleWheel, { passive: true })
     return () => {
-      window.removeEventListener('wheel', handleWheel)
-      if (tugState.current.rafId) cancelAnimationFrame(tugState.current.rafId)
+      ScrollTrigger.getAll().forEach(st => st.kill())
+      observer.disconnect()
+      scroll.destroy()
+      scrollRef.current = null
     }
-  }, [viewMode, navigateToStage])
-
-  // Update NYC time every minute
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date()
-      setNycTime(new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/New_York',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }).format(now))
-    }
-
-    const interval = setInterval(updateTime, 60000)
-    return () => clearInterval(interval)
   }, [])
 
-  // Blink colon every second to simulate seconds counting
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setColonVisible(prev => !prev)
-    }, 1000)
-    return () => clearInterval(interval)
+  // Scroll-driven glove scale (1.5→1.0) + rotation (0→360°).
+  // Both span the full travel zone for a very gradual, scroll-mapped effect.
+  useLayoutEffect(() => {
+    const zone = travelZoneRef.current
+    if (!zone) return
+
+    const ctx = gsap.context(() => {
+      gsap.to(gloveScaleRef, {
+        current: 1.0,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: zone,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.6,
+        },
+      })
+      gsap.to(gloveRotationRef, {
+        current: Math.PI * 2,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: zone,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: 0.6,
+        },
+      })
+      // Dusk lighting — scrubs 0→1 over the second half of the travel zone
+      // so the shift begins as gloves approach the gradient dome.
+      gsap.to(gloveDuskRef, {
+        current: 1,
+        ease: 'power2.in',
+        scrollTrigger: {
+          trigger: zone,
+          start: 'center center',
+          end: 'bottom bottom',
+          scrub: 0.6,
+        },
+      })
+    })
+    return () => ctx.revert()
   }, [])
 
-  // Get hour for NYC time to determine sun/moon (5AM-5:59PM = sun, 6PM-4:59AM = moon)
-  const nycHour = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', hour12: false })
-  const hourNum = parseInt(nycHour, 10)
-  const isDaylight = hourNum >= 5 && hourNum <= 17 // 5:00 AM to 5:59 PM
+  // Dissolve BottomBar + compact pill bar to 0% opacity during video section.
+  // Uses a CSS class with !important to override Framer Motion's inline opacity.
+  useLayoutEffect(() => {
+    const videoSection = document.querySelector('[data-section="video-morph"]')
+    if (!videoSection) return
 
-  // Format time with blinking colon
-  const formatTimeWithBlinkingColon = (time: string) => {
-    const colonIndex = time.indexOf(':')
-    if (colonIndex === -1) return time
-    const before = time.slice(0, colonIndex)
-    const after = time.slice(colonIndex + 1)
-    return (
-      <>
-        {before}
-        <span style={{ opacity: colonVisible ? 1 : 0 }}>:</span>
-        {after}
-      </>
-    )
-  }
+    let hasPassedVideo = false
+    const toggle = (hide: boolean) => {
+      const compact = document.querySelector('[data-compact-bar]')
+      const bottom = document.querySelector('[data-bottom-bar]')
+      if (hide) {
+        // Mark ready so CSS transition kicks in for both hide AND subsequent unhide
+        compact?.classList.add('video-dissolve-ready', 'video-hidden-up')
+        bottom?.classList.add('video-dissolve-ready', 'video-hidden-down')
+      } else {
+        // Compact bar always returns
+        compact?.classList.remove('video-hidden-up')
+        // BottomBar only returns when scrolling back up (before video)
+        if (!hasPassedVideo) {
+          bottom?.classList.remove('video-hidden-down')
+        }
+      }
+    }
+
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: videoSection,
+        start: 'top bottom',
+        end: 'bottom top',
+        onEnter: () => toggle(true),
+        onLeave: () => {
+          hasPassedVideo = true
+          document.body.setAttribute('data-past-video', '')
+          window.dispatchEvent(new CustomEvent('past-video-change', { detail: true }))
+          toggle(false)
+        },
+        onEnterBack: () => toggle(true),
+        onLeaveBack: () => {
+          hasPassedVideo = false
+          document.body.removeAttribute('data-past-video')
+          window.dispatchEvent(new CustomEvent('past-video-change', { detail: false }))
+          toggle(false)
+        },
+      })
+
+      // On page refresh the browser may restore scroll to a position past the video
+      // section. ScrollTrigger's callbacks only fire on scroll *events*, so if the
+      // section is already past the viewport at mount time, onLeave never fires.
+      // Explicitly set the attribute so TopCards renders the correct post-video variant.
+      const vRect = videoSection.getBoundingClientRect()
+      if (vRect.bottom < 0) {
+        hasPassedVideo = true
+        document.body.setAttribute('data-past-video', '')
+        window.dispatchEvent(new CustomEvent('past-video-change', { detail: true }))
+      }
+    })
+    return () => ctx.revert()
+  }, [])
 
   // Hardcoded shadow settings
   const shadowSettings = {
     lightX: 0,
     lightY: 2.5,
     lightZ: 10,
-    shadowMapSize: 1024,
-    shadowCameraBounds: 6,
+    shadowMapSize: 2048,
+    shadowCameraBounds: 8,
     shadowCameraFar: 30,
     shadowRadius: 4,
     shadowBias: -0.0001,
@@ -432,273 +284,664 @@ function App() {
 
   // Boxing Gloves preset - hardcoded
   const settings = {
-    // Ball/Glove appearance
     color: '#8b0000',
     metalness: 0.1,
     roughness: 0.6,
     envMapIntensity: 0.4,
-    radius: 0.525, // Increased from 0.42 to 0.525 (1.25x larger)
-
-    // Physics - light to drag, bouncy plop when released, dangly, soft collisions
+    radius: 0.525,
     mass: 1.2,
     restitution: 0.02,
     friction: 0.8,
-    linearDamping: 1.0, // Reduced from 1.5 for more bounce oscillation
+    linearDamping: 1.0,
     gravity: -200,
     springStrength: 350,
-
-    // String
     stringLength: 2.5,
     stringThickness: 0.028,
     stringColor: '#d4a574',
     ropeDamping: 0.92,
   }
 
-  // Determine if TopCards should be visible
-  // Show in hero view, hide in stages view UNLESS zoomed nav is active
-  const isInStagesView = viewMode === 'stages' || transitionPhase === 'expanding'
-  const showTopCards = !isInStagesView || isZoomedNav
+  // Graffiti vertical pull-up — responsive so bio text stays aligned with the SVG.
+  // Desktop (≥1440): -32vw. Sub-desktop (768–1439): -10vw. Mobile (<768): -5vw.
+  // Uses !isMobile && !isDesktop to catch the full 768–1439 range (isTablet only covers 1024–1439).
+  const graffitiPullUp = isMobile ? 5 : isDesktop ? 32 : 10  // in vw units
+
+  // Bio text vertical position factors (fraction of graffiti SVG height).
+  // Sub-desktop: 50% more gap between strings 2 & 3 for better legibility.
+  const bioFactor2 = isDesktop ? 0.60 : 0.675
+  const bioFactor3 = isDesktop ? 0.75 : 0.85
+
+  // Scroll-driven horizontal zig-zag — tablet+ (≥768px).
+  // Gloves shift: right → left → right → center to weave between bio text strings.
+  useLayoutEffect(() => {
+    if (isMobile) {
+      gloveHorizontalRef.current = 0
+      return
+    }
+    const zone = travelZoneRef.current
+    if (!zone) return
+
+    const ctx = gsap.context(() => {
+      const shift = 1.0 // Three.js world units (~horizontal offset at fov 45, z=7)
+      gsap.fromTo(gloveHorizontalRef,
+        { current: 0 },
+        {
+          keyframes: [
+            { current: shift, duration: 0.33 },    // → right (during string 1)
+            { current: -shift, duration: 0.34 },   // → left (during string 3)
+            { current: 0, duration: 0.33 },         // → center (before gradient)
+          ],
+          ease: 'none',
+          scrollTrigger: {
+            trigger: zone,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 0.6,
+          },
+        }
+      )
+
+      // Per-glove Y rotation — alternating "face the viewer" during zig-zag.
+      // Right glove faces viewer during zig-right, left glove during zag-left.
+      const faceAngle = Math.PI * 0.75  // ~135° — strong turn to show front face
+
+      // Right glove: rotate during zig-right (phase 1), neutral otherwise
+      gsap.fromTo(gloveRightRotRef,
+        { current: 0 },
+        {
+          keyframes: [
+            { current: faceAngle, duration: 0.25 },    // face viewer during zig right
+            { current: faceAngle, duration: 0.08 },     // hold briefly
+            { current: 0, duration: 0.25 },              // return as zag begins
+            { current: 0, duration: 0.08 },              // hold at neutral
+            { current: 0, duration: 0.34 },              // stay neutral through resolve
+          ],
+          ease: 'none',
+          scrollTrigger: {
+            trigger: zone,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 0.6,
+          },
+        }
+      )
+
+      // Left glove: neutral during zig-right, rotate during zag-left (phase 2)
+      gsap.fromTo(gloveLeftRotRef,
+        { current: 0 },
+        {
+          keyframes: [
+            { current: 0, duration: 0.33 },               // stay neutral during zig right
+            { current: -faceAngle, duration: 0.25 },      // face viewer during zag left
+            { current: -faceAngle, duration: 0.08 },      // hold briefly
+            { current: 0, duration: 0.25 },                // return to neutral
+            { current: 0, duration: 0.09 },                // hold through resolve
+          ],
+          ease: 'none',
+          scrollTrigger: {
+            trigger: zone,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 0.6,
+          },
+        }
+      )
+    })
+    return () => ctx.revert()
+  }, [isMobile])
+
+  // Toggle data-cursor-invert on the sticky canvas wrapper when the gradient
+  // dome visually covers the center of the viewport. The dome uses power3.in
+  // (scaleY = progress³), so scaleY ≈ 0.50 at ~79% of the 240vh runway.
+  // This makes the drag/grab cursor invert to white over the dark section.
+  useLayoutEffect(() => {
+    const canvasWrapper = stickyCanvasRef.current
+    const zone = travelZoneRef.current
+    if (!canvasWrapper || !zone) return
+
+    // Find the gradient runway — last child of travel zone with significant height
+    const children = Array.from(zone.children) as HTMLElement[]
+    const runway = children.find(
+      (el) => el.offsetHeight > window.innerHeight && el.style.position !== 'fixed'
+    )
+    if (!runway) return
+
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: runway,
+        start: '79% bottom',
+        end: 'bottom bottom',
+        onEnter: () => canvasWrapper.setAttribute('data-cursor-invert', ''),
+        onLeaveBack: () => canvasWrapper.removeAttribute('data-cursor-invert'),
+        onLeave: () => canvasWrapper.removeAttribute('data-cursor-invert'),
+        onEnterBack: () => canvasWrapper.setAttribute('data-cursor-invert', ''),
+      })
+    })
+    return () => ctx.revert()
+  }, [])
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full flex flex-col overflow-hidden"
-      style={{ backgroundColor: theme.bgColor }}
+      className="relative w-full min-h-screen flex flex-col"
+      style={{ overflowX: 'clip' }}
     >
-      {/* Desktop: 3D Scene - always rendered to prevent gloves from dropping on every transition */}
-      {/* Gloves stay visible during transition - blades cover them as they slide up */}
-      {isDesktop && (
+
+      {/* ===== PETEY Graffiti SVG — page-level background layer =====
+           Positioned absolutely from the App root, scrolls with the page.
+           overflow: hidden contains the oversized SVG within the viewport.
+           Hidden on mobile — hero cuts straight to entry gradient. */}
+      {!isMobile && (
         <div
-          className="absolute inset-0"
+          className="absolute pointer-events-none"
           style={{
-            zIndex: 10,
-            pointerEvents: viewMode === 'hero' ? 'auto' : 'none',
-            opacity: viewMode === 'hero' || transitionPhase === 'expanding' ? 1 : 0,
-            transition: 'opacity 0.3s ease',
+            top: 0,
+            left: 0,
+            width: '100%',
+            zIndex: 0,
+            overflow: 'hidden',
+            opacity: 0.10,
           }}
         >
-          <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
+          <motion.div
+            style={{
+              width: `${130 * graffitiScale}vw`,
+              height: 'auto',
+              aspectRatio: '538 / 1185.79',
+              marginLeft: `calc(50vw - ${(130 * graffitiScale / 2).toFixed(1)}vw)`,
+              translateX: '3%',
+              marginTop: '-32vw',
+              rotateX: graffitiRotateX,
+              rotateY: graffitiRotateY,
+              x: graffitiX,
+              y: graffitiY,
+              perspective: 1200,
+            }}
+          >
+            <PeteyGraffitiSvg
+              style={{
+                width: '100%',
+                height: '100%',
+                display: 'block',
+              }}
+            />
+
+          </motion.div>
         </div>
       )}
 
-      {/* Desktop: TopCards - slides up/down during transition, also shows in zoomed nav mode */}
-      {/* z-index: 20 normally, but z-60 when zoomed to appear above scaled stage */}
-      {isDesktop && (
-        <motion.div
-          className="absolute top-0 left-0 right-0"
-          style={{
-            pointerEvents: showTopCards ? 'auto' : 'none',
-            overflow: 'visible',
-            zIndex: isZoomedNav ? 60 : 20,
-          }}
-          initial={{ y: 0, opacity: 1 }}
-          animate={{
-            y: showTopCards ? 0 : -150,
-            opacity: showTopCards ? 1 : 0,
-          }}
-          transition={{
-            type: 'spring',
-            stiffness: 320,
-            damping: 40,
-            mass: 1,
-          }}
-        >
-          <TopCards themeMode={themeMode} />
-        </motion.div>
-      )}
-
-      {/* Hero View - background elements only on desktop, full view on mobile/tablet */}
-      <AnimatePresence>
-        {viewMode === 'hero' && (
-          <motion.div
-            className="absolute inset-0"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
+      {/* ===== Bio text — positioned along the graffiti tail =====
+           Separate from the graffiti wrapper so they aren't affected by its
+           10% opacity. Each block uses GSAP SplitText for a word-by-word
+           scroll-driven reveal, staggered as the user scrolls down the tail.
+           Hidden on mobile (no graffiti tail to attach to). */}
+      {!isMobile && (
+        <>
+          {/* String 1 — left-aligned; starts at col 1 */}
+          <BioTextReveal
+            top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * 0.45).toFixed(1)}vw)`}
+            left="25px"
+            width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+            textAlign="left"
           >
-            {/* Background Marquee - scrolling text revealed by cursor */}
-            <BackgroundMarquee marqueeFill={theme.marqueeColor} />
-
-            {/* Radial gradient spotlight overlay - covers marquee, reveals center (desktop only) */}
-            {!isMobile && (
-              <div
-                className="absolute inset-0 z-[5] pointer-events-none"
-                style={{
-                  background: theme.spotlightInverted
-                    ? `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 15%, ${theme.spotlightOuter} 45%)`
-                    : `radial-gradient(circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, transparent 0%, transparent 20%, ${theme.spotlightOuter} 50%)`,
-                  transition: 'background 0.1s ease-out',
-                }}
-              />
-            )}
-
-            {/* Mobile/Tablet only: Cards inside hero (desktop has them outside for animation) */}
-            {!isDesktop && (
-              <div className="absolute top-0 left-0 right-0 z-20" style={{ pointerEvents: 'auto', overflow: 'visible' }}>
-                <TopCards themeMode={themeMode} />
-              </div>
-            )}
-
-            {/* Mobile/Tablet only: 3D Scene (desktop has it outside for persistence) */}
-            {!isDesktop && (
-              <div
-                className="absolute inset-0"
-                style={{
-                  zIndex: 10,
-                  pointerEvents: 'auto',
-                }}
+            Peter Rodriguez is a{' '}
+            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
+              nuyorican
+            </span>{' '}
+            designer solving hard problems with soft products.
+          </BioTextReveal>
+          {/* String 2 — right-aligned; right-aligns with col 12. Visible on tabletWide+ (≥1128). */}
+          {isTabletWide && (
+            <BioTextReveal
+              top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor2).toFixed(1)}vw)`}
+              right="25px"
+              width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+              textAlign="left"
+            >
+              Bringing over a decade of insight, intuition & influence. Off the{' '}
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>DomE</span>
+              , to your{' '}
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>Chrome</span>.
+            </BioTextReveal>
+          )}
+          {/* Strings 3 & 4 — tabletWide+ (≥1128): split into two flanking strings */}
+          {isTabletWide ? (
+            <>
+              {/* String 3 — left-aligned, flanks gloves on the left */}
+              <BioTextReveal
+                top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
+                left="25px"
+                width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+                textAlign="left"
               >
-                <Scene settings={settings} shadowSettings={shadowSettings} themeMode={themeMode} />
-              </div>
-            )}
-
-            {/* Left biographical text - show on tablet and desktop (md+) */}
-            {/* Desktop (>=1024px): flanks gloves at vertical center */}
-            {/* Tablet (<1024px): positioned at bottom, offset +3px to center-align with taller Right Bio */}
-            <div
-              className="absolute z-20 pointer-events-none select-none hidden md:block"
-              style={{
-                left: '5%',
-                ...(isDesktop
-                  ? { top: '50%', transform: 'translateY(-50%)' }
-                  : { bottom: '214px' }
-                ),
-              }}
+                <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px' }}>NoWADays</span>
+                , he{'\u2019'}s shaping vision
+              </BioTextReveal>
+              {/* String 4 — right-aligned, flanks gloves on the right */}
+              <BioTextReveal
+                top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
+                right="25px"
+                width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+                textAlign="left"
+              >
+                for Squarespace{'\u2019'}s site builder.
+              </BioTextReveal>
+            </>
+          ) : (
+            /* Tablet (768–1127): single string, right-aligned */
+            <BioTextReveal
+              top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
+              right="25px"
+              width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
+              textAlign="left"
             >
-              <LeftBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
-            </div>
-
-            {/* Right biographical text - show on tablet and desktop (md+) */}
-            {/* Desktop (>=1024px): flanks gloves at vertical center */}
-            {/* Tablet (<1024px): positioned at bottom, center-aligned with left bio */}
-            <div
-              className="absolute z-20 pointer-events-none select-none hidden md:block"
-              style={{
-                right: '5%',
-                maxWidth: '200px',
-                ...(isDesktop
-                  ? { top: '50%', transform: 'translateY(-50%)' }
-                  : { bottom: '211px' }
-                ),
-              }}
-            >
-              <RightBioSvg fill={theme.bioFill} fillOpacity={theme.bioOpacity} />
-            </div>
-
-            {/* Mobile/Tablet: Text lockup (time/location + coming soon) */}
-            {/* Both mobile and tablet: positioned near bottom */}
-            {!isDesktop && fontReady && (
-              <div className="fixed left-0 right-0 z-30 flex flex-col items-center" style={{ bottom: '110px' }}>
-                <p style={{
-                  color: theme.textColor,
-                  textAlign: 'center',
-                  fontFamily: 'GT Pressura Mono',
-                  fontSize: '12px',
-                  fontStyle: 'normal',
-                  fontWeight: 400,
-                  lineHeight: '15px',
-                  letterSpacing: '0.36px',
-                  textTransform: 'uppercase',
-                }}>
-                  {formatTimeWithBlinkingColon(nycTime)} {isDaylight ? '☀︎' : '⏾'} BROOKLYN, NY
-                </p>
-                <p style={{
-                  color: theme.textColor,
-                  textAlign: 'center',
-                  fontFamily: 'GT Pressura Mono',
-                  fontSize: '12px',
-                  fontStyle: 'normal',
-                  fontWeight: 400,
-                  lineHeight: '15px',
-                  letterSpacing: '0.36px',
-                  textTransform: 'uppercase',
-                  marginTop: '4px'
-                }}>
-                  《 Full site coming soon 》
-                </p>
-              </div>
-            )}
-
-            {/* Mobile/Tablet: Pete Logo - stays at bottom */}
-            {!isDesktop && fontReady && (
-              <div className="fixed left-0 right-0 z-30 flex flex-col items-center padding-responsive" style={{ bottom: '16px' }}>
-                <PeteLogo onClick={cycleTheme} fill={theme.logoFill} />
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Desktop: Unified background - single element that morphs between blade and fullscreen */}
-      {/* PersistentNav is rendered inside StageBackground so it shares the same tug/hover wrapper */}
-      {isDesktop && (
-        <StageBackground
-          viewMode={viewMode}
-          transitionPhase={transitionPhase}
-          activeStageIndex={activeStageIndex}
-          onNavigateToStage={navigateToStage}
-          tugOffset={tugOffsetMV}
-          themeMode={themeMode}
-        >
-          <PersistentNav
-            viewMode={viewMode}
-            transitionPhase={transitionPhase}
-            onNavigateToHero={navigateToHero}
-            onNavigateToStages={() => navigateToStage(0)}
-            onLogoClick={handleLogoClick}
-            onExitZoomedNav={exitZoomedNav}
-            isZoomedNav={isZoomedNav}
-            heroBgColor={theme.bgColor}
-            activeStageIndex={activeStageIndex}
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px' }}>NoWADays</span>
+              , he{'\u2019'}s shaping vision for Squarespace{'\u2019'}s site builder.
+            </BioTextReveal>
+          )}
+          {/* Invisible trigger for "And occasionally..." reveal */}
+          <div
+            ref={string4TriggerRef}
+            aria-hidden
+            style={{
+              position: 'absolute',
+              top: `calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * (isDesktop ? 0.90 : 1.00)).toFixed(1)}vw)`,
+              left: 0,
+              width: '100%',
+              height: '15vh',
+              pointerEvents: 'none',
+            }}
           />
-        </StageBackground>
+        </>
       )}
+      {/* ===== Gloves Travel Zone =====
+           Wraps the hero + graffiti spacer so the 3D canvas can stick (position: sticky)
+           for the entire scroll range, unpinning naturally when the wrapper ends. */}
+      <div ref={travelZoneRef} style={{ position: 'relative' }}>
 
-      {/* Desktop: Stacked Blades (back blades 1,2,3 - blade 0 is StageBackground) */}
-      {/* Always mounted - they sit behind blade 0 (z-45) so invisible when in stages view */}
-      {/* This prevents them from disappearing mid-animation */}
-      {isDesktop && (
-        <StackedBlades
-          onNavigateToStage={navigateToStage}
-          themeMode={themeMode}
-          transitionPhase={transitionPhase}
-          viewMode={viewMode}
-          nycTime={nycTime}
-          colonVisible={colonVisible}
-          isDaylight={isDaylight}
-          tugOffset={tugOffsetMV}
+        {/* Mobile hero graffiti background — full SVG with bottom fade.
+             Below the sticky canvas (z-10 < z-30) so gloves render on top.
+             Same SVG as desktop but contained within 100vh, no scroll travel. */}
+        {isMobile && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 10,
+              height: '100vh',
+              overflow: 'hidden',
+              opacity: 0.20,
+              maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+            }}
+          >
+            <PeteyGraffitiSvg
+              style={{
+                width: `${130 * graffitiScale}vw`,
+                height: 'auto',
+                aspectRatio: '538 / 1185.79',
+                position: 'absolute',
+                left: `calc(50% - ${(130 * graffitiScale / 2).toFixed(1)}vw)`,
+                top: '-10vw',
+                display: 'block',
+              }}
+            />
+          </div>
+        )}
+
+        {/* Sticky 3D Canvas — pinned at viewport top through the travel zone.
+             z-30 sits above the gradient dome (z-20) so gloves remain visible.
+             On mobile: same sticky behavior so gloves pin through the gradient. */}
+        <div
+          ref={stickyCanvasRef}
+          style={{
+            position: 'sticky',
+            top: 0,
+            height: '100vh',
+            width: '100%',
+            zIndex: 30,
+            pointerEvents: 'auto',
+          }}
+        >
+          <Scene
+            settings={settings}
+            shadowSettings={shadowSettings}
+            themeMode={themeMode}
+            gloveHorizontalRef={gloveHorizontalRef}
+            gloveDuskRef={gloveDuskRef}
+            {...(!isMobile && { gloveScaleRef, gloveRotationRef, gloveLeftRotRef, gloveRightRotRef })}
+          />
+        </div>
+
+        {/* ===== Hero Section =====
+             Absolute-positioned so it doesn't add flow height to the travel zone
+             (flow height = sticky canvas + spacer only, giving maximum sticky travel). */}
+        <section
+          ref={heroRef}
+          className="relative h-screen w-full flex-shrink-0"
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 40, pointerEvents: 'none' }}
+        >
+          <div
+            className="absolute top-0 left-0 right-0"
+            style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 40 }}
+          >
+            <TopCards themeMode={themeMode} introStagger />
+          </div>
+        </section>
+
+        {/* Spacer — scroll through the graffiti while canvas stays pinned.
+             0.50 of SVG height so the gradient dome begins before the tail appears.
+             Hidden on mobile (no graffiti scroll-out). */}
+        {!isMobile && (
+          <div
+            aria-hidden
+            style={{
+              height: `calc(${(130 * graffitiScale * (1185.79 / 538) * 0.50).toFixed(1)}vw - ${graffitiPullUp}vw - 100vh)`,
+              position: 'relative',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
+
+        {/* ===== "And occasionally..." — 4th bio text, fixed at viewport center.
+             Reveal triggered by invisible div at 0.90 SVG height position.
+             Pins through gradient dome for handoff to "Live from SQSP..." lockup.
+             Inside the travel zone so the sticky canvas persists through the gradient.
+             Hidden on mobile. ===== */}
+        {!isMobile && <AndOccasionallyText triggerRef={string4TriggerRef} />}
+
+        {/* ===== Entry Gradient Transition =====
+             Inside the travel zone — its z-index: 20 covers the sticky canvas (z-10)
+             as the dome grows. The gloves unpin when this runway ends.
+             Mobile: negative margin pulls runway up so the dome starts growing
+             while the hero is still in view (seamless overlap). */}
+        <GradientTransition
+          direction="enter"
+          src="/images/transition-entry.png"
+          className="relative"
+          style={{ zIndex: 20, ...(isMobile ? { marginTop: '-100vh' } : {}) }}
+          fadeIn={isMobile}
         />
-      )}
 
-      {/* Zoomed nav background - shows hero bg behind scaled stage */}
-      {isZoomedNav && (
-        <motion.div
-          className="fixed inset-0"
-          style={{ backgroundColor: theme.bgColor, zIndex: 45 }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-        />
-      )}
+      </div>
 
-      {/* Stages View - content only, background is provided by StageBackground */}
-      {/* Visible during expanding transition so cards slide up with the blade */}
-      <StagesContainer
-        isVisible={viewMode === 'stages' || transitionPhase === 'expanding'}
-        onNavigateToHero={navigateToHero}
-        onThemeToggle={cycleTheme}
-        logoFill={theme.logoFill}
-        themeMode={themeMode}
-        isInitialEntry={transitionPhase === 'complete'}
-        initialStageIndex={activeStageIndex}
-        onStageChange={setActiveStageIndex}
-        transitionPhase={transitionPhase}
-        isZoomedNav={isZoomedNav}
-        onExitZoomedNav={exitZoomedNav}
+      {/* ===== Video Morph Section =====
+           marginTop: -1px closes a subpixel seam between the travel zone
+           bottom edge and the video section's dark background. */}
+      <div style={{ marginTop: -1 }}>
+        <VideoMorphSection />
+      </div>
+
+      {/* ===== Exit Gradient Transition ===== */}
+      <GradientTransition
+        direction="exit"
+        src="/images/transition-exit.png"
+        className="relative"
+        style={{ zIndex: 22 }}
       />
 
+      {/* ===== Logo Marquee + Quote ===== */}
+      <LogoMarqueeSection />
+
+      {/* ===== Footer ===== */}
+      <SiteFooter />
+
+      {/* ===== Bottom Bar — fixed status bar ===== */}
+      <BottomBar />
+
+      {/* Custom cursor (tablet + desktop — useCursorMorph self-disables on pure touch devices) */}
+      {showCursor && <CustomCursor />}
+
+      {/* Debug grid overlay — toggled with G key (Figma: 12 cols, 25px margin, 20px gutter) */}
+      {showGrid && (
+        <div
+          className="debug-grid-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            pointerEvents: 'none',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(12, 1fr)',
+            gap: 20,
+            padding: '0 25px',
+          }}
+        >
+          {Array.from({ length: 12 }, (_, i) => (
+            <div
+              key={i}
+              style={{
+                backgroundColor: 'rgba(255, 0, 0, 0.04)',
+                height: '100%',
+              }}
+            />
+          ))}
+        </div>
+      )}
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Bio text reveal — GSAP SplitText word-by-word scroll-driven animation
+// ---------------------------------------------------------------------------
+// Each text block reveals word-by-word as it scrolls into view.
+// Words start at autoAlpha: 0 + y: 12, and stagger in with scrub.
+
+function BioTextReveal({
+  children,
+  top,
+  left,
+  right,
+  width,
+  textAlign = 'justify',
+}: {
+  children: React.ReactNode
+  top: string
+  left?: string
+  right?: string
+  width?: string
+  textAlign?: 'justify' | 'right' | 'left'
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+
+    const split = SplitText.create(el, { type: 'words' })
+
+    gsap.set(split.words, { autoAlpha: 0, y: 12 })
+
+    const ctx = gsap.context(() => {
+      // Word-by-word reveal
+      gsap.to(split.words, {
+        autoAlpha: 1,
+        y: 0,
+        ease: 'power2.out',
+        stagger: 0.08,
+        scrollTrigger: {
+          trigger: el,
+          start: 'top 90%',
+          end: 'bottom 40%',
+          scrub: 0.6,
+        },
+      })
+
+      // Parallax — container drifts up as page scrolls
+      gsap.to(el, {
+        y: -60,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: el,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
+        },
+      })
+    })
+
+    return () => {
+      ctx.revert()
+      split.revert()
+    }
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        position: 'absolute',
+        top,
+        ...(left ? { left } : {}),
+        ...(right ? { right } : {}),
+        width,
+        zIndex: 1,
+        fontFamily: 'Inter',
+        fontSize: 24,
+        fontWeight: 500,
+        lineHeight: 1.4,
+        letterSpacing: '-0.04em',
+        color: '#0E0E0E',
+        textAlign,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// "And occasionally, he hops on stage..." — 4th bio string
+// ---------------------------------------------------------------------------
+// position: fixed at viewport center (zero document-flow space).
+// SplitText word-by-word reveal triggered by an invisible absolute div
+// at 1.05 of SVG height — same "appear" effect as bio strings 1–3.
+//
+// After revealing, the text stays at center (inherently pinned via fixed)
+// while the gradient dome covers the screen:
+//   1. Color shifts dark → white during the dome
+//   2. Fades out as "Live from SQSP..." lockup fades in
+
+function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLDivElement | null> }) {
+  const markerRef = useRef<HTMLDivElement>(null)
+  const textRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const marker = markerRef.current
+    const text = textRef.current
+    const trigger = triggerRef.current
+    if (!marker || !text || !trigger) return
+
+    // Find the gradient runway (skip past our own fixed overlay)
+    let runway = marker.nextElementSibling as HTMLElement | null
+    while (runway && (runway.style.position === 'fixed' || runway.offsetHeight === 0)) {
+      runway = runway.nextElementSibling as HTMLElement | null
+    }
+    if (!runway) return
+
+    // Find the VideoMorphSection — may be a sibling of the gradient's parent (travel zone)
+    // if the gradient was moved inside a wrapper for sticky scroll behavior.
+    let videoSection = runway.nextElementSibling as HTMLElement | null
+    if (!videoSection && runway.parentElement) {
+      videoSection = runway.parentElement.nextElementSibling as HTMLElement | null
+      // Skip 0-height / fixed siblings at the wrapper level too
+      while (videoSection && (videoSection.style.position === 'fixed' || videoSection.offsetHeight === 0)) {
+        videoSection = videoSection.nextElementSibling as HTMLElement | null
+      }
+    }
+
+    // SplitText — words for reveal, chars for exit
+    const split = SplitText.create(text, { type: 'chars' })
+    gsap.set(split.chars, { opacity: 0 })
+
+    const ctx = gsap.context(() => {
+      // ── Char dissolve — triggered by gradient runway at ~91% scroll ──
+      // The dome uses power3.in (t³): scaleY = progress³.
+      // At 91% scroll → scaleY ≈ 0.75 (dome ¾ up the viewport).
+      // At 97% scroll → scaleY ≈ 0.91 (dome nearly full).
+      gsap.to(split.chars, {
+        opacity: 1,
+        ease: 'power2.out',
+        stagger: { each: 0.03, from: 'edges' },
+        scrollTrigger: {
+          trigger: runway,
+          start: '91% bottom',
+          end: '97% bottom',
+          scrub: 0.6,
+        },
+      })
+
+      // ── Color shift dark → white ──
+      // The dome uses power3.in (t³) so it barely covers center until
+      // ~80% of the runway. Shift at 93–98% where scaleY ≈ 0.83–0.95
+      // so the text stays black until the dome has clearly passed center.
+      if (runway) {
+        gsap.to(text, {
+          color: '#FFFFFF',
+          ease: 'none',
+          scrollTrigger: {
+            trigger: runway,
+            start: '93% bottom',
+            end: '98% bottom',
+            scrub: true,
+          },
+        })
+      }
+
+      // ── Container exit — whole text fades up and out ──
+      // Targets the parent div (not individual chars) to avoid
+      // competing with the entrance tween's per-char opacity.
+      if (videoSection) {
+        gsap.to(text, {
+          opacity: 0,
+          y: -60,
+          ease: 'power2.in',
+          scrollTrigger: {
+            trigger: videoSection,
+            start: 'top top',
+            end: '10% top',
+            scrub: 0.6,
+          },
+        })
+      }
+    })
+
+    return () => {
+      ctx.revert()
+      split.revert()
+    }
+  }, [triggerRef])
+
+  return (
+    <>
+      {/* 0-height marker for sibling discovery (runway, videoSection) */}
+      <div ref={markerRef} aria-hidden style={{ height: 0, position: 'relative' }} />
+
+      {/* Fixed at viewport center — zero document flow */}
+      <div
+        ref={textRef}
+        data-cursor-invert=""
+        data-cursor-text=""
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 25,
+          pointerEvents: 'auto',
+          whiteSpace: 'nowrap',
+          fontFamily: 'Inter',
+          fontSize: 24,
+          fontWeight: 500,
+          lineHeight: 1.4,
+          letterSpacing: '-0.02em',
+          color: '#0E0E0E',
+          textAlign: 'center',
+        }}
+      >
+        And occasionally, he hops on the{' '}<span style={{ fontFamily: 'Fresh Marker', letterSpacing: '2px' }}>MIc</span>...
+      </div>
+    </>
   )
 }
 

@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo, useEffect } from 'react'
+import { useRef, useCallback, useMemo, useEffect, type RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@react-three/rapier'
@@ -21,55 +21,67 @@ function createRopeGeometry(
 ): THREE.TubeGeometry {
   // If positions provided, create geometry at correct initial location
   // Otherwise create a minimal geometry that will be updated on first frame
-  const start = anchorPos || new THREE.Vector3(0, 3.2, 0)
+  const start = anchorPos ? new THREE.Vector3(0, anchorPos.y + 4, 0) : new THREE.Vector3(0, 7.2, 0)
   const end = glovePos || new THREE.Vector3(0, 0.7, 0)
   const mid = new THREE.Vector3().lerpVectors(start, end, 0.5)
 
-  const curve = new THREE.CatmullRomCurve3([start, mid, end])
+  const curve = new THREE.QuadraticBezierCurve3(start, mid, end)
   return new THREE.TubeGeometry(curve, ROPE_SEGMENTS, thickness, ROPE_RADIAL_SEGMENTS, false)
 }
 
-// Update tube geometry vertices in place without creating new geometry
+// Reusable vectors for updateRopeGeometry (avoid per-frame allocation)
+const _P = new THREE.Vector3()
+const _T = new THREE.Vector3()
+const _N = new THREE.Vector3()
+const _B = new THREE.Vector3()
+const _vertex = new THREE.Vector3()
+const _normal = new THREE.Vector3()
+const _refDir = new THREE.Vector3(0, 0, 1) // Fixed reference for stable normals
+
+// Update tube geometry vertices in place without creating new geometry.
+// Uses a fixed-reference-vector approach instead of Frenet frames to avoid
+// normal flipping on near-straight or low-curvature curves.
 function updateRopeGeometry(
   geometry: THREE.TubeGeometry,
   points: THREE.Vector3[],
   thickness: number
 ): void {
-  const curve = new THREE.CatmullRomCurve3(points)
+  const curve = new THREE.QuadraticBezierCurve3(points[0], points[1], points[2])
   const tubularSegments = ROPE_SEGMENTS
   const radialSegments = ROPE_RADIAL_SEGMENTS
-
-  const frames = curve.computeFrenetFrames(tubularSegments, false)
   const position = geometry.attributes.position
 
-  const vertex = new THREE.Vector3()
-  const normal = new THREE.Vector3()
-  const P = new THREE.Vector3()
-
-  // Generate vertices
   for (let i = 0; i <= tubularSegments; i++) {
     const u = i / tubularSegments
-    curve.getPointAt(u, P)
+    curve.getPointAt(u, _P)
+    curve.getTangentAt(u, _T)
 
-    const N = frames.normals[i]
-    const B = frames.binormals[i]
+    // Build a stable frame from a fixed reference direction.
+    // B = normalize(T × ref), N = normalize(B × T)
+    // If T is nearly parallel to ref, fall back to X-axis.
+    _B.crossVectors(_T, _refDir)
+    if (_B.lengthSq() < 1e-6) {
+      _B.crossVectors(_T, _N.set(1, 0, 0))
+    }
+    _B.normalize()
+    _N.crossVectors(_B, _T).normalize()
 
     for (let j = 0; j <= radialSegments; j++) {
       const v = (j / radialSegments) * Math.PI * 2
       const sin = Math.sin(v)
       const cos = -Math.cos(v)
 
-      normal.x = cos * N.x + sin * B.x
-      normal.y = cos * N.y + sin * B.y
-      normal.z = cos * N.z + sin * B.z
-      normal.normalize()
+      _normal.x = cos * _N.x + sin * _B.x
+      _normal.y = cos * _N.y + sin * _B.y
+      _normal.z = cos * _N.z + sin * _B.z
+      _normal.normalize()
 
-      vertex.x = P.x + thickness * normal.x
-      vertex.y = P.y + thickness * normal.y
-      vertex.z = P.z + thickness * normal.z
+      _vertex.x = _P.x + thickness * _normal.x
+      _vertex.y = _P.y + thickness * _normal.y
+      _vertex.z = _P.z + thickness * _normal.z
 
       const index = i * (radialSegments + 1) + j
-      position.setXYZ(index, vertex.x, vertex.y, vertex.z)
+      position.setXYZ(index, _vertex.x, _vertex.y, _vertex.z)
     }
   }
 
@@ -79,7 +91,7 @@ function updateRopeGeometry(
 }
 
 // Fixed configuration
-const ANCHOR_POSITION: [number, number, number] = [0, 3.2, 0] // Single shared origin - raised to extend ropes off viewport
+const ANCHOR_POSITION: [number, number, number] = [0, 3.2, 0] // Single shared origin
 
 
 // Draggable glove with soft string constraint
@@ -90,6 +102,7 @@ function DraggableGloveWithRope({
   themeMode = 'light',
   modelUrl,
   yRotation = Math.PI,
+  scrollRotRef,
 }: {
   anchorOffset: [number, number, number]
   settings: Settings
@@ -97,6 +110,7 @@ function DraggableGloveWithRope({
   themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' // Theme mode for color adjustments
   modelUrl: string // URL to the glove GLB model
   yRotation?: number // Initial Y-axis rotation in radians
+  scrollRotRef?: RefObject<number> // Per-glove scroll-driven Y rotation
 }) {
   const gloveRef = useRef<RapierRigidBody>(null)
   const tubeRef = useRef<THREE.Mesh>(null)
@@ -114,13 +128,6 @@ function DraggableGloveWithRope({
   const dropDelayElapsed = useRef(dropDelay === 0)
   const dropStartTime = useRef<number | null>(null)
   const dragEndTime = useRef<number>(0) // Timestamp when drag ended, for post-drag settle
-
-  // Handle drop delay - start timer on mount
-  useEffect(() => {
-    if (dropDelay > 0) {
-      dropStartTime.current = performance.now()
-    }
-  }, [dropDelay])
 
   // Reusable Vector3 objects to avoid garbage collection in useFrame
   const tempVec = useRef({
@@ -141,6 +148,7 @@ function DraggableGloveWithRope({
     threeQuarter: new THREE.Vector3(),
   })
   const tempQuat = useRef(new THREE.Quaternion())
+  const scrollQuat = useRef(new THREE.Quaternion()) // Reusable quat for scroll-driven rotation
 
   // This glove's anchor point - memoized to prevent recreation
   const anchorPos = useMemo(() => new THREE.Vector3(
@@ -167,9 +175,8 @@ function DraggableGloveWithRope({
   )
 
   // Reusable array for rope curve points (avoid allocation in useFrame)
+  // 3 points: anchor + mid (with sag) + gloveAttach
   const ropePoints = useRef<THREE.Vector3[]>([
-    new THREE.Vector3(),
-    new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
     new THREE.Vector3(),
@@ -212,6 +219,13 @@ function DraggableGloveWithRope({
     visualRotation.current = new THREE.Quaternion()
     visualRotation.current.setFromEuler(new THREE.Euler(0, yRotation, 0))
   }
+
+  // Handle drop delay - start timer on mount
+  useEffect(() => {
+    if (dropDelay > 0) {
+      dropStartTime.current = performance.now()
+    }
+  }, [dropDelay])
 
   // Soft string constraint + rope visual update
   useFrame(() => {
@@ -266,6 +280,19 @@ function DraggableGloveWithRope({
       // Update the visual group position and rotation
       visualGroupRef.current.position.copy(visualPosition.current!)
       visualGroupRef.current.quaternion.copy(visualRotation.current!)
+
+      // Compose scroll-driven per-glove rotation on top of physics rotation,
+      // and push glove outward to prevent clipping during the turn.
+      if (scrollRotRef?.current) {
+        const rot = scrollRotRef.current
+        scrollQuat.current.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, rot)
+        visualGroupRef.current.quaternion.multiply(scrollQuat.current)
+
+        // Spread apart — push outward proportional to rotation magnitude
+        const spread = Math.abs(rot) / (Math.PI * 0.75) * 0.35 // up to 0.35 units at full rotation
+        const sign = isLeftGlove ? -1 : 1
+        visualGroupRef.current.position.x += sign * spread
+      }
 
       t.toGlove.copy(t.gloveCenter).sub(anchorPos)
       const distance = t.toGlove.length()
@@ -397,26 +424,27 @@ function DraggableGloveWithRope({
     t.attachOffset.applyQuaternion(visualRotation.current) // Rotate by glove orientation
     t.gloveAttach.copy(visualPosition.current).add(t.attachOffset) // Add to position
 
-    // Create a slight sag in the middle for natural rope look
+    // Rope sag — only when there's slack (rope shorter than string length)
     const ropeDistance = anchorPos.distanceTo(t.gloveAttach)
     const sag = Math.max(0, (settings.stringLength - ropeDistance) * 0.15)
 
     t.mid.copy(anchorPos).lerp(t.gloveAttach, 0.5)
     t.mid.y -= sag
 
-    t.quarter.copy(anchorPos).lerp(t.gloveAttach, 0.25)
-    t.quarter.y -= sag * 0.5
-
-    t.threeQuarter.copy(anchorPos).lerp(t.gloveAttach, 0.75)
-    t.threeQuarter.y -= sag * 0.5
-
-    // Update rope points in place (no allocation)
+    // Build a smooth curve via quadratic Bezier (no CatmullRom inflection).
+    // Sample 3 points along the Bezier: start, middle, end.
+    // The control point is the sagged midpoint pushed further out so the
+    // Bezier's actual midpoint lands on t.mid (Bezier mid = avg of endpoints
+    // and control weighted, so control needs 2× the offset).
     const pts = ropePoints.current
-    pts[0].copy(anchorPos)
-    pts[1].copy(t.quarter)
-    pts[2].copy(t.mid)
-    pts[3].copy(t.threeQuarter)
-    pts[4].copy(t.gloveAttach)
+    // Start the rope well above the anchor (off-screen) so the shadow is one
+    // continuous curve with no seam. The old separate shadow-extension cylinder
+    // created a visible kink where it met the curved rope.
+    pts[0].set(0, anchorPos.y + 4, 0)
+    // Push control point to 2× sag so the curve's geometric midpoint matches t.mid
+    pts[1].copy(anchorPos).lerp(t.gloveAttach, 0.5)
+    pts[1].y -= sag * 2
+    pts[2].copy(t.gloveAttach)
 
     // Update geometry vertices in place (no new geometry allocation)
     updateRopeGeometry(ropeGeometry, pts, settings.stringThickness)
@@ -442,7 +470,8 @@ function DraggableGloveWithRope({
     offset.current.subVectors(glovePos, intersection.current)
 
     gloveRef.current.setBodyType(2, true)
-    ;(gl.domElement as HTMLElement).style.cursor = 'grabbing'
+    ;(gl.domElement as HTMLElement).style.cursor = 'none'
+    gl.domElement.setAttribute('data-cursor', 'drag')
     ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
   }, [camera, gl])
 
@@ -479,7 +508,8 @@ function DraggableGloveWithRope({
     if (!isDragging.current || !gloveRef.current) return
 
     isDragging.current = false
-    ;(gl.domElement as HTMLElement).style.cursor = 'grab'
+    ;(gl.domElement as HTMLElement).style.cursor = 'none'
+    gl.domElement.setAttribute('data-cursor', 'grab')
     ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
 
     const avgVelocity = new THREE.Vector3()
@@ -559,12 +589,14 @@ function DraggableGloveWithRope({
           onPointerUp={handlePointerUp}
           onPointerOver={() => {
             if (!isDragging.current) {
-              ;(gl.domElement as HTMLElement).style.cursor = 'grab'
+              ;(gl.domElement as HTMLElement).style.cursor = 'none'
+              gl.domElement.setAttribute('data-cursor', 'grab')
             }
           }}
           onPointerOut={() => {
             if (!isDragging.current) {
               ;(gl.domElement as HTMLElement).style.cursor = 'default'
+              gl.domElement.removeAttribute('data-cursor')
             }
           }}
         >
@@ -693,9 +725,10 @@ function DraggableGloveWithRope({
       </group>
 
       {/* Rope visual - uses memoized geometry that's updated in place */}
-      <mesh ref={tubeRef} geometry={ropeGeometry} frustumCulled={false}>
+      <mesh ref={tubeRef} geometry={ropeGeometry} frustumCulled={false} castShadow>
         <meshStandardMaterial color="#2a2a2a" roughness={0.4} metalness={0.1} />
       </mesh>
+
     </group>
   )
 }
@@ -704,13 +737,25 @@ function DraggableGloveWithRope({
 useGLTF.preload(leftGloveModelUrl, true)
 useGLTF.preload(rightGloveModelUrl, true)
 
-export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light' }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted' }) {
+export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'light', gloveScaleRef, gloveLeftRotRef, gloveRightRotRef }: { settings: Settings; shadowOpacity?: number; themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted'; gloveScaleRef?: RefObject<number>; gloveLeftRotRef?: RefObject<number>; gloveRightRotRef?: RefObject<number> }) {
+  const shadowMatRef = useRef<THREE.ShadowMaterial>(null)
+
+  // Fade shadow shortly after leaving hero — full at scale 1.15, gone by scale 1.11
+  // (~27% into scroll travel). Clamp so it stays at 0 for the rest.
+  useFrame(() => {
+    if (!shadowMatRef.current || !gloveScaleRef?.current) return
+    const FADE_END = 1.11   // shadow fully gone at this scale value
+    const t = Math.min(1, Math.max(0, (gloveScaleRef.current - FADE_END) / (1.15 - FADE_END)))
+    shadowMatRef.current.opacity = shadowOpacity * t
+  })
+
   return (
     <group>
-      {/* Shadow plane behind gloves */}
-      <mesh position={[0, 0, -2]} receiveShadow>
-        <planeGeometry args={[40, 40]} />
-        <shadowMaterial opacity={shadowOpacity} transparent />
+      {/* Shadow plane behind gloves — centered on rope midpoint (anchor y=3.2, gloves ~y=0)
+          Tall enough to catch rope shadows that extend above the viewport */}
+      <mesh position={[0, 2, -2]} receiveShadow>
+        <planeGeometry args={[20, 20]} />
+        <shadowMaterial ref={shadowMatRef} opacity={shadowOpacity} transparent />
       </mesh>
 
       {/* Anchor point visual - hidden since it should be off-screen */}
@@ -719,13 +764,14 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
         <meshStandardMaterial color="#111" metalness={0.9} roughness={0.2} />
       </mesh>
 
-      {/* Left glove - offset left and slightly forward, drops slightly after right */}
+      {/* Left glove - offset left and slightly forward, drops after right */}
       <DraggableGloveWithRope
         anchorOffset={[-0.4, 0, 0.15]}
-        dropDelay={100}
+        dropDelay={700}
         themeMode={themeMode}
         modelUrl={leftGloveModelUrl}
         yRotation={Math.PI + Math.PI / 6 - Math.PI / 4}
+        scrollRotRef={gloveLeftRotRef}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.25,
@@ -735,9 +781,11 @@ export function HangingSpheres({ settings, shadowOpacity = 0.08, themeMode = 'li
       {/* Right glove - offset right and slightly back, with extended cord */}
       <DraggableGloveWithRope
         anchorOffset={[0.4, 0, -0.15]}
+        dropDelay={600}
         themeMode={themeMode}
         modelUrl={rightGloveModelUrl}
         yRotation={Math.PI + (45 * Math.PI / 180)}
+        scrollRotRef={gloveRightRotRef}
         settings={{
           ...settings,
           stringLength: settings.stringLength + 0.7,

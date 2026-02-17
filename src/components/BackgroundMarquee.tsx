@@ -1,11 +1,9 @@
-import { memo } from 'react'
+import { memo, useEffect, useRef } from 'react'
+import { motion, useMotionValue, useSpring } from 'framer-motion'
 
 interface BackgroundMarqueeProps {
   marqueeFill?: string
 }
-
-// Locations content
-const locationsContent = 'OAKLAND  DA BRONX  SAN JUAN  SILICON VALLEY  NEW YORK  '
 
 // Icon components for the middle marquee row
 const RoyalCaribbeanIcon = () => (
@@ -21,7 +19,7 @@ const ShipHeroIcon = () => (
 )
 
 const AppleIcon = () => (
-  <svg viewBox="0 0 243 364" fill="currentColor" style={{ height: '90%', width: 'auto', marginTop: '-5px' }}>
+  <svg viewBox="0 0 243 364" fill="currentColor" style={{ height: '90%', width: 'auto', marginTop: '-5px', marginLeft: '2vh', marginRight: '2vh' }}>
     <path d="M234.62 122.554C232.893 123.917 202.408 141.395 202.408 180.259C202.408 225.211 241.199 241.114 242.36 241.508C242.181 242.477 236.197 263.287 221.908 284.491C209.166 303.151 195.859 321.78 175.615 321.78C155.371 321.78 150.161 309.815 126.792 309.815C104.017 309.815 95.9198 322.174 77.4027 322.174C58.8856 322.174 45.9653 304.908 31.1099 283.704C13.9027 258.804 0 220.122 0 183.409C0 124.523 37.6296 93.2928 74.6639 93.2928C94.342 93.2928 110.745 106.439 123.1 106.439C134.859 106.439 153.198 92.5052 175.585 92.5052C184.07 92.5052 214.554 93.2928 234.62 122.554ZM164.957 67.5755C174.216 56.3981 180.765 40.8889 180.765 25.3798C180.765 23.2291 180.587 21.0482 180.2 19.2913C165.136 19.8668 147.214 29.4994 136.407 42.252C127.923 52.0664 120.004 67.5755 120.004 83.2967C120.004 85.6594 120.391 88.0221 120.57 88.7794C121.522 88.9612 123.07 89.1732 124.618 89.1732C138.134 89.1732 155.133 79.9647 164.957 67.5755Z" />
   </svg>
 )
@@ -96,6 +94,16 @@ const MarqueeIcons = [
   UnfoldIcon,
 ]
 
+// Shuffled order for row 3 so icons don't move in parallel with row 1
+const MarqueeIconsAlt = [
+  SquarespaceIcon,
+  AppleIcon,
+  UnfoldIcon,
+  RoyalCaribbeanIcon,
+  MasterClassIcon,
+  ShipHeroIcon,
+]
+
 // Array of agency icon components
 const AgencyIcons = [
   CriticalMassIcon,
@@ -112,6 +120,7 @@ function MarqueeRow({
   direction,
   isIcons = false,
   isAgencies = false,
+  useAltIcons = false,
   fontType = 'mono',
   startOffset = 0,
   fillColor = '#E0E0E0',
@@ -120,6 +129,7 @@ function MarqueeRow({
   direction: 'left' | 'right'
   isIcons?: boolean
   isAgencies?: boolean
+  useAltIcons?: boolean
   fillColor?: string
   fontType?: 'dotmatrix' | 'mono' | 'gothic'
   startOffset?: number // Percentage offset for animation start position (0-50)
@@ -131,15 +141,15 @@ function MarqueeRow({
   // Row 4 (Locations): 38vh text, positioned so ~50% clips at bottom
 
   if (isIcons || isAgencies) {
-    const icons = isAgencies ? AgencyIcons : MarqueeIcons
+    const icons = isAgencies ? AgencyIcons : useAltIcons ? MarqueeIconsAlt : MarqueeIcons
     const repetitions = 6
 
     // Clients row larger, agencies row smaller
     const rowHeight = isAgencies ? '32vh' : '50vh'
     const iconHeight = isAgencies ? '28vh' : '40vh'
     // Agencies: slight adjustment - a bit more space above, bit less below
-    const rowMarginTop = isAgencies ? '-2vh' : '-8vh'
-    const rowMarginBottom = isAgencies ? '-6vh' : '-8vh'
+    const rowMarginTop = isAgencies ? '-4vh' : '-10vh'
+    const rowMarginBottom = isAgencies ? '-8vh' : '-10vh'
 
     // Generate icons
     const renderIconSet = (keyPrefix: string) => (
@@ -161,9 +171,11 @@ function MarqueeRow({
       )
     )
 
+    const animationDelay = startOffset > 0 ? `-${startOffset}s` : '0s'
+
     return (
       <div
-        className="relative w-full overflow-hidden flex items-center"
+        className="relative w-full overflow-x-hidden overflow-y-visible flex items-center"
         style={{ height: rowHeight, marginTop: rowMarginTop, marginBottom: rowMarginBottom }}
       >
         <div
@@ -173,6 +185,7 @@ function MarqueeRow({
             opacity: 0.38, // Reduced from 0.44 to lower background competition
             lineHeight: 1,
             height: iconHeight,
+            animationDelay,
           }}
         >
           {/* First half */}
@@ -188,9 +201,12 @@ function MarqueeRow({
     )
   }
 
-  // Text rows - 38vh height (slightly larger than before)
-  const rowHeight = '38vh'
-  const rowMargin = '-6vh'
+  // Text rows — height must accommodate font descenders (g, y, etc.)
+  // Font size is 34vh with lineHeight:1, so the text box is 34vh.
+  // Descenders extend ~15% below the baseline, needing ~5vh extra.
+  // 42vh total ensures no clipping; negative margins collapse the visual gap.
+  const rowHeight = '42vh'
+  const rowMargin = '-8vh'
 
   const fontStyles = fontType === 'dotmatrix'
     ? {
@@ -201,16 +217,16 @@ function MarqueeRow({
       }
     : fontType === 'gothic'
     ? {
-        fontFamily: 'GT Pressura, sans-serif',
+        fontFamily: 'Inter',
         fontSize: '36vh',
-        fontWeight: 500,
-        letterSpacing: '-0.09em',
+        fontWeight: 600,
+        letterSpacing: '-0.04em',
       }
     : {
-        fontFamily: 'GT Pressura Mono, monospace',
+        fontFamily: 'Inter',
         fontSize: '34vh',
-        fontWeight: 350,
-        letterSpacing: '-0.06em',
+        fontWeight: 400,
+        letterSpacing: '-0.02em',
       }
 
   // Create the repeated content string
@@ -221,7 +237,7 @@ function MarqueeRow({
 
   return (
     <div
-      className="relative w-full overflow-hidden flex items-center"
+      className="relative w-full overflow-x-hidden overflow-y-visible flex items-center"
       style={{ height: rowHeight, marginTop: rowMargin, marginBottom: rowMargin }}
     >
       <div
@@ -248,49 +264,139 @@ export const BackgroundMarquee = memo(function BackgroundMarquee({ marqueeFill =
   // When centered, first row is ~50% clipped at top, last row ~50% clipped at bottom
   // This maintains consistent proportions at any viewport height
 
+  // Mouse-driven perspective tilt (matches hero graffiti SVG effect)
+  const TILT = 2.0   // max degrees of rotation
+  const SHIFT = 5    // max px translate
+  const spring = { stiffness: 50, damping: 20, mass: 1 }
+  const tiltTargetX = useMotionValue(0)
+  const tiltTargetY = useMotionValue(0)
+  const shiftTargetX = useMotionValue(0)
+  const shiftTargetY = useMotionValue(0)
+  const rotateX = useSpring(tiltTargetX, spring)
+  const rotateY = useSpring(tiltTargetY, spring)
+  const tx = useSpring(shiftTargetX, spring)
+  const ty = useSpring(shiftTargetY, spring)
+
+  const mouseRef = useRef({ x: 0.5, y: 0.5 })
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      mouseRef.current.x = e.clientX / window.innerWidth
+      mouseRef.current.y = e.clientY / window.innerHeight
+    }
+    window.addEventListener('mousemove', onMove)
+
+    let raf = 0
+    const tick = () => {
+      const { x, y } = mouseRef.current
+      tiltTargetY.set((x - 0.5) * TILT * 2)
+      tiltTargetX.set((y - 0.5) * -TILT * 2)
+      shiftTargetX.set((x - 0.5) * -SHIFT * 2)
+      shiftTargetY.set((y - 0.5) * -SHIFT * 2)
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      cancelAnimationFrame(raf)
+    }
+  }, [tiltTargetX, tiltTargetY, shiftTargetX, shiftTargetY])
+
   return (
     <div
-      className="absolute inset-0 overflow-hidden pointer-events-none select-none"
+      className="absolute inset-0 overflow-x-hidden overflow-y-visible pointer-events-none select-none"
       style={{ zIndex: 1 }}
     >
-      {/* Container for 4-row marquee pattern - centered vertically */}
+      {/* Centering wrapper */}
       <div
-        className="absolute left-0 right-0 flex flex-col justify-center"
-        style={{
-          top: '50%',
-          transform: 'translateY(-50%)',
-        }}
+        className="absolute left-0 right-0"
+        style={{ top: '50%', transform: 'translateY(-50%)' }}
       >
-        {/* Row 1: Client icons */}
-        <MarqueeRow
-          content=""
-          direction="right"
-          isIcons
-          fillColor={marqueeFill}
-        />
-        {/* Row 2: Locations */}
-        <MarqueeRow
-          content={locationsContent}
-          direction="left"
-          fontType="dotmatrix"
-          startOffset={0}
-          fillColor={marqueeFill}
-        />
-        {/* Row 3: Agency icons */}
-        <MarqueeRow
-          content=""
-          direction="right"
-          isAgencies
-          fillColor={marqueeFill}
-        />
-        {/* Row 4: Locations */}
-        <MarqueeRow
-          content={locationsContent}
-          direction="left"
-          fontType="dotmatrix"
-          startOffset={30}
-          fillColor={marqueeFill}
-        />
+        {/* Tilt wrapper — perspective tilt driven by cursor */}
+        <motion.div
+          style={{
+            rotateX,
+            rotateY,
+            x: tx,
+            y: ty,
+            perspective: 1200,
+          }}
+        >
+          {/* Container for 4-row marquee pattern
+              Each row staggers in with a slide-up + fade reveal */}
+          <motion.div
+            className="flex flex-col justify-center"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.12 } } }}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.35 }}
+        >
+        {/* Row 1: Client icons
+             overflow:hidden clips the slide-up entrance, then reverts to visible
+             so row content (descenders, tall icons) isn't permanently clipped */}
+        <motion.div
+          style={{ overflow: 'hidden' }}
+          variants={{
+            hidden: { opacity: 0, y: 60 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              overflow: 'visible',
+              transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+            },
+          }}
+        >
+          <MarqueeRow
+            content=""
+            direction="right"
+            isIcons
+            fillColor={marqueeFill}
+          />
+        </motion.div>
+        {/* Row 2: Agency icons — pulled closer to row 1 */}
+        <motion.div
+          style={{ overflow: 'hidden', marginTop: '-2vh' }}
+          variants={{
+            hidden: { opacity: 0, y: 60 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              overflow: 'visible',
+              transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+            },
+          }}
+        >
+          <MarqueeRow
+            content=""
+            direction="left"
+            isAgencies
+            fillColor={marqueeFill}
+          />
+        </motion.div>
+        {/* Row 3: Client icons (repeat of row 1, opposite direction) — more space from row 2 */}
+        <motion.div
+          style={{ overflow: 'hidden', marginTop: '4vh' }}
+          variants={{
+            hidden: { opacity: 0, y: 60 },
+            visible: {
+              opacity: 1,
+              y: 0,
+              overflow: 'visible',
+              transition: { duration: 0.8, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+            },
+          }}
+        >
+          <MarqueeRow
+            content=""
+            direction="right"
+            isIcons
+            useAltIcons
+            fillColor={marqueeFill}
+          />
+          </motion.div>
+        </motion.div>
+      </motion.div>
       </div>
     </div>
   )
