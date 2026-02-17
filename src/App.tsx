@@ -3,11 +3,11 @@ import { CustomCursor } from './components/CustomCursor'
 import { TopCards } from './components/TopCards'
 import { VideoMorphSection } from './components/VideoMorphSection'
 import { GradientTransition } from './components/GradientTransition'
-import { ScrollingTextSection } from './components/ScrollingTextSection'
+
 import { PeteyGraffitiSvg } from './components/PeteyGraffitiSvg'
 import { SplitText } from './lib/gsap'
-import { SelectedWorksHeader } from './components/SelectedWorksHeader'
-import { ProjectCardsGrid } from './components/ProjectCardsGrid'
+
+
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
 import { BottomBar } from './components/BottomBar'
@@ -209,6 +209,7 @@ function App() {
     const videoSection = document.querySelector('[data-section="video-morph"]')
     if (!videoSection) return
 
+    let hasPassedVideo = false
     const toggle = (hide: boolean) => {
       const compact = document.querySelector('[data-compact-bar]')
       const bottom = document.querySelector('[data-bottom-bar]')
@@ -217,9 +218,12 @@ function App() {
         compact?.classList.add('video-dissolve-ready', 'video-hidden-up')
         bottom?.classList.add('video-dissolve-ready', 'video-hidden-down')
       } else {
-        // Remove hidden but keep dissolve-ready so the return animates
+        // Compact bar always returns
         compact?.classList.remove('video-hidden-up')
-        bottom?.classList.remove('video-hidden-down')
+        // BottomBar only returns when scrolling back up (before video)
+        if (!hasPassedVideo) {
+          bottom?.classList.remove('video-hidden-down')
+        }
       }
     }
 
@@ -229,10 +233,31 @@ function App() {
         start: 'top bottom',
         end: 'bottom top',
         onEnter: () => toggle(true),
-        onLeave: () => toggle(false),
+        onLeave: () => {
+          hasPassedVideo = true
+          document.body.setAttribute('data-past-video', '')
+          window.dispatchEvent(new CustomEvent('past-video-change', { detail: true }))
+          toggle(false)
+        },
         onEnterBack: () => toggle(true),
-        onLeaveBack: () => toggle(false),
+        onLeaveBack: () => {
+          hasPassedVideo = false
+          document.body.removeAttribute('data-past-video')
+          window.dispatchEvent(new CustomEvent('past-video-change', { detail: false }))
+          toggle(false)
+        },
       })
+
+      // On page refresh the browser may restore scroll to a position past the video
+      // section. ScrollTrigger's callbacks only fire on scroll *events*, so if the
+      // section is already past the viewport at mount time, onLeave never fires.
+      // Explicitly set the attribute so TopCards renders the correct post-video variant.
+      const vRect = videoSection.getBoundingClientRect()
+      if (vRect.bottom < 0) {
+        hasPassedVideo = true
+        document.body.setAttribute('data-past-video', '')
+        window.dispatchEvent(new CustomEvent('past-video-change', { detail: true }))
+      }
     })
     return () => ctx.revert()
   }, [])
@@ -489,7 +514,7 @@ function App() {
                 textAlign="left"
               >
                 <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px' }}>NoWADays</span>
-                , he{'\u2019'}s shaping design
+                , he{'\u2019'}s shaping vision
               </BioTextReveal>
               {/* String 4 — right-aligned, flanks gloves on the right */}
               <BioTextReveal
@@ -510,7 +535,7 @@ function App() {
               textAlign="left"
             >
               <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px' }}>NoWADays</span>
-              , he{'\u2019'}s shaping design for Squarespace{'\u2019'}s site builder.
+              , he{'\u2019'}s shaping vision for Squarespace{'\u2019'}s site builder.
             </BioTextReveal>
           )}
           {/* Invisible trigger for "And occasionally..." reveal */}
@@ -622,15 +647,6 @@ function App() {
         className="relative"
         style={{ zIndex: 20 }}
       />
-
-      {/* ===== Scrolling Text Section ===== */}
-      <ScrollingTextSection />
-
-      {/* ===== Selected Works Header ===== */}
-      <SelectedWorksHeader />
-
-      {/* ===== Project Cards Grid ===== */}
-      <ProjectCardsGrid />
 
       {/* ===== Logo Marquee + Quote ===== */}
       <LogoMarqueeSection />

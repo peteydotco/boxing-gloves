@@ -87,8 +87,19 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
   // Track email copied toast state
   const [emailCopied, setEmailCopied] = React.useState(false)
 
-  // Store card positions when expanding
-  const [cardPositions, setCardPositions] = React.useState<Map<string, DOMRect>>(new Map())
+  // Store card positions when expanding.
+  // Kept as a ref (not state) so the captured positions survive React StrictMode's
+  // unmount→remount cycle. A setState Map gets reset to the initial empty Map on
+  // the second render pass, causing the expanded portal to hit the {0,0} fallback
+  // and stack all cards at top-left on the first open after page load.
+  const cardPositionsRef = React.useRef<Map<string, DOMRect>>(new Map())
+  // Bump a counter to force re-render after updating the ref
+  const [, forcePositionRender] = React.useState(0)
+  const setCardPositions = React.useCallback((positions: Map<string, DOMRect>) => {
+    cardPositionsRef.current = positions
+    forcePositionRender(c => c + 1)
+  }, [])
+  const cardPositions = cardPositionsRef.current
 
   // Refs to track card elements
   const cardRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map())
@@ -104,12 +115,34 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
   //   'expanded'→ full compact bar with labels (on hover over mini tray)
   type CompactState = 'hidden' | 'mini' | 'expanded'
   const [compactState, setCompactState] = React.useState<CompactState>('hidden')
+  // Track whether we've scrolled past the video section — drives which
+  // compact variant renders (mini/expanded morph vs default card row).
+  const [isPastVideo, setIsPastVideo] = React.useState(() => {
+    if (typeof document === 'undefined') return false
+    // Check the body attribute first (set by ScrollTrigger in App.tsx)
+    if (document.body.hasAttribute('data-past-video')) return true
+    // On page refresh the browser restores scroll position before ScrollTrigger
+    // initializes, so the attribute may not exist yet. Fall back to checking
+    // whether the video section's bottom is above the viewport.
+    const videoSection = document.querySelector('[data-section="video-morph"]') as HTMLElement | null
+    if (videoSection) {
+      const rect = videoSection.getBoundingClientRect()
+      if (rect.bottom < 0) return true
+    }
+    return false
+  })
   const isCompact = compactState !== 'hidden' // derived for existing code compatibility
   const isMiniTray = compactState === 'mini'
   const isCompactExpanded = compactState === 'expanded'
   const [isOverDark, setIsOverDark] = React.useState(false)
   const topCardsWrapperRef = React.useRef<HTMLDivElement>(null)
   const compactCardRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map())
+  // Separate refs for the post-video bar cards. The pre-video compact bar and
+  // post-video bar share an AnimatePresence — when the user scrolls past the video,
+  // the pre-video bar exit-animates while the post-video bar mounts. The delayed
+  // unmount of the pre-video bar fires ref callbacks with `null`, overwriting any
+  // shared ref map. Keeping them separate prevents the race condition.
+  const postVideoCardRefs = React.useRef<Map<string, HTMLDivElement | null>>(new Map())
   const compactScrollRef = React.useRef<HTMLDivElement | null>(null)
   const savedCompactScrollPosition = React.useRef<number>(0)
   // Shared horizontal scroll position — kept in sync between the default card row
@@ -162,7 +195,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
         if (scrollContainerRef.current) {
           sharedScrollLeft.current = scrollContainerRef.current.scrollLeft
         }
-        setCompactState(prev => prev === 'hidden' ? 'mini' : prev)
+        setCompactState(prev => {
+          if (prev !== 'hidden') return prev
+          return 'mini'
+        })
       }
       else if (currentCompact && rect.bottom > BUFFER) {
         currentCompact = false
@@ -201,6 +237,15 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // When video section is passed/re-entered, track state for compact variant selection
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      setIsPastVideo(!!(e as CustomEvent).detail)
+    }
+    window.addEventListener('past-video-change', handler)
+    return () => window.removeEventListener('past-video-change', handler)
   }, [])
 
   // --- Mini tray ↔ expanded compact bar hover handlers ---
@@ -284,7 +329,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     // soft-magnetic cursor effect. Use the BRCT center (transform-invariant for
     // center-origin scales) with offsetWidth/offsetHeight (layout dimensions,
     // immune to transforms), then subtract any active magnetic displacement.
-    compactCardRefs.current.forEach((el, id) => {
+    // Read from the correct ref map — post-video bar has its own refs to avoid
+    // the pre-video bar's delayed AnimatePresence unmount nullifying them.
+    const activeRefs = isPastVideo ? postVideoCardRefs.current : compactCardRefs.current
+    activeRefs.forEach((el, id) => {
       if (el) {
         const width = el.offsetWidth
         const height = el.offsetHeight
@@ -341,29 +389,33 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     closingCardIndex.current = expandedIndex
     if (expandedIndex === null) return
 
-    // ── Closing back to mini tray ──
-    // Skip the expanded compact bar entirely — collapse straight to the mini
-    // tray's tiny pill positions so there's no intermediate state.
+    // ── Closing back to compact bar ──
     if (expandedFromCompact.current) {
-      const newExitPositions = new Map<string, { top: number; left: number; width: number; height: number }>()
-      const vw = window.innerWidth
-      const miniPillW = 28
-      const miniPillH = 8
-      const miniGap = 4
-      const miniTrayW = numPills * miniPillW + (numPills - 1) * miniGap
-      const miniTrayLeft = (vw - miniTrayW) / 2
-      // Mini tray marginTop matches the expanded pills' vertical center
-      const miniMarginTop = vw < BREAKPOINTS.mobile ? 32 : 40
+      if (isPastVideo) {
+        // Post-video: exit targets are the full-size card positions captured at
+        // expand time (collapsedPosition fallback). Clear any stale mini positions.
+        setMobileExitPositions(new Map())
+      } else {
+        // Pre-video: target mini tray positions (tiny 28×8px pills, centered at top).
+        const newExitPositions = new Map<string, { top: number; left: number; width: number; height: number }>()
+        const vw = window.innerWidth
+        const miniPillW = 28
+        const miniPillH = 8
+        const miniGap = 4
+        const miniTrayW = numPills * miniPillW + (numPills - 1) * miniGap
+        const miniTrayLeft = (vw - miniTrayW) / 2
+        const miniMarginTop = vw < BREAKPOINTS.mobile ? 32 : 40
 
-      visibleCards.forEach((card, idx) => {
-        newExitPositions.set(card.id, {
-          top: miniMarginTop,
-          left: miniTrayLeft + idx * (miniPillW + miniGap),
-          width: miniPillW,
-          height: miniPillH,
+        visibleCards.forEach((card, idx) => {
+          newExitPositions.set(card.id, {
+            top: miniMarginTop,
+            left: miniTrayLeft + idx * (miniPillW + miniGap),
+            width: miniPillW,
+            height: miniPillH,
+          })
         })
-      })
-      setMobileExitPositions(newExitPositions)
+        setMobileExitPositions(newExitPositions)
+      }
       // Defer overflow restoration: the cleanup of the overflow useEffect will fire
       // when expandedIndex goes null, but we need overflow to stay 'hidden' during
       // the entire exit animation so the scrollbar doesn't reappear and shift positions.
@@ -1274,8 +1326,8 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                       zIndexOverride={zIndexOverride}
                       useBouncyTransition={useBouncyTransition}
                       isFocused={cardIndex === expandedIndex}
-                      initialBorderRadius={expandedFromCompact.current ? 44 : 16}
-                      expandedFromCompact={expandedFromCompact.current}
+                      initialBorderRadius={(expandedFromCompact.current && !isPastVideo) ? 44 : 16}
+                      expandedFromCompact={expandedFromCompact.current && !isPastVideo}
                       isOverDark={isOverDark}
                     />
                   )
@@ -1287,10 +1339,95 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
         document.body
       )}
 
-      {/* Compact sticky bar — unified morphing container: mini tray ↔ expanded bar */}
+      {/* Compact sticky bar — two variants:
+            1. Pre-video: mini tray ↔ expanded morph bar (hover-driven)
+            2. Post-video: default card row fixed at top (no morph) */}
       {typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
-          {isCompact && !isExpanded && !isClosing && (
+          {/* ── Post-video: default card row ── */}
+          {isPastVideo && isCompact && !isExpanded && !isClosing && (
+            <motion.div
+              key="post-video-bar"
+              data-compact-bar
+              className="fixed top-0 left-0 right-0 horizontal-padding-responsive"
+              style={{
+                zIndex: 50,
+                paddingTop: isMobile ? 12 : 20,
+                paddingBottom: isMobile ? 12 : 20,
+                overflow: 'visible',
+              }}
+              initial={justClosedFromCompact.current ? { y: 0 } : { y: '-100%' }}
+              animate={{ y: 0, transition: justClosedFromCompact.current
+                ? { duration: 0 }
+                : { duration: 0.6, ease: [0.33, 1, 0.68, 1] }
+              }}
+              exit={expandedFromCompact.current
+                ? { y: 0, transition: { duration: 0 } }
+                : { y: '-100%', opacity: 0, transition: { duration: 0.4, ease: [0.33, 1, 0.68, 1] } }
+              }
+            >
+              <div
+                className="flex scrollbar-hide"
+                style={{
+                  gap: isMobile ? '0.5rem' : '1rem',
+                  justifyContent: isDesktop ? 'center' : 'flex-start',
+                  overflowX: isMobile ? 'auto' : isTablet ? 'auto' : 'visible',
+                  overflowY: 'visible',
+                  // Extra padding so hover scale (1.03×) doesn't clip at viewport edges
+                  padding: 6,
+                  margin: -6,
+                  ...(!isDesktop && {
+                    marginLeft: '-0.75rem',
+                    marginRight: '-0.75rem',
+                    paddingLeft: '0.75rem',
+                    paddingRight: '0.75rem',
+                  }),
+                }}
+              >
+                {visibleCards.map((card) => {
+                  const cardIndex = cardsToShow.findIndex((c) => c.id === card.id)
+                  const isCompactCtaCard = false
+
+                  return (
+                    <div
+                      key={card.id}
+                      ref={(el) => { postVideoCardRefs.current.set(card.id, el) }}
+                      style={{
+                        overflow: 'visible',
+                        ...(isDesktop
+                          ? { flex: '1 1 0%', minWidth: 0 }
+                          : isTablet
+                          ? { flex: '1 0 260px' }
+                          : {
+                              flex: '0 0 auto',
+                              minWidth: isCompactCtaCard ? '115px' : '243px',
+                              maxWidth: isCompactCtaCard ? '115px' : '243px',
+                              width: isCompactCtaCard ? '115px' : '243px',
+                            }),
+                      }}
+                    >
+                      <MorphingCard
+                        card={card}
+                        isExpanded={false}
+                        expandedPosition={getExpandedPosition(cardIndex)}
+                        onClick={() => captureCompactPositionsAndExpand(cardIndex)}
+                        onClose={handleCloseExpanded}
+                        onHighlightClick={(label) => console.log('Highlight clicked:', label)}
+                        hideShortcut={isMobile}
+                        compactCta={isCompactCtaCard}
+                        mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
+                        emailCopied={emailCopied}
+                        themeMode={themeMode}
+                      />
+                    </div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── Pre-video: mini tray ↔ expanded morph bar ── */}
+          {!isPastVideo && isCompact && !isExpanded && !isClosing && (
             <motion.div
               key="compact-bar"
               data-compact-bar
@@ -1365,8 +1502,8 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                   y: isMiniTray ? springMagY : 0,
                   zIndex: 1,
                 }}
-                // When remounting after close-from-compact, start at mini target values
-                // so the morphing container doesn't spring from 0 (collapse-transitions.md §7).
+                // When remounting, start at the return-target values so the morphing
+                // container doesn't spring from 0 (collapse-transitions.md §7).
                 {...(justClosedFromCompact.current && {
                   initial: {
                     width: numPills * 28 + (numPills - 1) * 4,
@@ -1421,8 +1558,8 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                     x: glassMagX,
                     y: glassMagY,
                   }}
-                  // Start hidden when remounting after close-from-compact so the glass
-                  // dissolves in via the existing transition instead of popping in at full opacity.
+                  // Start hidden when remounting so the glass dissolves in via the
+                  // existing transition instead of popping in at full opacity.
                   {...(justClosedFromCompact.current && { initial: { opacity: 0 } })}
                   animate={{ opacity: isMiniTray ? 1 : 0 }}
                   transition={morphStyle === 4
@@ -1546,8 +1683,6 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                           WebkitBackdropFilter: (!isMiniTray && isCta) ? 'blur(8px)' : undefined,
                           transition: 'background-color 0.4s ease',
                         }}
-                        // Always start at mini dimensions so pills don't animate
-                        // their size on first mount (the container slide-in is enough).
                         initial={{
                           width: 28,
                           height: 8,
@@ -1666,9 +1801,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                             whiteSpace: 'nowrap',
                             pointerEvents: isMiniTray ? 'none' : 'auto',
                           }}
-                          // Start hidden when remounting after close-from-compact to prevent
-                          // label text flashing visible before fading out (same pattern as pills).
-                          {...(justClosedFromCompact.current && { initial: { opacity: 0 } })}
+                          // Start hidden when remounting to prevent label flash
+                          {...(justClosedFromCompact.current && {
+                            initial: { opacity: 0 },
+                          })}
                           animate={{
                             opacity: isMiniTray ? 0 : 1,
                           }}
@@ -1690,9 +1826,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                             position: 'relative',
                             zIndex: 1,
                           }}
-                          // Start hidden when remounting after close-from-compact to prevent
-                          // badge numbers flashing visible before fading out.
-                          {...(justClosedFromCompact.current && { initial: { opacity: 0 } })}
+                          // Start hidden when remounting to prevent badge flash
+                          {...(justClosedFromCompact.current && {
+                            initial: { opacity: 0 },
+                          })}
                           animate={{
                             opacity: isMiniTray ? 0 : 1,
                           }}

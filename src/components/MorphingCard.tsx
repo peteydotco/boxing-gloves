@@ -930,12 +930,7 @@ export function MorphingCard({
           borderRadius: initialBorderRadius,
           rotate: 0,
           scale: 1,
-          // Compact pills have no boxShadow — use 'none' to prevent shadow jump on unmount
-          boxShadow: expandedFromCompact
-            ? 'none'
-            : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop)
-              ? '0 12px 24px 0 rgba(0,0,0,0.04), 0 4px 12px 0 rgba(0,0,0,0.08)'
-              : '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
+          boxShadow: 'none',
           // Transition bg to match collapsed/compact pill appearance on unmount.
           // CTA compact: portal bg goes transparent so the ghost's own backdropFilter blur
           // sees through to the page (ghost provides the semi-transparent bg + blur).
@@ -1738,9 +1733,7 @@ export function MorphingCard({
         width: '100%',
         height: 'auto',
         ...(card.variant === 'cta' ? { backdropFilter: 'blur(8px)', overflow: 'visible' as const } : {}),
-        boxShadow: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop)
-          ? '0 12px 24px 0 rgba(0,0,0,0.04), 0 4px 12px 0 rgba(0,0,0,0.08)'
-          : '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)',
+        boxShadow: 'none',
       }}
       animate={{
         scale: isHovered ? 1.02 : 1,

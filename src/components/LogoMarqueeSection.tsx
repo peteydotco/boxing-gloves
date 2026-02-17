@@ -2,9 +2,7 @@ import { BackgroundMarquee } from './BackgroundMarquee'
 import { motion } from 'framer-motion'
 
 const quoteLines = [
-  "Delivering shareholder value",
-  "despite macroeconomic trends",
-  "since 1989.",
+  "Case studies coming soon.",
 ]
 
 export function LogoMarqueeSection() {
@@ -13,9 +11,11 @@ export function LogoMarqueeSection() {
       className=""
       style={{
         position: 'relative',
-        overflowX: 'hidden',
+        zIndex: 21,
+        overflowX: 'clip',
         overflowY: 'visible',
-        height: '140vh',
+        height: '85vh',
+        marginTop: '-20vh',
       }}
       data-scroll
       data-scroll-section

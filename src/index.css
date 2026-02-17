@@ -281,7 +281,7 @@ html::-webkit-scrollbar {
 }
 
 body {
-  background: #F9F9F9;
+  background: #fff;
 }
 
 /* ===== Scroll-triggered fade-in for project cards ===== */
