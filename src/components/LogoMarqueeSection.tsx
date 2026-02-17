@@ -21,8 +21,8 @@ export function LogoMarqueeSection() {
       data-scroll
       data-scroll-section
     >
-      {/* Background marquee — same component previously used in hero */}
-      <BackgroundMarquee marqueeFill="#DCDCDC" />
+      {/* Background marquee — disabled for now */}
+      {/* <BackgroundMarquee marqueeFill="#DCDCDC" /> */}
 
       {/* Quote — overlaying the marquee, line-by-line reveal */}
       <motion.div

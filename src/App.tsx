@@ -675,7 +675,7 @@ function App() {
         direction="exit"
         src="/images/transition-exit.png"
         className="relative"
-        style={{ zIndex: 20 }}
+        style={{ zIndex: 22 }}
       />
 
       {/* ===== Logo Marquee + Quote ===== */}

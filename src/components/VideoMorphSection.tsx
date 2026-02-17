@@ -316,7 +316,7 @@ export function VideoMorphSection() {
 
   const labelStyle = {
     fontFamily: 'Inter',
-    fontSize: 24,
+    fontSize: isMobile ? 22 : 24,
     fontWeight: 500,
     letterSpacing: '-0.02em',
     whiteSpace: 'nowrap' as const,
