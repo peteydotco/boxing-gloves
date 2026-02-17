@@ -119,17 +119,11 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
   // compact variant renders (mini/expanded morph vs default card row).
   const [isPastVideo, setIsPastVideo] = React.useState(() => {
     if (typeof document === 'undefined') return false
-    // Check the body attribute first (set by ScrollTrigger in App.tsx)
-    if (document.body.hasAttribute('data-past-video')) return true
-    // On page refresh the browser restores scroll position before ScrollTrigger
-    // initializes, so the attribute may not exist yet. Fall back to checking
-    // whether the video section's bottom is above the viewport.
-    const videoSection = document.querySelector('[data-section="video-morph"]') as HTMLElement | null
-    if (videoSection) {
-      const rect = videoSection.getBoundingClientRect()
-      if (rect.bottom < 0) return true
-    }
-    return false
+    // Check the body attribute (set by ScrollTrigger in App.tsx).
+    // On initial page load this is the only synchronous signal available —
+    // the video section DOM element may not exist yet during TopCards' render
+    // phase since VideoMorphSection is a later sibling in App's tree.
+    return document.body.hasAttribute('data-past-video')
   })
   const isCompact = compactState !== 'hidden' // derived for existing code compatibility
   const isMiniTray = compactState === 'mini'
@@ -185,6 +179,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     const BUFFER = 20
     let currentCompact = false
     let currentDark = false
+    let currentPastVideo = false
     const handleScroll = () => {
       const wrapper = topCardsWrapperRef.current
       if (!wrapper) return
@@ -210,19 +205,14 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
         if (leaveTimeoutRef.current) { clearTimeout(leaveTimeoutRef.current); leaveTimeoutRef.current = null }
       }
 
-      // Detect dark video section overlap for CTA pill color swap
-      // Thresholds aligned with VideoMorphSection labelColor useTransform:
-      //   entry: label transitions 0.14→0.21, midpoint ≈ 0.175
-      //   exit:  label transitions 0.78→0.88, midpoint ≈ 0.83
-      // CTA pill has a 0.4s CSS ease transition, so triggering at the midpoint
-      // makes both elements appear to flip at the same time.
+      // Detect video section position for dark overlay + past-video state.
+      // The video section query is already needed for CTA pill color swap;
+      // piggyback on it to also detect past-video so the scroll handler and
+      // isPastVideo stay in sync without a separate listener.
       const videoSection = document.querySelector('[data-section="video-morph"]') as HTMLElement | null
       if (videoSection) {
         const vRect = videoSection.getBoundingClientRect()
         const sectionH = videoSection.offsetHeight
-        // scrollYProgress: how far the section has scrolled through the viewport
-        // offset: ['start end', 'end start'] means progress 0 when section top hits viewport bottom,
-        // progress 1 when section bottom hits viewport top
         const viewH = window.innerHeight
         const progress = (-vRect.top + viewH) / (sectionH + viewH)
         const nowDark = progress > 0.175 && progress < 0.83
@@ -230,17 +220,43 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
           currentDark = nowDark
           setIsOverDark(nowDark)
         }
+        // Past-video: section bottom is above viewport top
+        const nowPast = vRect.bottom < 0
+        if (nowPast !== currentPastVideo) {
+          currentPastVideo = nowPast
+          setIsPastVideo(nowPast)
+        }
       } else if (currentDark) {
         currentDark = false
         setIsOverDark(false)
       }
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
+    // Run once on mount to handle page-refresh with restored scroll position.
+    // At this point the DOM is fully painted (useEffect fires post-paint),
+    // so the video section element exists and getBoundingClientRect is valid.
+    handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // When video section is passed/re-entered, track state for compact variant selection
+  // When video section is passed/re-entered, track state for compact variant selection.
+  // Also performs a one-shot mount check: on page refresh the browser restores scroll
+  // before App.tsx's ScrollTrigger fires, so the `data-past-video` attribute may not
+  // exist at useState-init time. Once mounted, the video section DOM is available and
+  // we can check its position directly.
   React.useEffect(() => {
+    // Mount-time detection: if the video section's bottom is above the viewport,
+    // we're past video and should render the post-video default card row.
+    if (!isPastVideo) {
+      const videoSection = document.querySelector('[data-section="video-morph"]') as HTMLElement | null
+      if (videoSection) {
+        const rect = videoSection.getBoundingClientRect()
+        if (rect.bottom < 0) {
+          setIsPastVideo(true)
+        }
+      }
+    }
+
     const handler = (e: Event) => {
       setIsPastVideo(!!(e as CustomEvent).detail)
     }
