@@ -15,15 +15,16 @@ export function BottomBar() {
   const barRef = useRef<HTMLDivElement>(null)
   const centerRef = useRef<HTMLDivElement>(null)
 
-  // Active status index — initializes to the current time-based status
-  const [statusIndex, setStatusIndex] = useState(() =>
-    ALL_STATUSES.indexOf(currentStatus)
-  )
+  // Active status index — always reflects the current time-based status
+  const statusIndex = ALL_STATUSES.indexOf(currentStatus)
 
   const [hovered, setHovered] = useState(false)
 
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.mobile : false
+  )
+  const [isTouch, setIsTouch] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < BREAKPOINTS.tablet : false
   )
   const [isWide, setIsWide] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.tabletWide : true
@@ -33,11 +34,24 @@ export function BottomBar() {
     const handleResize = () => {
       const w = window.innerWidth
       setIsMobile(w < BREAKPOINTS.mobile)
+      setIsTouch(w < BREAKPOINTS.tablet)
       setIsWide(w >= BREAKPOINTS.tabletWide)
     }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  // Collapse on outside tap (touch devices only)
+  useEffect(() => {
+    if (!isTouch || !hovered) return
+    const handleOutsideTap = (e: PointerEvent) => {
+      if (barRef.current && !barRef.current.contains(e.target as Node)) {
+        setHovered(false)
+      }
+    }
+    document.addEventListener('pointerdown', handleOutsideTap)
+    return () => document.removeEventListener('pointerdown', handleOutsideTap)
+  }, [isTouch, hovered])
 
   // Entrance — slide up from below after TopCards stagger in.
   // Uses autoAlpha (visibility + opacity) so it doesn't conflict with the
@@ -79,34 +93,12 @@ export function BottomBar() {
     return () => ctx.revert()
   }, [])
 
-  // Cycle to next status on tap — crossfade transition
+  // On touch devices (<1024), tap toggles expand/collapse.
   const handleTap = useCallback(() => {
-    const center = centerRef.current
-    const next = (prev: number) => (prev + 1) % ALL_STATUSES.length
-
-    if (!center) {
-      setStatusIndex(next)
-      return
+    if (isTouch) {
+      setHovered(prev => !prev)
     }
-
-    // Fade out current, swap, fade in
-    gsap.to(center, {
-      opacity: 0,
-      y: -4,
-      duration: 0.15,
-      ease: 'power2.in',
-      onComplete: () => {
-        setStatusIndex(next)
-        gsap.set(center, { y: 4 })
-        gsap.to(center, {
-          opacity: 1,
-          y: 0,
-          duration: 0.2,
-          ease: 'power2.out',
-        })
-      },
-    })
-  }, [])
+  }, [isTouch])
 
   // Temperature display — with F unit
   const tempStr = weather.temp !== null ? `${weather.temp}\u00B0F` : '--'

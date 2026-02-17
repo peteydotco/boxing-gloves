@@ -1,4 +1,4 @@
-import { BackgroundMarquee } from './BackgroundMarquee'
+// import { BackgroundMarquee } from './BackgroundMarquee'
 import { motion } from 'framer-motion'
 
 const quoteLines = [
