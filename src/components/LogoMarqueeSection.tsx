@@ -16,6 +16,7 @@ export function LogoMarqueeSection() {
         overflowY: 'visible',
         height: '85vh',
         marginTop: '-20vh',
+        backgroundColor: '#fff',
       }}
       data-scroll
       data-scroll-section
@@ -36,12 +37,13 @@ export function LogoMarqueeSection() {
           transform: 'translate(-50%, -50%)',
           zIndex: 3,
           width: 685,
+          maxWidth: 'calc(100vw - 48px)',
           textAlign: 'center',
           fontFamily: 'Inter',
-          fontSize: 48,
+          fontSize: 'clamp(28px, 5vw, 48px)',
           fontWeight: 600,
-          lineHeight: '60px',
-          letterSpacing: '-1.32px',
+          lineHeight: 1.25,
+          letterSpacing: '-0.028em',
           color: '#0E0E0E',
         }}
       >

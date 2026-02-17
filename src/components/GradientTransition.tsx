@@ -6,6 +6,8 @@ interface GradientTransitionProps {
   src: string
   className?: string
   style?: React.CSSProperties
+  /** Scrub opacity 0→1 alongside the scaleY animation (mobile entry). */
+  fadeIn?: boolean
 }
 
 /**
@@ -25,21 +27,27 @@ interface GradientTransitionProps {
  *   Mirror of enter — image swings down from top edge. Sticky pins
  *   to viewport top.
  */
-export function GradientTransition({ direction, src, className = '', style }: GradientTransitionProps) {
+export function GradientTransition({ direction, src, className = '', style, fadeIn }: GradientTransitionProps) {
   const runwayRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
+  const stickyRef = useRef<HTMLDivElement>(null)
 
   const isEnter = direction === 'enter'
 
   useLayoutEffect(() => {
     const runway = runwayRef.current
     const image = imageRef.current
+    const sticky = stickyRef.current
     if (!runway || !image) return
 
     // Initial state — fully flat (invisible)
     gsap.set(image, {
       scaleY: 0,
     })
+
+    if (fadeIn && sticky) {
+      gsap.set(sticky, { opacity: 0 })
+    }
 
     const ctx = gsap.context(() => {
       // Phase 1: Ease in from 0 → 0.08 as it scrolls into view and pins.
@@ -67,10 +75,24 @@ export function GradientTransition({ direction, src, className = '', style }: Gr
           scrub: true,
         },
       })
+
+      // Optional opacity fade — scrubs the sticky container from 0→1.
+      if (fadeIn && sticky) {
+        gsap.to(sticky, {
+          opacity: 1,
+          ease: 'power2.in',
+          scrollTrigger: {
+            trigger: runway,
+            start: 'top bottom',
+            end: '60% bottom',
+            scrub: true,
+          },
+        })
+      }
     }, runway)
 
     return () => ctx.revert()
-  }, [isEnter])
+  }, [isEnter, fadeIn])
 
   return (
     <div
@@ -91,6 +113,7 @@ export function GradientTransition({ direction, src, className = '', style }: Gr
       }}
     >
       <div
+        ref={stickyRef}
         className="w-full pointer-events-none"
         style={{
           position: 'sticky',

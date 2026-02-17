@@ -558,6 +558,35 @@ function App() {
            for the entire scroll range, unpinning naturally when the wrapper ends. */}
       <div ref={travelZoneRef} style={{ position: 'relative' }}>
 
+        {/* Mobile hero graffiti background — full SVG with bottom fade.
+             Below the sticky canvas (z-10 < z-30) so gloves render on top.
+             Same SVG as desktop but contained within 100vh, no scroll travel. */}
+        {isMobile && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 10,
+              height: '100vh',
+              overflow: 'hidden',
+              opacity: 0.20,
+              maskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, black 60%, transparent 100%)',
+            }}
+          >
+            <PeteyGraffitiSvg
+              style={{
+                width: `${130 * graffitiScale}vw`,
+                height: 'auto',
+                aspectRatio: '538 / 1185.79',
+                position: 'absolute',
+                left: `calc(50% - ${(130 * graffitiScale / 2).toFixed(1)}vw)`,
+                top: '-10vw',
+                display: 'block',
+              }}
+            />
+          </div>
+        )}
+
         {/* Sticky 3D Canvas — pinned at viewport top through the travel zone.
              z-30 sits above the gradient dome (z-20) so gloves remain visible.
              On mobile: same sticky behavior so gloves pin through the gradient. */}
@@ -629,6 +658,7 @@ function App() {
           src="/images/transition-entry.png"
           className="relative"
           style={{ zIndex: 20, ...(isMobile ? { marginTop: '-100vh' } : {}) }}
+          fadeIn={isMobile}
         />
 
       </div>
@@ -821,16 +851,15 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
 
     // SplitText — words for reveal, chars for exit
     const split = SplitText.create(text, { type: 'chars' })
-    gsap.set(split.chars, { opacity: 0, y: 80 })
+    gsap.set(split.chars, { opacity: 0 })
 
     const ctx = gsap.context(() => {
-      // ── Char reveal — triggered by gradient runway at ~91% scroll ──
+      // ── Char dissolve — triggered by gradient runway at ~91% scroll ──
       // The dome uses power3.in (t³): scaleY = progress³.
       // At 91% scroll → scaleY ≈ 0.75 (dome ¾ up the viewport).
       // At 97% scroll → scaleY ≈ 0.91 (dome nearly full).
       gsap.to(split.chars, {
         opacity: 1,
-        y: 0,
         ease: 'power2.out',
         stagger: { each: 0.03, from: 'edges' },
         scrollTrigger: {

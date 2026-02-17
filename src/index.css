@@ -464,6 +464,23 @@ canvas {
   will-change: transform;
 }
 
+/* ===== Video credits: collapse forced line break on mobile ===== */
+@media (max-width: 639px) {
+  .credits-br {
+    display: none;
+  }
+}
+
+/* ===== Footer: hide non-copyright assets on tablet/mobile, center the pills ===== */
+@media (max-width: 1023px) {
+  .footer-desktop-only {
+    display: none !important;
+  }
+  .footer-pills {
+    margin: 0 auto;
+  }
+}
+
 /* Compact pill spotlight — fill + border, driven by --spot-x/y/opacity custom props */
 .compact-pill-spot,
 .compact-pill-border-spot {

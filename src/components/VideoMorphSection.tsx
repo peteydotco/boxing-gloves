@@ -529,46 +529,36 @@ export function VideoMorphSection() {
               left: '50%',
               transform: 'translateX(-50%)',
               fontFamily: 'Inter',
-              fontSize: 16,
+              fontSize: 'clamp(13px, 3.2vw, 16px)',
               fontWeight: 500,
               textAlign: 'center',
-              lineHeight: '24px',
+              lineHeight: 1.5,
               letterSpacing: '-0.02em',
               marginTop: 44,
-              whiteSpace: 'nowrap',
+              width: 'max-content',
+              maxWidth: 'calc(100vw - 48px)',
               mixBlendMode: 'luminosity',
             }}
           >
-            <div style={{ overflow: 'hidden' }}>
-              <motion.div
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } },
-                }}
-                style={{ color: '#8B8B8B' }}
-              >
-                A special thank you to my partners{' '}
-                <a href="https://www.linkedin.com/in/vanasa-liu/" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                  Vanasa Liu
-                </a>{' '}
-                and{' '}
-                <a href="https://www.linkedin.com/in/guillermo-su%C3%A1rez-ara-59720680" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                  Guillermo Suarez Ara
-                </a>
-                ,
-              </motion.div>
-            </div>
-            <div style={{ overflow: 'hidden' }}>
-              <motion.div
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } },
-                }}
-                style={{ color: '#8B8B8B' }}
-              >
-                and Websites engineering for making this live demo possible.
-              </motion.div>
-            </div>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } },
+              }}
+              style={{ color: '#8B8B8B' }}
+            >
+              A special thank you to my partners{' '}
+              <a href="https://www.linkedin.com/in/vanasa-liu/" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                Vanasa Liu
+              </a>{' '}
+              and{' '}
+              <a href="https://www.linkedin.com/in/guillermo-su%C3%A1rez-ara-59720680" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                Guillermo Suarez Ara
+              </a>
+              ,{' '}
+              <br className="credits-br" />
+              and Websites engineering for making this live demo possible.
+            </motion.div>
           </motion.div>
         </div>
       </div>
