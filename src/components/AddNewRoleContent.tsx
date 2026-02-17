@@ -218,7 +218,6 @@ export function AddNewRoleContent({
   styles,
   emailCopied: emailCopiedProp = false,
   expandedFromCompact = false,
-  compactLabel: _compactLabel,
 }: AddNewRoleContentProps) {
   // Helper: scale a pixel value proportionally (mobile uses slightly smaller base sizes)
   const s = (px: number) => Math.round(px * contentScale)

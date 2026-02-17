@@ -106,7 +106,7 @@ const getShortcutBadgeStyles = (themeMode: 'light' | 'inverted' | 'dark') => {
 }
 
 
-export function Card({ id, label, title, shortcut, variant, onClick, isBottomFixed: _isBottomFixed = false, isFlexible: _isFlexible = false, layoutId, hideShortcut = false, compactCta = false, themeMode = 'light' }: CardProps) {
+export function Card({ id, label, title, shortcut, variant, onClick, layoutId, hideShortcut = false, compactCta = false, themeMode = 'light' }: CardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 }) // Percentage position for gradient
   const cardRef = useRef<HTMLButtonElement>(null)

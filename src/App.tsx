@@ -42,6 +42,13 @@ function App() {
     return typeof window !== 'undefined' ? computeGraffitiScale(window.innerWidth) : 1
   })
 
+  const [isDesktop, setIsDesktop] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
+  })
+  const [isTabletWide, setIsTabletWide] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.tabletWide : true
+  })
+
   const themeMode = 'light' as const
 
   // Debug grid overlay — toggle with "G" key
@@ -297,12 +304,6 @@ function App() {
   // Graffiti vertical pull-up — responsive so bio text stays aligned with the SVG.
   // Desktop (≥1440): -32vw. Sub-desktop (768–1439): -10vw. Mobile (<768): -5vw.
   // Uses !isMobile && !isDesktop to catch the full 768–1439 range (isTablet only covers 1024–1439).
-  const [isDesktop, setIsDesktop] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
-  })
-  const [isTabletWide, setIsTabletWide] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.tabletWide : true
-  })
   const graffitiPullUp = isMobile ? 5 : isDesktop ? 32 : 10  // in vw units
 
   // Bio text vertical position factors (fraction of graffiti SVG height).

@@ -1188,7 +1188,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                     expandedPosition={getExpandedPosition(cardIndex)}
                     onClick={() => capturePositionsAndExpand(cardIndex)}
                     onClose={handleCloseExpanded}
-                    onHighlightClick={(label) => console.log('Highlight clicked:', label)}
+                    onHighlightClick={() => {}}
                     hideShortcut={isMobile}
                     compactCta={isCompactCtaCard}
                     mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
@@ -1330,7 +1330,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                       expandedPosition={expandedPos}
                       onClick={() => {}}
                       onClose={handleCloseExpanded}
-                      onHighlightClick={(label) => console.log('Highlight clicked:', label)}
+                      onHighlightClick={() => {}}
                       hideShortcut={isMobile}
                       compactCta={isCompactCtaCard}
                       mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
@@ -1428,7 +1428,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                         expandedPosition={getExpandedPosition(cardIndex)}
                         onClick={() => captureCompactPositionsAndExpand(cardIndex)}
                         onClose={handleCloseExpanded}
-                        onHighlightClick={(label) => console.log('Highlight clicked:', label)}
+                        onHighlightClick={() => {}}
                         hideShortcut={isMobile}
                         compactCta={isCompactCtaCard}
                         mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
