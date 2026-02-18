@@ -536,6 +536,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
       // Number keys 1-4 to open/close/jump between cards
       const keyNum = parseInt(e.key, 10)
       if (keyNum >= 1 && keyNum <= cardsToShow.length) {
+        e.preventDefault() // Stop the digit from landing in the Add-a-role input
         const targetIndex = keyNum - 1
         if (expandedIndex === null) {
           // Not expanded - open the card
