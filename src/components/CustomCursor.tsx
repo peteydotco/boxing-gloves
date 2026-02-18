@@ -30,6 +30,7 @@ export function CustomCursor() {
   const playIconSize = useTransform(mode, (m) => m === 'play-circle' ? 22 : 32)
   const playMarginLeft = useTransform(mode, (m) => m === 'play-circle' ? 2 : 3)
   const grabOrDrag = useTransform(mode, (m) => m === 'grab' || m === 'drag' ? 1 : 0)
+  const sprayOpacity = useTransform(mode, (m) => m === 'spray' ? 1 : 0)
 
   // Parallax: derive from the lag between raw mouse and spring-animated position.
   const parallaxX = useTransform(
@@ -144,6 +145,25 @@ export function CustomCursor() {
           r={nubRadius}
           strokeWidth={2}
           style={{ fill: nubFillFinal, stroke: nubStrokeFinal } as any}
+        />
+      </motion.svg>
+
+      {/* Spray nozzle dot — small filled circle indicating paint target */}
+      <motion.svg
+        viewBox="0 0 20 20"
+        width={20}
+        height={20}
+        style={{
+          position: 'absolute',
+          opacity: sprayOpacity,
+          overflow: 'visible',
+        }}
+      >
+        <motion.circle
+          cx={10}
+          cy={10}
+          r={3}
+          style={{ fill: iconColor, stroke: 'none' } as any}
         />
       </motion.svg>
     </motion.div>

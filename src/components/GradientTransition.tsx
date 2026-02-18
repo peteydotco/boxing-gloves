@@ -109,6 +109,9 @@ export function GradientTransition({ direction, src, className = '', style, fade
         // Exit: dark bg so the runway above the gradient matches VideoMorphSection
         backgroundColor: isEnter ? undefined : '#050101',
         // NO overflow hidden here — this is just a scroll spacer
+        // Prevent gradient images from being selectable (interferes with nearby text selection)
+        userSelect: 'none',
+        pointerEvents: 'none',
         ...style,
       }}
     >
@@ -126,6 +129,7 @@ export function GradientTransition({ direction, src, className = '', style, fade
           ref={imageRef}
           src={src}
           alt=""
+          draggable={false}
           style={{
             display: 'block',
             width: '100%',
@@ -133,7 +137,9 @@ export function GradientTransition({ direction, src, className = '', style, fade
             objectFit: 'fill',
             transformOrigin: 'center bottom',
             willChange: 'transform',
-          }}
+            userSelect: 'none',
+            WebkitUserDrag: 'none',
+          } as React.CSSProperties}
         />
       </div>
     </div>

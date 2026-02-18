@@ -189,7 +189,6 @@ interface AddNewRoleContentProps {
   contentScale?: number
   isFocused?: boolean
   styles?: VariantStyle
-  emailCopied?: boolean
   expandedFromCompact?: boolean
   compactLabel?: string
 }
@@ -212,18 +211,16 @@ export function AddNewRoleContent({
   onClose,
   isMobile = false,
   hideShortcut = false,
-  shortcut = '⌘ C',
+  shortcut = '4',
   contentScale = 1,
   isFocused = true,
   styles,
-  emailCopied: emailCopiedProp = false,
   expandedFromCompact = false,
 }: AddNewRoleContentProps) {
   // Helper: scale a pixel value proportionally (mobile uses slightly smaller base sizes)
   const s = (px: number) => Math.round(px * contentScale)
   const [inputValue, setInputValue] = useState('')
-  const [localCopied, setLocalCopied] = useState(false)
-  const copied = localCopied || emailCopiedProp
+  const [copied, setCopied] = useState(false)
   const [hoveredButton, setHoveredButton] = useState<'linkedin' | 'email' | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -260,8 +257,8 @@ export function AddNewRoleContent({
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText('hello@petey.co')
-    setLocalCopied(true)
-    setTimeout(() => setLocalCopied(false), 2000)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const handleLinkedIn = () => {
@@ -278,7 +275,7 @@ export function AddNewRoleContent({
       {/* Each badge sizes itself naturally based on its text content */}
       {!hideShortcut && (
         <>
-          {/* Shortcut badge (⌘ C) - visible in collapsed, fades out when expanded */}
+          {/* Shortcut badge (4) - visible in collapsed, fades out when expanded */}
           <motion.div
             onClick={(e) => {
               e.stopPropagation()
@@ -286,14 +283,14 @@ export function AddNewRoleContent({
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
             style={{ backgroundColor: themeBadgeBg }}
-            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: 1 }}
+            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 1 }}
             animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 0 }}
-            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: expandedFromCompact ? 0 : 1 }}
+            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: expandedFromCompact ? 0 : 1 }}
             transition={contentSpring}
           >
             <div
               className="uppercase leading-[100%] text-[12px]"
-              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.12em', position: 'relative', top: '-1px', color: themeBadgeText, whiteSpace: 'nowrap' }}
+              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px', color: themeBadgeText, whiteSpace: 'nowrap' }}
             >
               {shortcut}
             </div>
@@ -308,14 +305,14 @@ export function AddNewRoleContent({
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
             style={{ backgroundColor: themeBadgeBg }}
-            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: 0 }}
+            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 0 }}
             animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 1 }}
-            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '12px', paddingRight: '12px', opacity: 0 }}
+            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 0 }}
             transition={contentSpring}
           >
             <div
               className="uppercase leading-[100%] relative text-[12px]"
-              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.12em', top: '-1px' }}
+              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', top: '-0.5px' }}
             >
               {/* ESC text absolutely positioned - same as MorphingCard */}
               <span className="absolute inset-0 flex items-center justify-center" style={{ color: themeBadgeText }}>

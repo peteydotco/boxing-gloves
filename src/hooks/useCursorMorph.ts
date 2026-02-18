@@ -33,12 +33,16 @@ const DRAG_RADIUS = DRAG_SIZE / 2
 const GRAB_SIZE = 44
 const GRAB_RADIUS = GRAB_SIZE / 2
 
+// Spray cursor — small circle with nozzle dot for paint-on-canvas mode
+const SPRAY_SIZE = 28
+const SPRAY_RADIUS = SPRAY_SIZE / 2
+
 // Magnetic pull: element shifts toward cursor by this fraction of the offset
 const MAGNETIC_STRENGTH = 0.08
 // Max pixels the element can be displaced
 const MAGNETIC_MAX = 3
 
-export type CursorMode = 'default' | 'morph' | 'morph-only' | 'grow' | 'text' | 'play' | 'play-circle' | 'drag' | 'grab'
+export type CursorMode = 'default' | 'morph' | 'morph-only' | 'grow' | 'text' | 'play' | 'play-circle' | 'drag' | 'grab' | 'spray'
 
 export interface CursorMorphValues {
   x: MotionValue<number>
@@ -511,6 +515,22 @@ export function useCursorMorph(): CursorMorphValues {
       borderRadius.set(GRAB_RADIUS)
     }
 
+    const setSpray = (clientX: number, clientY: number) => {
+      cancelPendingDefault()
+      if (morphTargetRef.current) {
+        clearLiftProps(morphTargetRef.current)
+        if (modeRef.current === 'morph') releaseMagnetic(morphTargetRef.current)
+      }
+      morphTargetRef.current = null
+      updateMode('spray')
+      isMorphed.set(0)
+      rawX.set(clientX)
+      rawY.set(clientY)
+      width.set(SPRAY_SIZE)
+      height.set(SPRAY_SIZE)
+      borderRadius.set(SPRAY_RADIUS)
+    }
+
     const handleMouseMove = (e: MouseEvent) => {
       if (iframeFadeTimerRef.current) {
         clearTimeout(iframeFadeTimerRef.current)
@@ -581,6 +601,13 @@ export function useCursorMorph(): CursorMorphValues {
       const growEl = target?.closest('[data-cursor="grow"]') as HTMLElement | null
       if (growEl) {
         setGrow(e.clientX, e.clientY)
+        return
+      }
+
+      // Check for spray target (paint-on-canvas zone — low priority, after all interactive modes)
+      const sprayEl = target?.closest('[data-cursor="spray"]') as HTMLElement | null
+      if (sprayEl) {
+        setSpray(e.clientX, e.clientY)
       } else if (target) {
         const beamH = getTextBeamHeight(e.clientX, e.clientY, target)
         if (beamH > 0) {
@@ -677,6 +704,7 @@ export function useCursorMorph(): CursorMorphValues {
           drag: 'drag',
           grab: 'grab',
           grow: 'grow',
+          spray: 'spray',
           text: null, // text mode is detected by caret position, not attribute
         }
 

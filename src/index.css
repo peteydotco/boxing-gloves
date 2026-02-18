@@ -481,6 +481,14 @@ canvas {
   }
 }
 
+/* ===== Spray Paint Zone: suppress content pointer-events while painting =====
+   When the canvas sets data-spray-active on the wrapper, all children except the
+   canvas itself become non-interactive so buttons/links can't steal the stroke
+   or flash hover states mid-paint. */
+[data-spray-active] > *:not(canvas) {
+  pointer-events: none !important;
+}
+
 /* Compact pill spotlight — fill + border, driven by --spot-x/y/opacity custom props */
 .compact-pill-spot,
 .compact-pill-border-spot {

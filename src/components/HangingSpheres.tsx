@@ -150,6 +150,8 @@ function DraggableGloveWithRope({
   })
   const tempQuat = useRef(new THREE.Quaternion())
   const scrollQuat = useRef(new THREE.Quaternion()) // Reusable quat for scroll-driven rotation
+  const physicsGroupRef = useRef<THREE.Group>(null) // Top-level group for world↔local transforms
+  const inverseParentMatrix = useRef(new THREE.Matrix4()) // Cached inverse of parent world matrix
 
   // This glove's anchor point - memoized to prevent recreation
   const anchorPos = useMemo(() => new THREE.Vector3(
@@ -464,7 +466,7 @@ function DraggableGloveWithRope({
 
   const handlePointerDown = useCallback((e: any) => {
     e.stopPropagation()
-    if (!gloveRef.current) return
+    if (!gloveRef.current || !physicsGroupRef.current) return
 
     isDragging.current = true
     velocityHistory.current = []
@@ -473,17 +475,28 @@ function DraggableGloveWithRope({
     touchMoveBlocker.current = (te: TouchEvent) => te.preventDefault()
     gl.domElement.addEventListener('touchmove', touchMoveBlocker.current, { passive: false })
 
+    // Cache inverse of parent world matrix — converts world space → local physics space.
+    // This accounts for ScrollRotationGroup, ScaleGroup, HorizontalTranslateGroup etc.
+    physicsGroupRef.current.updateWorldMatrix(true, false)
+    inverseParentMatrix.current.copy(physicsGroupRef.current.matrixWorld).invert()
+
+    // Glove position is in local physics space
     const pos = gloveRef.current.translation()
-    const glovePos = new THREE.Vector3(pos.x, pos.y, pos.z)
-    lastPosition.current.copy(glovePos)
+    const gloveLocalPos = new THREE.Vector3(pos.x, pos.y, pos.z)
+    lastPosition.current.copy(gloveLocalPos)
+
+    // Convert local glove position to world space for the drag plane
+    const gloveWorldPos = gloveLocalPos.clone().applyMatrix4(physicsGroupRef.current.matrixWorld)
 
     const cameraDir = new THREE.Vector3()
     camera.getWorldDirection(cameraDir)
-    dragPlane.current.setFromNormalAndCoplanarPoint(cameraDir.negate(), glovePos)
+    dragPlane.current.setFromNormalAndCoplanarPoint(cameraDir.negate(), gloveWorldPos)
 
+    // Ray is in world space — intersect with world-space plane, then convert to local
     const ray = e.ray as THREE.Ray
     ray.intersectPlane(dragPlane.current, intersection.current)
-    offset.current.subVectors(glovePos, intersection.current)
+    const localIntersection = intersection.current.clone().applyMatrix4(inverseParentMatrix.current)
+    offset.current.subVectors(gloveLocalPos, localIntersection)
 
     gloveRef.current.setBodyType(2, true)
     ;(gl.domElement as HTMLElement).style.cursor = 'none'
@@ -492,12 +505,27 @@ function DraggableGloveWithRope({
   }, [camera, gl])
 
   const handlePointerMove = useCallback((e: any) => {
-    if (!isDragging.current || !gloveRef.current) return
+    if (!isDragging.current || !gloveRef.current || !physicsGroupRef.current) return
+
+    // Update matrices each frame — parent may rotate/translate during drag (user scrolling)
+    physicsGroupRef.current.updateWorldMatrix(true, false)
+    inverseParentMatrix.current.copy(physicsGroupRef.current.matrixWorld).invert()
+
+    // Update drag plane to follow the glove's current world position
+    // (parent transforms shift where "local origin" maps to in world space)
+    const pos = gloveRef.current.translation()
+    const gloveWorldPos = new THREE.Vector3(pos.x, pos.y, pos.z)
+      .applyMatrix4(physicsGroupRef.current.matrixWorld)
+    const cameraDir = new THREE.Vector3()
+    camera.getWorldDirection(cameraDir)
+    dragPlane.current.setFromNormalAndCoplanarPoint(cameraDir.negate(), gloveWorldPos)
 
     const ray = e.ray as THREE.Ray
     if (!ray.intersectPlane(dragPlane.current, intersection.current)) return
 
-    let newPos = intersection.current.clone().add(offset.current)
+    // Convert world-space intersection to local physics space
+    const localIntersection = intersection.current.clone().applyMatrix4(inverseParentMatrix.current)
+    let newPos = localIntersection.add(offset.current)
 
     // Constrain to string length from anchor
     const toGlove = newPos.clone().sub(anchorPos)
@@ -518,7 +546,7 @@ function DraggableGloveWithRope({
       y: newPos.y,
       z: newPos.z,
     })
-  }, [anchorPos, settings.stringLength])
+  }, [anchorPos, settings.stringLength, camera])
 
   const handlePointerUp = useCallback((e: any) => {
     if (!isDragging.current || !gloveRef.current) return
@@ -562,7 +590,7 @@ function DraggableGloveWithRope({
   }, [gl])
 
   return (
-    <group>
+    <group ref={physicsGroupRef}>
       {/* Physics body - invisible, only colliders */}
       <RigidBody
         ref={gloveRef}

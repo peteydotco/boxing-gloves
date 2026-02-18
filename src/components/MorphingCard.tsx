@@ -32,7 +32,7 @@ interface MorphingCardProps {
   hideShortcut?: boolean
   compactCta?: boolean
   mobileLabel?: string
-  emailCopied?: boolean
+
   themeMode?: ThemeMode
   parallaxOffset?: number
   isStackedBehind?: boolean
@@ -753,7 +753,7 @@ export function MorphingCard({
   hideShortcut = false,
   compactCta = false,
   mobileLabel,
-  emailCopied: emailCopiedProp,
+
   themeMode = 'light',
   parallaxOffset = 0,
   isStackedBehind = false,
@@ -771,9 +771,6 @@ export function MorphingCard({
   const [swipeDownOffset, setSwipeDownOffset] = useState(0)
   const [isSwipingDown, setIsSwipingDown] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
-
-  // emailCopied state is managed by parent (TopCards)
-  const emailCopied = emailCopiedProp ?? false
 
   const styles = getVariantStyles(themeMode)[card.variant]
   const { expandedContent } = card
@@ -1147,7 +1144,6 @@ export function MorphingCard({
               contentScale={contentScale}
               isFocused={isFocused}
               styles={expandedStyles}
-              emailCopied={emailCopied}
               expandedFromCompact={expandedFromCompact}
               compactLabel={card.compactLabel || card.label}
             />
@@ -1821,37 +1817,27 @@ export function MorphingCard({
             zIndex: 10,
           }}
         >
-          {card.variant === 'cta' ? (
-            // CTA badge with animated width for email copied toast
-            <motion.div
-              className="flex items-center justify-center rounded-full shrink-0 overflow-hidden"
-              style={{ backgroundColor: styles.badgeBg, padding: '4px 4px' }}
-              initial={false}
-              animate={{
-                width: emailCopied ? 116 : 46,
-              }}
-              transition={signatureSpring}
-            >
-              <div
-                className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
-                style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px' }}
-              >
-                {emailCopied ? 'Email Copied' : (
-                  card.shortcut
-                )}
-              </div>
-            </motion.div>
-          ) : (
-            // Regular badge with padding-based sizing
+          <div
+            className="flex items-center justify-center rounded-full shrink-0"
+            style={{
+              padding: '4px 8px',
+              backgroundColor: card.variant === 'cta' ? 'rgba(0,0,0,0.08)' : styles.badgeBg,
+            }}
+          >
             <div
-              className="flex items-center justify-center rounded-full shrink-0"
-              style={{ padding: '4px 8px', backgroundColor: styles.badgeBg }}
+              className="text-[12px] uppercase leading-[100%]"
+              style={{
+                fontFamily: 'DotGothic16',
+                fontWeight: 400,
+                letterSpacing: '0.08em',
+                position: 'relative',
+                top: '-0.5px',
+                ...(card.variant === 'cta' && { color: 'rgba(0,0,0,0.48)' }),
+              }}
             >
-              <div className="text-[12px] uppercase leading-[100%]" style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px' }}>
-                {card.shortcut}
-              </div>
+              {card.shortcut}
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -1862,19 +1848,12 @@ export function MorphingCard({
       >
         {compactCta ? (
           <div data-cursor-parallax="" className="flex flex-col items-center justify-center w-full h-full">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={emailCopied ? 'copied' : 'add'}
-                className="text-[12px] text-center"
-                style={{ fontFamily: 'Inter', fontWeight: 500, lineHeight: '15px', letterSpacing: '-0.01em' }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {emailCopied ? 'Email Copied' : 'Add a role...'}
-              </motion.div>
-            </AnimatePresence>
+            <div
+              className="text-[12px] text-center"
+              style={{ fontFamily: 'Inter', fontWeight: 500, lineHeight: '15px', letterSpacing: '-0.01em' }}
+            >
+              Add a role...
+            </div>
           </div>
         ) : (
           <>

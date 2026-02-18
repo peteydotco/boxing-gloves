@@ -98,7 +98,7 @@ export const cards: CardData[] = [
     id: 'cta',
     label: 'Blank Slot',
     title: 'Add a role...',
-    shortcut: '⌘C',
+    shortcut: '4',
     variant: 'cta',
     compactLabel: 'hello@petey.co',
     expandedContent: {

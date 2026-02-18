@@ -84,9 +84,6 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
   const [mobileExitPositions, setMobileExitPositions] = React.useState<Map<string, { top: number; left: number; width: number; height: number }>>(new Map())
 
 
-  // Track email copied toast state
-  const [emailCopied, setEmailCopied] = React.useState(false)
-
   // Store card positions when expanding.
   // Kept as a ref (not state) so the captured positions survive React StrictMode's
   // unmount→remount cycle. A setState Map gets reset to the initial empty Map on
@@ -529,25 +526,12 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     }
   }, [expandFromCompactTriggered])
 
-  // Handle ESC key, arrow keys for navigation, number keys to open cards, and ⌘+C to copy email
+  // Handle ESC key, arrow keys for navigation, and number keys to open cards
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Disable ALL card shortcuts when compact bar is showing (mini or expanded).
       // The default cards are off-screen so shortcuts would look broken.
       if (isCompact && expandedIndex === null) return
-
-      // ⌘+C to copy email address
-      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
-        // Only intercept if no text is selected
-        const selection = window.getSelection()
-        if (!selection || selection.toString().length === 0) {
-          e.preventDefault()
-          navigator.clipboard.writeText('hello@petey.co')
-          setEmailCopied(true)
-          setTimeout(() => setEmailCopied(false), 2000)
-        }
-        return
-      }
 
       // Number keys 1-4 to open/close/jump between cards
       const keyNum = parseInt(e.key, 10)
@@ -1192,7 +1176,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                     hideShortcut={isMobile}
                     compactCta={isCompactCtaCard}
                     mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
-                    emailCopied={emailCopied}
+
                     themeMode={themeMode}
                   />
                 </motion.div>
@@ -1334,7 +1318,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                       hideShortcut={isMobile}
                       compactCta={isCompactCtaCard}
                       mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
-                      emailCopied={emailCopied}
+  
                       themeMode={themeMode}
                       parallaxOffset={cardParallaxOffset}
                       stackedRotation={stackedRotation}
@@ -1432,7 +1416,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                         hideShortcut={isMobile}
                         compactCta={isCompactCtaCard}
                         mobileLabel={isCompactCtaCard ? 'ADD ROLE' : undefined}
-                        emailCopied={emailCopied}
+    
                         themeMode={themeMode}
                       />
                     </div>
@@ -1858,20 +1842,18 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                           }}
                         >
                           {isCta ? (
-                            <motion.div
-                              className="flex items-center justify-center shrink-0 rounded-full overflow-hidden"
+                            <div
+                              className="flex items-center justify-center shrink-0 rounded-full"
                               style={{
                                 backgroundColor: isOverDark ? 'rgba(255,255,255,0.15)' : '#DDDDDD',
                                 transition: 'background-color 0.4s ease',
-                                padding: '4px 6px 4px 8px',
+                                padding: '4px 8px',
+                                minWidth: 18.66,
                                 height: 18.66,
                               }}
-                              initial={false}
-                              animate={{ width: emailCopied ? 108 : 46 }}
-                              transition={signatureSpring}
                             >
-                              <div
-                                className="text-[12px] uppercase leading-[100%] whitespace-nowrap flex items-center justify-center gap-1"
+                              <span
+                                className="text-[12px] uppercase leading-[100%]"
                                 style={{
                                   fontFamily: 'DotGothic16',
                                   fontWeight: 400,
@@ -1882,9 +1864,9 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                                   transition: 'color 0.4s ease',
                                 }}
                               >
-                                {emailCopied ? 'Email Copied' : card.shortcut}
-                              </div>
-                            </motion.div>
+                                {card.shortcut}
+                              </span>
+                            </div>
                           ) : (
                             <div
                               className="flex items-center justify-center shrink-0"

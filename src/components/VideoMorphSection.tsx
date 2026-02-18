@@ -12,7 +12,6 @@ const morphSpring = { stiffness: 180, damping: 38, mass: 1.6 }
 const GRID_MARGIN = 25
 const GRID_GUTTER = 20
 const GRID_COLS = 12
-
 const computeGridWidth = (vw: number) => {
   // Mobile: full viewport width, no margins
   if (vw < 768) return vw
@@ -431,7 +430,12 @@ export function VideoMorphSection() {
                           playsInline
                           poster={`https://img.youtube.com/vi/${YOUTUBE_VIDEO_ID}/maxresdefault.jpg`}
                           className="w-full h-full"
-                          style={{ objectFit: 'cover', display: 'block' }}
+                          style={{
+                            objectFit: 'cover',
+                            display: 'block',
+                            // Scale up ~4% to crop baked-in black borders in the webm
+                            transform: 'scale(1.04)',
+                          }}
                           src="/images/vid-sqsp-thumb.webm"
                         />
                       </button>

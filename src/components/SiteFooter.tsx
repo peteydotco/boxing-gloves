@@ -4,6 +4,7 @@ export function SiteFooter() {
       className=""
       style={{
         position: 'relative',
+        zIndex: 11,
         padding: '0 0 40px',
       }}
       data-scroll

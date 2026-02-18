@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/react'
 import { Scene, mousePositionRef } from './components/Scene'
 import { CustomCursor } from './components/CustomCursor'
 import { TopCards } from './components/TopCards'
@@ -10,6 +11,7 @@ import { SplitText } from './lib/gsap'
 
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
+// import { SprayPaintCanvas } from './components/SprayPaintCanvas'  // shelved — see SPRAY_PAINT.md
 import { BottomBar } from './components/BottomBar'
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { BREAKPOINTS } from './constants'
@@ -485,7 +487,7 @@ function App() {
             textAlign="left"
           >
             Peter Rodriguez is a{' '}
-            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
+            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.5px', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' }}>
               nuyorican
             </span>{' '}
             designer solving hard problems with soft products.
@@ -499,9 +501,9 @@ function App() {
               textAlign="left"
             >
               Bringing over a decade of insight, intuition & influence. Off the{' '}
-              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>DomE</span>
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Do<span style={{ letterSpacing: '2.5px' }}>m</span>e</span>
               , to your{' '}
-              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px' }}>Chrome</span>.
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Chro<span style={{ letterSpacing: '2.5px' }}>m</span>E</span>.
             </BioTextReveal>
           )}
           {/* Strings 3 & 4 — tabletWide+ (≥1128): split into two flanking strings */}
@@ -514,15 +516,16 @@ function App() {
                 width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
                 textAlign="left"
               >
-                <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px' }}>NoWADays</span>
+                <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px', whiteSpace: 'nowrap' }}>NoWA<span style={{ letterSpacing: '-1.2px' }}>D</span>ays</span>
                 , he{'\u2019'}s shaping vision
               </BioTextReveal>
-              {/* String 4 — right-aligned, flanks gloves on the right */}
+              {/* String 4 — right-aligned, flanks gloves on the right (slides in from right) */}
               <BioTextReveal
                 top={`calc(${-graffitiPullUp}vw + ${(130 * graffitiScale * (1185.79 / 538) * bioFactor3).toFixed(1)}vw)`}
                 right="25px"
                 width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
                 textAlign="left"
+                fromRight
               >
                 for Squarespace{'\u2019'}s site builder.
               </BioTextReveal>
@@ -535,7 +538,7 @@ function App() {
               width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
               textAlign="left"
             >
-              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px' }}>NoWADays</span>
+              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px', whiteSpace: 'nowrap' }}>NoWA<span style={{ letterSpacing: '-1.2px' }}>D</span>ays</span>
               , he{'\u2019'}s shaping vision for Squarespace{'\u2019'}s site builder.
             </BioTextReveal>
           )}
@@ -671,22 +674,30 @@ function App() {
         <VideoMorphSection />
       </div>
 
-      {/* ===== Exit Gradient Transition ===== */}
-      <GradientTransition
-        direction="exit"
-        src="/images/transition-exit.png"
-        className="relative"
-        style={{ zIndex: 22 }}
-      />
+      {/* ===== Spray Paint Zone — canvas overlay spans gradient + quote + footer ===== */}
+      <div style={{ position: 'relative', zIndex: 21 }}>
+        {/* <SprayPaintCanvas /> — shelved, see SPRAY_PAINT.md */}
 
-      {/* ===== Logo Marquee + Quote ===== */}
-      <LogoMarqueeSection />
+        {/* ===== Exit Gradient Transition ===== */}
+        <GradientTransition
+          direction="exit"
+          src="/images/transition-exit.png"
+          className="relative"
+          style={{ zIndex: 1 }}
+        />
 
-      {/* ===== Footer ===== */}
-      <SiteFooter />
+        {/* ===== Logo Marquee + Quote ===== */}
+        <LogoMarqueeSection />
+
+        {/* ===== Footer ===== */}
+        <SiteFooter />
+      </div>
 
       {/* ===== Bottom Bar — fixed status bar ===== */}
       <BottomBar />
+
+      {/* Vercel Web Analytics */}
+      <Analytics />
 
       {/* Custom cursor (tablet + desktop — useCursorMorph self-disables on pure touch devices) */}
       {showCursor && <CustomCursor />}
@@ -734,6 +745,7 @@ function BioTextReveal({
   right,
   width,
   textAlign = 'justify',
+  fromRight = false,
 }: {
   children: React.ReactNode
   top: string
@@ -741,6 +753,7 @@ function BioTextReveal({
   right?: string
   width?: string
   textAlign?: 'justify' | 'right' | 'left'
+  fromRight?: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
 
@@ -758,7 +771,7 @@ function BioTextReveal({
         autoAlpha: 1,
         y: 0,
         ease: 'power2.out',
-        stagger: 0.08,
+        stagger: fromRight ? { each: 0.08, from: 'end' } : 0.08,
         scrollTrigger: {
           trigger: el,
           start: 'top 90%',
@@ -853,8 +866,22 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
     // SplitText — words for reveal, chars for exit
     const split = SplitText.create(text, { type: 'chars' })
     gsap.set(split.chars, { opacity: 0 })
+    // Start scaled to near-zero so nothing peeks from behind the gloves
+    gsap.set(text, { scale: 0.005 })
 
     const ctx = gsap.context(() => {
+      // ── Scale up from near-zero alongside char dissolve ──
+      gsap.to(text, {
+        scale: 1,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: runway,
+          start: '91% bottom',
+          end: '97% bottom',
+          scrub: 0.6,
+        },
+      })
+
       // ── Char dissolve — triggered by gradient runway at ~91% scroll ──
       // The dome uses power3.in (t³): scaleY = progress³.
       // At 91% scroll → scaleY ≈ 0.75 (dome ¾ up the viewport).
