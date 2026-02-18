@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import { IoMdArrowForward, IoMdCheckmark } from 'react-icons/io'
 import { contentSpring } from '../constants/animation'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 import { BREAKPOINTS } from '../constants/breakpoints'
 import type { VariantStyle } from '../types'
 
@@ -217,6 +218,8 @@ export function AddNewRoleContent({
   styles,
   expandedFromCompact = false,
 }: AddNewRoleContentProps) {
+  const reduced = useReducedMotion()
+
   // Helper: scale a pixel value proportionally (mobile uses slightly smaller base sizes)
   const s = (px: number) => Math.round(px * contentScale)
   const [inputValue, setInputValue] = useState('')
@@ -286,11 +289,11 @@ export function AddNewRoleContent({
             initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 1 }}
             animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 0 }}
             exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: expandedFromCompact ? 0 : 1 }}
-            transition={contentSpring}
+            transition={reduced ? { duration: 0.01 } : contentSpring}
           >
             <div
-              className="uppercase leading-[100%] text-[12px]"
-              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px', color: themeBadgeText, whiteSpace: 'nowrap' }}
+              className="uppercase leading-[100%] text-[12px] font-dotgothic"
+              style={{ fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px', color: themeBadgeText, whiteSpace: 'nowrap' }}
             >
               {shortcut}
             </div>
@@ -308,11 +311,11 @@ export function AddNewRoleContent({
             initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 0 }}
             animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 1 }}
             exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 0 }}
-            transition={contentSpring}
+            transition={reduced ? { duration: 0.01 } : contentSpring}
           >
             <div
-              className="uppercase leading-[100%] relative text-[12px]"
-              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.08em', top: '-0.5px' }}
+              className="uppercase leading-[100%] relative text-[12px] font-dotgothic"
+              style={{ fontWeight: 400, letterSpacing: '0.08em', top: '-0.5px' }}
             >
               {/* ESC text absolutely positioned - same as MorphingCard */}
               <span className="absolute inset-0 flex items-center justify-center" style={{ color: themeBadgeText }}>
@@ -338,13 +341,12 @@ export function AddNewRoleContent({
             type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1],
           },
         }}
-        transition={contentSpring}
+        transition={reduced ? { duration: 0.01 } : contentSpring}
       >
         {/* Label row */}
         <motion.div
-          className="text-left"
+          className="text-left font-inter"
           style={{
-            fontFamily: 'Inter',
             fontWeight: 500,
             color: themeText,
             fontSize: '12px',
@@ -363,7 +365,7 @@ export function AddNewRoleContent({
               scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
             },
           }}
-          transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
+          transition={reduced ? { duration: 0.01 } : { ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
         >
           Blank Slot
         </motion.div>
@@ -372,9 +374,8 @@ export function AddNewRoleContent({
         {/* Matches collapsed structure: block div > span.flex.items-center.gap-3 */}
         {/* Uses textColor (0.55) in expanded for ghosted look, ctaTitleColor (0.75) on exit to match collapsed */}
         <motion.div
-          className="text-[18px] text-left w-full"
+          className="text-[18px] text-left w-full font-inter"
           style={{
-            fontFamily: 'Inter',
             fontWeight: 500,
             transformOrigin: 'top left',
             letterSpacing: '-0.01em',
@@ -396,7 +397,7 @@ export function AddNewRoleContent({
               marginLeft: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
             },
           }}
-          transition={{ ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
+          transition={reduced ? { duration: 0.01 } : { ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}
         >
           {/* Input row — fades out during compact exit */}
           <motion.span
@@ -408,9 +409,8 @@ export function AddNewRoleContent({
             <span className="relative flex-1" data-cursor-text="">
               {!inputValue && (
                 <span
-                  className="absolute inset-0 pointer-events-none"
+                  className="absolute inset-0 pointer-events-none font-inter"
                   style={{
-                    fontFamily: 'Inter',
                     fontWeight: 500,
                     color: 'inherit',
                     fontSize: 'inherit',
@@ -428,9 +428,8 @@ export function AddNewRoleContent({
                 onChange={(e) => setInputValue(e.target.value)}
                 disabled={!isFocused}
                 tabIndex={isFocused ? 0 : -1}
-                className="w-full bg-transparent outline-none relative"
+                className="w-full bg-transparent outline-none relative font-inter"
                 style={{
-                  fontFamily: 'Inter',
                   fontWeight: 500,
                   color: inputValue ? inputTypedColor : 'inherit',
                   fontSize: 'inherit',
@@ -501,14 +500,15 @@ export function AddNewRoleContent({
                   {/* Company + Location */}
                   <div className="flex items-baseline">
                     <span
-                      style={{ fontFamily: 'Inter', fontWeight: 600, fontSize: `${s(21)}px`, color: companyNameColor }}
+                      className="font-inter"
+                      style={{ fontWeight: 600, fontSize: `${s(21)}px`, color: companyNameColor }}
                     >
                       {exp.company}
                     </span>
                     <span style={{ width: `${s(12)}px` }} />
                     <span
-                      className="uppercase"
-                      style={{ fontFamily: 'DotGothic16', fontWeight: 400, fontSize: `${s(11)}px`, letterSpacing: '0.12em', color: themeText }}
+                      className="uppercase font-dotgothic"
+                      style={{ fontWeight: 400, fontSize: `${s(11)}px`, letterSpacing: '0.12em', color: themeText }}
                     >
                       {exp.location}
                     </span>
@@ -516,14 +516,16 @@ export function AddNewRoleContent({
 
                   {/* Description */}
                   <span
-                    style={{ fontFamily: 'Inter', fontWeight: 400, fontSize: `${s(15)}px`, color: themeText }}
+                    className="font-inter"
+                    style={{ fontWeight: 400, fontSize: `${s(15)}px`, color: themeText }}
                   >
                     {exp.title}
                   </span>
 
                   {/* Date range */}
                   <span
-                    style={{ fontFamily: 'Inter', fontWeight: 400, fontSize: `${s(17)}px`, color: themeText }}
+                    className="font-inter"
+                    style={{ fontWeight: 400, fontSize: `${s(17)}px`, color: themeText }}
                   >
                     {exp.dateRange.includes('→') ? (
                       <>
@@ -609,17 +611,20 @@ export function AddNewRoleContent({
                           {/* Sub-role info */}
                           <div className="flex flex-col" style={{ gap: '0px' }}>
                             <span
-                              style={{ fontFamily: 'Inter', fontWeight: 600, fontSize: `${s(18)}px`, letterSpacing: 0, color: companyNameColor }}
+                              className="font-inter"
+                              style={{ fontWeight: 600, fontSize: `${s(18)}px`, letterSpacing: 0, color: companyNameColor }}
                             >
                               {subRole.title}
                             </span>
                             <span
-                              style={{ fontFamily: 'Inter', fontWeight: 400, fontSize: `${s(15)}px`, letterSpacing: '0', color: themeText }}
+                              className="font-inter"
+                              style={{ fontWeight: 400, fontSize: `${s(15)}px`, letterSpacing: '0', color: themeText }}
                             >
                               {subRole.description}
                             </span>
                             <span
-                              style={{ fontFamily: 'Inter', fontWeight: 400, fontSize: `${s(15)}px`, letterSpacing: '0', color: themeText }}
+                              className="font-inter"
+                              style={{ fontWeight: 400, fontSize: `${s(15)}px`, letterSpacing: '0', color: themeText }}
                             >
                               {subRole.dateRange.includes('→') ? (
                                 <>
@@ -718,12 +723,12 @@ export function AddNewRoleContent({
             boxShadow: hoveredButton === 'linkedin' ? '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
             transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
           }}
-          whileHover={{ scale: 1.03 }}
+          whileHover={reduced ? undefined : { scale: 1.03 }}
           transition={{ duration: 0.3 }}
         >
           <span
+            className="font-inter"
             style={{
-              fontFamily: 'Inter',
               fontSize: `${s(17)}px`,
               color: '#000000',
               fontWeight: 500,
@@ -753,14 +758,14 @@ export function AddNewRoleContent({
             boxShadow: hoveredButton === 'email' ? '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
             transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
           }}
-          whileHover={{ scale: 1.03 }}
+          whileHover={reduced ? undefined : { scale: 1.03 }}
           transition={{ duration: 0.3 }}
         >
           <AnimatePresence mode="wait">
             <motion.span
               key={copied ? 'copied' : 'copy'}
+              className="font-inter"
               style={{
-                fontFamily: 'Inter',
                 fontSize: `${s(17)}px`,
                 color: '#000000',
                 fontWeight: 500,

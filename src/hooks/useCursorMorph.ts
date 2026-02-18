@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useMotionValue, useSpring, type MotionValue } from 'framer-motion'
 import { cursorFollowSpring, cursorMorphSpring, POINTER_LIFT } from '../constants/animation'
+import { prefersReducedMotion } from './useReducedMotion'
 
 const DEFAULT_SIZE = 22
 const GROW_SIZE = 48
@@ -119,7 +120,7 @@ function getTextBeamHeight(clientX: number, clientY: number, target: Element): n
 const liftTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>()
 
 export function useCursorMorph(): CursorMorphValues {
-  const enabled = typeof window !== 'undefined' && !isTouchDevice()
+  const enabled = typeof window !== 'undefined' && !isTouchDevice() && !prefersReducedMotion()
 
   // Raw mouse position (unsprung)
   const rawX = useMotionValue(0)

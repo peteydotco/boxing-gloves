@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react
 import { motion, useSpring, useTransform, useMotionValueEvent } from 'framer-motion'
 import { gsap, ScrollTrigger, SplitText } from '../lib/gsap'
 import { BREAKPOINTS } from '../constants/breakpoints'
+import { colorTokens } from '../constants/themes'
+import { prefersReducedMotion } from '../hooks/useReducedMotion'
 
 const YOUTUBE_VIDEO_ID = 'rJKduGHwvHk'
 
@@ -222,6 +224,13 @@ export function VideoMorphSection() {
     const section = sectionRef.current
     if (!section) return
 
+    // Reduced motion: skip all scroll-driven animations, show labels immediately
+    if (prefersReducedMotion()) {
+      if (leftLabelRef.current) leftLabelRef.current.style.visibility = 'visible'
+      if (rightLabelRef.current) rightLabelRef.current.style.visibility = 'visible'
+      return
+    }
+
     const splits: ReturnType<typeof SplitText.create>[] = []
 
     const ctx = gsap.context(() => {
@@ -289,9 +298,9 @@ export function VideoMorphSection() {
         if (loaderInnerRef.current) loaderInnerRef.current.style.backgroundColor = '#FFFFFF'
       }
       const setDarkLabels = () => {
-        if (leftLabelRef.current) leftLabelRef.current.style.color = '#0E0E0E'
-        if (rightLabelRef.current) rightLabelRef.current.style.color = '#0E0E0E'
-        if (loaderInnerRef.current) loaderInnerRef.current.style.backgroundColor = '#0E0E0E'
+        if (leftLabelRef.current) leftLabelRef.current.style.color = colorTokens.neutralNearBlack
+        if (rightLabelRef.current) rightLabelRef.current.style.color = colorTokens.neutralNearBlack
+        if (loaderInnerRef.current) loaderInnerRef.current.style.backgroundColor = colorTokens.neutralNearBlack
       }
 
       // Start white — the lockup first appears on the dark bg
@@ -314,7 +323,6 @@ export function VideoMorphSection() {
   }, [])
 
   const labelStyle = {
-    fontFamily: 'Inter',
     fontSize: isMobile ? 22 : 24,
     fontWeight: 500,
     letterSpacing: '-0.02em',
@@ -353,6 +361,7 @@ export function VideoMorphSection() {
             {/* Left label */}
             <motion.span
               ref={leftLabelRef}
+              className="font-inter"
               style={{
                 ...labelStyle,
                 textAlign: isCompactVideo ? 'right' : (isNarrow ? 'center' : 'right'),
@@ -367,7 +376,7 @@ export function VideoMorphSection() {
                 } : {}),
               }}
             >
-              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '2px' }}>Live</span> from SQSP
+              <span className="font-fresh-marker" style={{ letterSpacing: '2px' }}>Live</span> from SQSP
             </motion.span>
 
             {/* Morph wrapper — loader → video */}
@@ -490,7 +499,7 @@ export function VideoMorphSection() {
                   style={{
                     width: 22,
                     height: 22,
-                    backgroundColor: '#0E0E0E',
+                    backgroundColor: colorTokens.neutralNearBlack,
                     borderRadius: 2,
                     animation: 'loaderSkew 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite',
                   }}
@@ -501,6 +510,7 @@ export function VideoMorphSection() {
             {/* Right label */}
             <motion.span
               ref={rightLabelRef}
+              className="font-inter"
               style={{
                 ...labelStyle,
                 textAlign: isCompactVideo ? 'left' : (isNarrow ? 'center' : 'left'),
@@ -515,12 +525,13 @@ export function VideoMorphSection() {
                 } : {}),
               }}
             >
-              Circle Day <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '2px' }}>2o25</span>
+              Circle Day <span className="font-fresh-marker" style={{ letterSpacing: '2px' }}>2o25</span>
             </motion.span>
           </div>
 
           {/* Attribution text */}
           <motion.div
+            className="font-inter"
             animate={showCredits ? 'visible' : 'hidden'}
             initial="hidden"
             variants={{
@@ -532,7 +543,6 @@ export function VideoMorphSection() {
               top: '100%',
               left: '50%',
               transform: 'translateX(-50%)',
-              fontFamily: 'Inter',
               fontSize: 'clamp(13px, 3.2vw, 16px)',
               fontWeight: 500,
               textAlign: 'center',

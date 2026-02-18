@@ -2,3 +2,4 @@
 export * from './animation'
 export * from './breakpoints'
 export * from './themes'
+export * from './typography'

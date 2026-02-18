@@ -11,10 +11,11 @@ import { SplitText } from './lib/gsap'
 
 import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
-// import { SprayPaintCanvas } from './components/SprayPaintCanvas'  // shelved — see SPRAY_PAINT.md
 import { BottomBar } from './components/BottomBar'
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { BREAKPOINTS } from './constants'
+import { colorTokens } from './constants/themes'
+import { prefersReducedMotion } from './hooks/useReducedMotion'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import LocomotiveScroll from 'locomotive-scroll'
 import { gsap, ScrollTrigger } from './lib/gsap'
@@ -114,6 +115,10 @@ function App() {
   const graffitiY = useSpring(graffitiShiftTargetY, graffitiSpring)
 
   useEffect(() => {
+    // Skip parallax mouse-tracking when user prefers reduced motion —
+    // graffiti stays static with no tilt or translate.
+    if (prefersReducedMotion()) return
+
     let raf = 0
     const tick = () => {
       const { x, y } = mousePositionRef.current
@@ -135,10 +140,11 @@ function App() {
   const scrollRef = useRef<LocomotiveScroll | null>(null)
 
   useEffect(() => {
+    const reducedMotion = prefersReducedMotion()
     const scroll = new LocomotiveScroll({
       lenisOptions: {
-        lerp: 0.09,
-        duration: 1.3,
+        lerp: reducedMotion ? 1 : 0.09,
+        duration: reducedMotion ? 0 : 1.3,
         smoothWheel: true,
         syncTouch: false,
       },
@@ -487,7 +493,7 @@ function App() {
             textAlign="left"
           >
             Peter Rodriguez is a{' '}
-            <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.5px', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' }}>
+            <span className="font-fresh-marker" style={{ letterSpacing: '0.5px', textTransform: 'uppercase' as const, whiteSpace: 'nowrap' }}>
               nuyorican
             </span>{' '}
             designer solving hard problems with soft products.
@@ -501,9 +507,9 @@ function App() {
               textAlign="left"
             >
               Bringing over a decade of insight, intuition & influence. Off the{' '}
-              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Do<span style={{ letterSpacing: '2.5px' }}>m</span>e</span>
+              <span className="font-fresh-marker" style={{ letterSpacing: '1px', whiteSpace: 'nowrap' }}>Do<span style={{ letterSpacing: '2.5px' }}>m</span>e</span>
               , to your{' '}
-              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '1px', whiteSpace: 'nowrap' }}>Chro<span style={{ letterSpacing: '2.5px' }}>m</span>E</span>.
+              <span className="font-fresh-marker" style={{ letterSpacing: '1px', whiteSpace: 'nowrap' }}>Chro<span style={{ letterSpacing: '2.5px' }}>m</span>E</span>.
             </BioTextReveal>
           )}
           {/* Strings 3 & 4 — tabletWide+ (≥1128): split into two flanking strings */}
@@ -516,7 +522,7 @@ function App() {
                 width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
                 textAlign="left"
               >
-                <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px', whiteSpace: 'nowrap' }}>NoWA<span style={{ letterSpacing: '-1.2px' }}>D</span>ays</span>
+                <span className="font-fresh-marker" style={{ letterSpacing: '0.48px', whiteSpace: 'nowrap' }}>NoWA<span style={{ letterSpacing: '-1.2px' }}>D</span>ays</span>
                 , he{'\u2019'}s shaping vision
               </BioTextReveal>
               {/* String 4 — right-aligned, flanks gloves on the right (slides in from right) */}
@@ -538,7 +544,7 @@ function App() {
               width="max(333px, calc(3 * (100vw - 270px) / 12 + 40px))"
               textAlign="left"
             >
-              <span style={{ fontFamily: 'Fresh Marker', letterSpacing: '0.48px', whiteSpace: 'nowrap' }}>NoWA<span style={{ letterSpacing: '-1.2px' }}>D</span>ays</span>
+              <span className="font-fresh-marker" style={{ letterSpacing: '0.48px', whiteSpace: 'nowrap' }}>NoWA<span style={{ letterSpacing: '-1.2px' }}>D</span>ays</span>
               , he{'\u2019'}s shaping vision for Squarespace{'\u2019'}s site builder.
             </BioTextReveal>
           )}
@@ -676,8 +682,6 @@ function App() {
 
       {/* ===== Spray Paint Zone — canvas overlay spans gradient + quote + footer ===== */}
       <div style={{ position: 'relative', zIndex: 21 }}>
-        {/* <SprayPaintCanvas /> — shelved, see SPRAY_PAINT.md */}
-
         {/* ===== Exit Gradient Transition ===== */}
         <GradientTransition
           direction="exit"
@@ -763,6 +767,13 @@ function BioTextReveal({
 
     const split = SplitText.create(el, { type: 'words' })
 
+    // When user prefers reduced motion, skip the GSAP scroll-driven
+    // reveal and just show all words immediately (no stagger, no parallax).
+    if (prefersReducedMotion()) {
+      gsap.set(split.words, { autoAlpha: 1, y: 0 })
+      return () => { split.revert() }
+    }
+
     gsap.set(split.words, { autoAlpha: 0, y: 12 })
 
     const ctx = gsap.context(() => {
@@ -802,6 +813,7 @@ function BioTextReveal({
   return (
     <div
       ref={ref}
+      className="font-inter"
       style={{
         position: 'absolute',
         top,
@@ -809,12 +821,11 @@ function BioTextReveal({
         ...(right ? { right } : {}),
         width,
         zIndex: 1,
-        fontFamily: 'Inter',
         fontSize: 24,
         fontWeight: 500,
         lineHeight: 1.4,
         letterSpacing: '-0.04em',
-        color: '#0E0E0E',
+        color: colorTokens.neutralNearBlack,
         textAlign,
       }}
     >
@@ -904,7 +915,7 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
       // so the text stays black until the dome has clearly passed center.
       if (runway) {
         gsap.to(text, {
-          color: '#FFFFFF',
+          color: colorTokens.canvas,
           ease: 'none',
           scrollTrigger: {
             trigger: runway,
@@ -947,6 +958,7 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
       {/* Fixed at viewport center — zero document flow */}
       <div
         ref={textRef}
+        className="font-inter"
         data-cursor-invert=""
         data-cursor-text=""
         style={{
@@ -957,16 +969,15 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
           zIndex: 25,
           pointerEvents: 'auto',
           whiteSpace: 'nowrap',
-          fontFamily: 'Inter',
           fontSize: 24,
           fontWeight: 500,
           lineHeight: 1.4,
           letterSpacing: '-0.02em',
-          color: '#0E0E0E',
+          color: colorTokens.neutralNearBlack,
           textAlign: 'center',
         }}
       >
-        And occasionally, he hops on the{' '}<span style={{ fontFamily: 'Fresh Marker', letterSpacing: '2px' }}>MIc</span>...
+        And occasionally, he hops on the{' '}<span className="font-fresh-marker" style={{ letterSpacing: '2px' }}>MIc</span>...
       </div>
     </>
   )

@@ -1,12 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-pressura: 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
-  --font-pressura-light: 'GT Pressura Light', 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
-  --font-pressura-ext: 'GT Pressura Ext', 'GT Pressura', ui-sans-serif, system-ui, sans-serif;
-  --font-pressura-mono: 'GT Pressura Mono', ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace;
   --font-inter: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-share-tech-mono: 'Share Tech Mono', ui-monospace, monospace;
   --font-dotgothic: 'DotGothic16', ui-monospace, monospace;
   --font-fresh-marker: 'Fresh Marker', cursive;
 
@@ -74,6 +69,10 @@
   --blade-squarespace: #EF4562;
   --blade-apple: #0064FF;
   --blade-shiphero: #2e2f5a;
+
+  /* ===== Neutral (warm-biased dark tones for text & icons) ===== */
+  --neutral-near-black: #0E0E0E;
+  --neutral-dark-gray: #262626;
 
   /* ===== Ink Neutrals (cool-biased dark surfaces) ===== */
   --ink-900: #0A0A10;
@@ -165,55 +164,6 @@
   translate: 0 100% !important;
 }
 
-/* GT Pressura Fonts */
-@font-face {
-  font-family: 'GT Pressura Mono';
-  src: url('/fonts/GT-Pressura-Mono-Text.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'GT Pressura';
-  src: url('/fonts/GT-Pressura-Standard-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'GT Pressura Light';
-  src: url('/fonts/GT-Pressura-Standard-Light.woff2') format('woff2');
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'GT Pressura Ext';
-  src: url('/fonts/GT-Pressura-Extended-Text.woff2') format('woff2');
-  font-weight: 350;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'GT Pressura Ext';
-  src: url('/fonts/GT-Pressura-Extended-Regular.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'GT Pressura';
-  src: url('/fonts/GT-Pressura-Standard-Medium.woff2') format('woff2');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* Self-hosted Google Fonts — eliminates render-blocking CDN request */
 @font-face {
   font-family: 'Inter';
@@ -227,15 +177,6 @@
 @font-face {
   font-family: 'DotGothic16';
   src: url('/fonts/DotGothic16-Latin.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  font-family: 'Share Tech Mono';
-  src: url('/fonts/ShareTechMono-Latin.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -257,8 +198,8 @@
 }
 
 ::selection {
-  background: #0E0E0E;
-  color: #FFFFFF;
+  background: var(--neutral-near-black);
+  color: var(--canvas);
 }
 
 html,
@@ -281,7 +222,7 @@ html::-webkit-scrollbar {
 }
 
 body {
-  background: #fff;
+  background: var(--canvas);
 }
 
 /* ===== Scroll-triggered fade-in for project cards ===== */
@@ -520,6 +461,53 @@ canvas {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   padding: 0.5px;
+}
+
+/* ===== Reduced Motion =====
+   Respects user's prefers-reduced-motion preference.
+   Disables non-essential animations while preserving layout and interactivity. */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable grain noise animation */
+  .grain-overlay {
+    animation: none !important;
+  }
+
+  /* Disable marquee scroll animations */
+  .animate-marquee-left,
+  .animate-marquee-right,
+  .animate-marquee-left-slow,
+  .animate-marquee-right-slow {
+    animation: none !important;
+  }
+
+  /* Instant scroll-triggered reveals */
+  .scroll-fade-in {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Disable magnetic cursor pull */
+  [data-cursor-morphed] {
+    transition: none !important;
+    translate: none !important;
+  }
+
+  /* Disable cursor parallax on children */
+  [data-cursor-morphed] [data-cursor-parallax] {
+    transition: none !important;
+    transform: none !important;
+  }
+
+  /* Restore native cursor */
+  *, *::before, *::after {
+    cursor: auto !important;
+  }
+
+  /* Disable video dissolve transitions */
+  .video-dissolve-ready {
+    transition: none !important;
+  }
 }
 
 

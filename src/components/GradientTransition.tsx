@@ -1,5 +1,6 @@
 import { useRef, useLayoutEffect } from 'react'
 import { gsap } from '../lib/gsap'
+import { prefersReducedMotion } from '../hooks/useReducedMotion'
 
 interface GradientTransitionProps {
   direction: 'enter' | 'exit'
@@ -39,6 +40,13 @@ export function GradientTransition({ direction, src, className = '', style, fade
     const image = imageRef.current
     const sticky = stickyRef.current
     if (!runway || !image) return
+
+    // Reduced motion: jump to final state immediately
+    if (prefersReducedMotion()) {
+      gsap.set(image, { scaleY: 1 })
+      if (fadeIn && sticky) gsap.set(sticky, { opacity: 1 })
+      return
+    }
 
     // Initial state — fully flat (invisible)
     gsap.set(image, {

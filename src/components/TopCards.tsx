@@ -4,6 +4,7 @@ import { MorphingCard } from './MorphingCard'
 import { createPortal } from 'react-dom'
 import { BREAKPOINTS, CAROUSEL_CONFIG, backdropColors, signatureSpring, ctaEntranceSpring, getVariantStyles } from '../constants'
 import { cards, stackedCardConfigs } from '../data/cards'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 
 // Canonical card dimensions - the "ideal" size we design for
 const CANONICAL_CARD_WIDTH = 500
@@ -53,6 +54,8 @@ const getExpandedCardDimensions = () => {
 }
 
 export function TopCards({ cardIndices, themeMode = 'light', introStagger = false }: { cardIndices?: number[], themeMode?: 'light' | 'inverted' | 'dark' | 'darkInverted', introStagger?: boolean } = {}) {
+  const reduced = useReducedMotion()
+
   const [isDesktop, setIsDesktop] = React.useState<boolean>(() => {
     return typeof window !== 'undefined' ? window.innerWidth >= BREAKPOINTS.desktop : true
   })
@@ -1140,10 +1143,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                   ref={(el) => { cardRefs.current.set(card.id, el) }}
                   initial={introStagger ? { y: -30, opacity: 0 } : false}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={introStagger ? {
+                  transition={introStagger ? (reduced ? { duration: 0.01 } : {
                     ...signatureSpring,
                     delay: vi * 0.08,
-                  } : { duration: 0 }}
+                  }) : { duration: 0 }}
                   style={{
                     // Desktop: flex cards that share space equally
                     // Tablet: flex cards that grow to fill but never shrink below 260px (scrolls when they can't fit)
@@ -1225,7 +1228,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                   backgroundColor: backdropColors[themeMode === 'dark' || themeMode === 'darkInverted' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'],
                 }}
                 exit={{ opacity: 0 }}
-                transition={{
+                transition={reduced ? { duration: 0.01 } : {
                   opacity: { duration: 0.2 },
                   backgroundColor: { duration: 0.5, ease: 'easeInOut' },
                 }}
@@ -1535,7 +1538,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                   paddingTop: isMiniTray ? 0 : (isMobile ? 12 : 20),
                   paddingBottom: isMiniTray ? 0 : (isMobile ? 12 : 20),
                 }}
-                transition={(morphStyle === 2 || morphStyle === 4) ? ctaEntranceSpring : signatureSpring}
+                transition={reduced ? { duration: 0.01 } : ((morphStyle === 2 || morphStyle === 4) ? ctaEntranceSpring : signatureSpring)}
               >
                 {/* Frosted glass pill — fixed 148×28 capsule, never resizes.
                     Centered over the pill content, simply dissolves on expand/collapse. */}
@@ -1563,10 +1566,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                   // existing transition instead of popping in at full opacity.
                   {...(justClosedFromCompact.current && { initial: { opacity: 0 } })}
                   animate={{ opacity: isMiniTray ? 1 : 0 }}
-                  transition={morphStyle === 4
+                  transition={reduced ? { duration: 0.01 } : (morphStyle === 4
                     ? { duration: 0.18, ease: 'easeOut' }  // faster dissolve = anticipation
                     : { duration: 0.3, ease: 'easeOut' }
-                  }
+                  )}
                 />
 
                 {/* Inner flex container — handles scroll on tablet/mobile when expanded */}
@@ -1642,7 +1645,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                     const delay = useStagger && !isMiniTray ? staggerDelay : 0
                     // Height + width get underdamped springs for visible elastic overshoot
                     const overshootSpring = { type: 'spring' as const, stiffness: 400, damping: 22, mass: 0.7 }
-                    const pillTransition = {
+                    const pillTransition = reduced ? { duration: 0.01 } : {
                       ...baseSpring,
                       delay,
                       height: { ...(useOvershoot ? overshootSpring : baseSpring), delay },
@@ -1705,8 +1708,8 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                           marginRight: isLastPill ? 0 : pillGap,
                         }}
                         transition={pillTransition}
-                        whileHover={isMiniTray ? {} : { scale: 1.02 }}
-                        whileTap={isMiniTray ? {} : { scale: 0.97 }}
+                        whileHover={reduced ? undefined : (isMiniTray ? {} : { scale: 1.02 })}
+                        whileTap={reduced ? undefined : (isMiniTray ? {} : { scale: 0.97 })}
                         onMouseMove={(e) => {
                           if (isMiniTray) return
                           const el = e.currentTarget
@@ -1736,7 +1739,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                               pointerEvents: 'none',
                             }}
                             animate={{ opacity: isMiniTray ? 0 : 1 }}
-                            transition={{ duration: 0.15 }}
+                            transition={reduced ? { duration: 0.01 } : { duration: 0.15 }}
                           />
                         )}
 
@@ -1747,7 +1750,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                             style={{ inset: 0, width: '100%', height: '100%', zIndex: 1, overflow: 'visible' }}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: 0.1, duration: 0.2 }}
+                            transition={reduced ? { duration: 0.01 } : { delay: 0.1, duration: 0.2 }}
                           >
                             <rect
                               x="0" y="0" width="100%" height="100%"
@@ -1788,11 +1791,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                         {/* Label text — fades in behind the pill morph */}
                         <motion.span
                           data-cursor-parallax=""
-                          className="flex-1 truncate"
+                          className="flex-1 truncate font-inter"
                           style={{
                             position: 'relative',
                             zIndex: 1,
-                            fontFamily: 'Inter',
                             fontWeight: 500,
                             fontSize: '16px',
                             letterSpacing: '-0.01em',
@@ -1809,7 +1811,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                           animate={{
                             opacity: isMiniTray ? 0 : 1,
                           }}
-                          transition={{
+                          transition={reduced ? { duration: 0.01 } : {
                             opacity: {
                               duration: isMiniTray ? 0.1 : 0.25,
                               delay: isMiniTray ? 0 : 0.08,
@@ -1834,7 +1836,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                           animate={{
                             opacity: isMiniTray ? 0 : 1,
                           }}
-                          transition={{
+                          transition={reduced ? { duration: 0.01 } : {
                             opacity: {
                               duration: isMiniTray ? 0.1 : 0.25,
                               delay: isMiniTray ? 0 : 0.08,
@@ -1854,9 +1856,8 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                               }}
                             >
                               <span
-                                className="text-[12px] uppercase leading-[100%]"
+                                className="text-[12px] uppercase leading-[100%] font-dotgothic"
                                 style={{
-                                  fontFamily: 'DotGothic16',
                                   fontWeight: 400,
                                   letterSpacing: '0.08em',
                                   position: 'relative',
@@ -1880,9 +1881,8 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                               }}
                             >
                               <span
-                                className="text-[12px] uppercase leading-[100%]"
+                                className="text-[12px] uppercase leading-[100%] font-dotgothic"
                                 style={{
-                                  fontFamily: 'DotGothic16',
                                   fontWeight: 400,
                                   letterSpacing: '0.08em',
                                   position: 'relative',

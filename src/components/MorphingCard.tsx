@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 import { RiPushpinLine } from 'react-icons/ri'
 import { CiPlay1 } from 'react-icons/ci'
 import { FiExternalLink, FiPlay, FiCalendar, FiMail } from 'react-icons/fi'
@@ -135,15 +136,15 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
           {highlight.image ? (
             <img src={highlight.image} alt={highlight.label} loading="lazy" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-[11px] uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, color: styles.textColor }}>
+            <span className="text-[11px] uppercase font-inter" style={{ fontWeight: 500, color: styles.textColor }}>
               {highlight.label.slice(0, 4)}
             </span>
           )}
         </motion.div>
       </div>
       <span
-        className="uppercase"
-        style={{ fontFamily: 'DotGothic16', fontWeight: 400, fontSize: labelSize, lineHeight: '100%', letterSpacing: '0.12em', color: styles.textColor }}
+        className="uppercase font-dotgothic"
+        style={{ fontWeight: 400, fontSize: labelSize, lineHeight: '100%', letterSpacing: '0.12em', color: styles.textColor }}
       >
         {highlight.label}
       </span>
@@ -388,9 +389,8 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
               <CiPlay1 style={{ width: isMobile ? '14px' : `${Math.round(16 * contentScale)}px`, height: isMobile ? '14px' : `${Math.round(16 * contentScale)}px`, color: '#000000' }} />
             )}
             <span
-              className="uppercase leading-[100%]"
+              className="uppercase leading-[100%] font-inter"
               style={{
-                fontFamily: 'Inter',
                 fontWeight: 500,
                 color: '#000000',
                 fontSize: isMobile ? '11px' : `${Math.round(12 * contentScale)}px`,
@@ -545,9 +545,8 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
         <div className="flex flex-col items-start flex-1 min-w-0">
           {/* Label */}
           <span
-            className="uppercase"
+            className="uppercase font-inter"
             style={{
-              fontFamily: 'Inter',
               fontWeight: 500,
               fontSize: isMobile ? '10px' : `${Math.round(11 * contentScale)}px`,
               letterSpacing: '0.33px',
@@ -559,9 +558,8 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
           </span>
           {/* Song title */}
           <span
-            className="truncate w-full text-left"
+            className="truncate w-full text-left font-inter"
             style={{
-              fontFamily: 'Inter',
               fontWeight: 500,
               fontSize: isMobile ? '14px' : `${Math.round(19 * contentScale)}px`,
               color: isInvertedWhite ? 'rgba(26,26,46,1)' : '#FFFFFF',
@@ -573,9 +571,8 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
           </span>
           {/* Artist */}
           <span
-            className="truncate w-full text-left"
+            className="truncate w-full text-left font-inter"
             style={{
-              fontFamily: 'Inter',
               fontWeight: 400,
               fontSize: isMobile ? '12px' : `${Math.round(15 * contentScale)}px`,
               color: isInvertedWhite ? 'rgba(26,26,46,0.7)' : 'rgba(255,255,255,0.75)',
@@ -725,8 +722,8 @@ function DescriptionContainer({ description, styles, isMobile = false, contentSc
       {description.map((paragraph, i) => (
         <p
           key={i}
+          className="font-inter"
           style={{
-            fontFamily: 'Inter',
             fontWeight: 300,
             fontSize: `${fontSize}px`,
             lineHeight: `${lineHeight}px`,
@@ -771,6 +768,7 @@ export function MorphingCard({
   const [swipeDownOffset, setSwipeDownOffset] = useState(0)
   const [isSwipingDown, setIsSwipingDown] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
+  const reduced = useReducedMotion()
 
   const styles = getVariantStyles(themeMode)[card.variant]
   const { expandedContent } = card
@@ -813,20 +811,21 @@ export function MorphingCard({
         <div className="flex items-center justify-between p-4" style={{ padding: '16px 20px' }}>
           <div className="flex flex-col gap-1">
             <span
-              style={{ fontFamily: 'Inter', fontSize: '12px', fontWeight: 500, lineHeight: '15px', letterSpacing: '0.01em', color: styles.secondaryText }}
+              className="font-inter"
+              style={{ fontSize: '12px', fontWeight: 500, lineHeight: '15px', letterSpacing: '0.01em', color: styles.secondaryText }}
             >
               {card.label}
             </span>
             <span
-              style={{ fontFamily: 'Inter', fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', color: styles.textColor }}
+              className="font-inter"
+              style={{ fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', color: styles.textColor }}
             >
               {card.title}
             </span>
           </div>
           <span
-            className="uppercase"
+            className="uppercase font-dotgothic"
             style={{
-              fontFamily: 'DotGothic16',
               fontSize: '12px',
               fontWeight: 400,
               lineHeight: '100%',
@@ -942,9 +941,11 @@ export function MorphingCard({
             // which leaves a visible blob near the mini tray. A 200ms ease-out tween
             // reaches the target cleanly and triggers onExitComplete promptly.
             const collapseTween = { type: 'tween' as const, duration: 0.2, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] as [number, number, number, number] }
-            const collapseTransition = expandedFromCompact
-              ? collapseTween
-              : mobileCollapseSpring
+            const collapseTransition = reduced
+              ? { duration: 0.01 }
+              : expandedFromCompact
+                ? collapseTween
+                : mobileCollapseSpring
             return {
               top: collapseTransition,
               left: collapseTransition,
@@ -960,7 +961,7 @@ export function MorphingCard({
             }
           })(),
         }}
-        transition={{
+        transition={reduced ? { duration: 0.01 } : {
           // Position - use bouncy spring for carousel nav AND for exit (collapse) animation
           top: useBouncyTransition ? ctaEntranceSpring : ctaEntranceSpring,
           left: useBouncyTransition ? ctaEntranceSpring : ctaEntranceSpring,
@@ -997,7 +998,7 @@ export function MorphingCard({
             // When expandedFromCompact or CTA, fade out — the ghost has its own border
             ...((expandedFromCompact || card.variant === 'cta') ? { opacity: 0 } : {}),
           }}
-          transition={{
+          transition={reduced ? { duration: 0.01 } : {
             ...contentSpring,
             opacity: { duration: 0 },
           }}
@@ -1068,7 +1069,7 @@ export function MorphingCard({
               : { padding: compactCta ? '18px 10px 19px 12px' : '18px 10px 19px 20px',
                   transition: { padding: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } } }),
           }}
-          transition={contentSpring}
+          transition={reduced ? { duration: 0.01 } : contentSpring}
           onTouchStart={(e) => {
             // Track touch start position for direction detection
             const touch = e.touches[0]
@@ -1171,12 +1172,12 @@ export function MorphingCard({
                 ? { opacity: { duration: 0.08, ease: 'easeOut' } }
                 : undefined,
             }}
-            transition={contentSpring}
+            transition={reduced ? { duration: 0.01 } : contentSpring}
           >
             {/* Badge text - same size as collapsed card */}
             <div
-              className="uppercase leading-[100%] relative text-[12px]"
-              style={{ fontFamily: 'DotGothic16', fontWeight: 400, letterSpacing: '0.12em', top: '-0.5px' }}
+              className="uppercase leading-[100%] relative text-[12px] font-dotgothic"
+              style={{ fontWeight: 400, letterSpacing: '0.12em', top: '-0.5px' }}
             >
               {/* ESC text - absolutely positioned, fades in when expanded */}
               <motion.span
@@ -1212,8 +1213,8 @@ export function MorphingCard({
           >
             {/* Label - morphs from collapsed to expanded */}
             <motion.div
-              className="text-left"
-              style={{ fontFamily: 'Inter', color: styles.textColor, fontSize: '12px', fontWeight: 500, lineHeight: '15px', letterSpacing: '0.01em', transformOrigin: 'top left', whiteSpace: 'nowrap', overflow: 'hidden' }}
+              className="text-left font-inter"
+              style={{ color: styles.textColor, fontSize: '12px', fontWeight: 500, lineHeight: '15px', letterSpacing: '0.01em', transformOrigin: 'top left', whiteSpace: 'nowrap', overflow: 'hidden' }}
               initial={{ scale: 1, opacity: 1 }}
               animate={{ scale: 14 / 12, opacity: 1 }}
               exit={{
@@ -1224,7 +1225,7 @@ export function MorphingCard({
                   ...(compactCta ? { opacity: { duration: 0.15, ease: 'easeOut' } } : {}),
                 },
               }}
-              transition={contentSpring}
+              transition={reduced ? { duration: 0.01 } : contentSpring}
             >
               {label}
             </motion.div>
@@ -1235,8 +1236,8 @@ export function MorphingCard({
             {/* Mobile uses smaller scale (26/18) to fit within narrower container */}
             {/* For compactCta (mobile CTA), fade out quickly on exit since collapsed state has different layout */}
             <motion.div
-              className="text-left w-full"
-              style={{ fontFamily: 'Inter', color: styles.textColor, transformOrigin: 'top left', fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative' }}
+              className="text-left w-full font-inter"
+              style={{ color: styles.textColor, transformOrigin: 'top left', fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative' }}
               initial={{ scale: 1, marginTop: '-4px', marginLeft: '0px', opacity: 1 }}
               animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 28 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 30 / 18 : 34 / 18, marginTop: '1px', marginLeft: '-1px', opacity: 1 }}
               exit={{
@@ -1251,7 +1252,7 @@ export function MorphingCard({
                   ...(compactCta ? { opacity: { duration: 0.1, ease: 'easeOut' } } : {}),
                 },
               }}
-              transition={contentSpring}
+              transition={reduced ? { duration: 0.01 } : contentSpring}
             >
               {card.title}
             </motion.div>
@@ -1262,8 +1263,8 @@ export function MorphingCard({
               const isTabletViewport = typeof window !== 'undefined' && window.innerWidth >= BREAKPOINTS.mobile && window.innerWidth < BREAKPOINTS.desktop
               return expandedContent.dateRange && (
                 <motion.p
+                  className="font-inter"
                   style={{
-                    fontFamily: 'Inter',
                     fontWeight: 400,
                     fontSize: isMobileViewport ? '14px' : isTabletViewport ? '16px' : '18px',
                     lineHeight: isMobileViewport ? '20px' : isTabletViewport ? '22px' : '26px',
@@ -1327,9 +1328,8 @@ export function MorphingCard({
                     {/* Pinned label - shown once when any pinned content exists (matching desktop) */}
                     {(expandedContent.highlights?.length || expandedContent.nowPlayingCard || expandedContent.reflectionsCard) && (
                       <motion.p
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 font-inter"
                         style={{
-                          fontFamily: 'Inter',
                           fontWeight: 400,
                           fontSize: '14px',
                           lineHeight: '20px',
@@ -1435,7 +1435,7 @@ export function MorphingCard({
                                 }}
                               >
                                 {Icon && <Icon className="w-5 h-5" />}
-                                <span data-cursor-parallax="" className="text-[18px] uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '-0.01em' }}>
+                                <span data-cursor-parallax="" className="text-[18px] uppercase font-inter" style={{ fontWeight: 500, letterSpacing: '-0.01em' }}>
                                   {action.label}
                                 </span>
                               </button>
@@ -1500,9 +1500,8 @@ export function MorphingCard({
               {/* Pinned highlights label - shown when any pinned content exists */}
               {(expandedContent.highlights?.length || expandedContent.nowPlayingCard || expandedContent.reflectionsCard) && (
                 <motion.p
-                  className="flex items-center"
+                  className="flex items-center font-inter"
                   style={{
-                    fontFamily: 'Inter',
                     fontWeight: 400,
                     fontSize: `${Math.round(18 * contentScale)}px`,
                     lineHeight: `${Math.round(26 * contentScale)}px`,
@@ -1651,7 +1650,7 @@ export function MorphingCard({
                           }}
                         >
                           {Icon && <Icon style={{ width: `${iconSize}px`, height: `${iconSize}px` }} />}
-                          <span data-cursor-parallax="" className="uppercase" style={{ fontFamily: 'Inter', fontWeight: 500, letterSpacing: '-0.01em', fontSize: `${fontSize}px` }}>
+                          <span data-cursor-parallax="" className="uppercase font-inter" style={{ fontWeight: 500, letterSpacing: '-0.01em', fontSize: `${fontSize}px` }}>
                             {action.label}
                           </span>
                         </button>
@@ -1734,7 +1733,7 @@ export function MorphingCard({
       animate={{
         scale: isHovered ? 1.02 : 1,
       }}
-      transition={hoverTransition}
+      transition={reduced ? { duration: 0.01 } : hoverTransition}
       onClick={() => {
         // On mobile, clear hover state when clicking to expand
         if (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) {
@@ -1750,7 +1749,7 @@ export function MorphingCard({
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setIsHovered(false)}
-      whileTap={{ scale: 0.97, transition: { duration: 0.1 } }}
+      whileTap={reduced ? undefined : { scale: 0.97, transition: { duration: 0.1 } }}
     >
       {/* Border — CTA uses SVG dashed stroke (dash:12, gap:8, round caps) to match Figma */}
       {card.variant === 'cta' ? (
@@ -1825,9 +1824,8 @@ export function MorphingCard({
             }}
           >
             <div
-              className="text-[12px] uppercase leading-[100%]"
+              className="text-[12px] uppercase leading-[100%] font-dotgothic"
               style={{
-                fontFamily: 'DotGothic16',
                 fontWeight: 400,
                 letterSpacing: '0.08em',
                 position: 'relative',
@@ -1849,8 +1847,8 @@ export function MorphingCard({
         {compactCta ? (
           <div data-cursor-parallax="" className="flex flex-col items-center justify-center w-full h-full">
             <div
-              className="text-[12px] text-center"
-              style={{ fontFamily: 'Inter', fontWeight: 500, lineHeight: '15px', letterSpacing: '-0.01em' }}
+              className="text-[12px] text-center font-inter"
+              style={{ fontWeight: 500, lineHeight: '15px', letterSpacing: '-0.01em' }}
             >
               Add a role...
             </div>
@@ -1861,9 +1859,8 @@ export function MorphingCard({
             <div data-cursor-parallax="" className="flex flex-col gap-[5px] w-full relative">
               {/* Label - slides up and fades on hover */}
               <div
-                className="text-[12px] text-left"
+                className="text-[12px] text-left font-inter"
                 style={{
-                  fontFamily: 'Inter',
                   fontWeight: 500,
                   lineHeight: '15px',
                   letterSpacing: '0.01em',
@@ -1877,9 +1874,8 @@ export function MorphingCard({
 
               {/* Title - slides up to label position on hover */}
               <div
-                className="text-left w-full"
+                className="text-left w-full font-inter"
                 style={{
-                  fontFamily: 'Inter',
                   fontSize: '18px',
                   fontWeight: 500,
                   lineHeight: '24px',
@@ -1895,9 +1891,8 @@ export function MorphingCard({
 
               {/* Date range - slides up from below on hover, hidden initially */}
               <div
-                className="text-left absolute pointer-events-none"
+                className="text-left absolute pointer-events-none font-inter"
                 style={{
-                  fontFamily: 'Inter',
                   bottom: -19.5,
                   left: 0,
                   fontWeight: 400,

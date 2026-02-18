@@ -3,6 +3,7 @@ import { Environment, Lightformer } from '@react-three/drei'
 import { Physics } from '@react-three/rapier'
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { HangingSpheres } from './HangingSpheres'
+import { prefersReducedMotion } from '../hooks/useReducedMotion'
 import * as THREE from 'three'
 import type { Settings, ShadowSettings, ThemeMode } from '../types'
 
@@ -151,6 +152,9 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
   // Smoothly interpolate light position based on mouse
   useFrame(() => {
     if (!mainLightRef.current) return
+
+    // Reduced motion: keep light at default position
+    if (prefersReducedMotion()) return
 
     // Read mouse position from ref (no React re-renders)
     const mouse = mousePositionRef.current

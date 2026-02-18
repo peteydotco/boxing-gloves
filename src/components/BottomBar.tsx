@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react'
 import { IoMdArrowForward } from 'react-icons/io'
 import { BREAKPOINTS } from '../constants'
+import { colorTokens } from '../constants/themes'
 import { useNycTime } from '../hooks/useNycTime'
 import { useStatusSchedule, ALL_STATUSES, getNextStatus, getNycDate } from '../hooks/useStatusSchedule'
 import { useNycWeather } from '../hooks/useNycWeather'
 import { gsap } from '../lib/gsap'
+import { prefersReducedMotion } from '../hooks/useReducedMotion'
+
+const ICON_STROKE = colorTokens.neutralDarkGray
 
 const SLIDE_TRANSITION = 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)'
 
@@ -59,6 +63,12 @@ export function BottomBar() {
   useLayoutEffect(() => {
     const bar = barRef.current
     if (!bar) return
+
+    // Reduced motion: show immediately, skip entrance + scroll animations
+    if (prefersReducedMotion()) {
+      gsap.set(bar, { autoAlpha: 1, y: 0 })
+      return
+    }
 
     const ctx = gsap.context(() => {
       // Start hidden and offset
@@ -130,6 +140,7 @@ export function BottomBar() {
   return (
     <div
       ref={barRef}
+      className="font-inter"
       data-bottom-bar
       data-cursor="morph"
       onClick={handleTap}
@@ -156,10 +167,9 @@ export function BottomBar() {
         border: hovered ? '1px solid #FFFFFF' : '1px solid rgba(250, 250, 250, 0.8)',
         boxShadow: '0px 216px 60px 0px rgba(0,0,0,0), 0px 138px 55px 0px rgba(0,0,0,0.01), 0px 78px 47px 0px rgba(0,0,0,0.05), 0px 35px 35px 0px rgba(0,0,0,0.09), 0px 9px 19px 0px rgba(0,0,0,0.1)',
         padding: '0 20px 1px',
-        fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
         fontWeight: 500,
         fontSize,
-        color: '#262626',
+        color: ICON_STROKE,
         pointerEvents: 'auto',
         overflow: 'hidden',
         cursor: 'pointer',
@@ -182,19 +192,19 @@ export function BottomBar() {
       }}>
         {isWide && (weather.isDaytime ? (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
-            <circle cx="8" cy="8" r="3.5" stroke="#262626" strokeWidth="1.5"/>
-            <line x1="8" y1="0.5" x2="8" y2="2.5" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="8" y1="13.5" x2="8" y2="15.5" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="0.5" y1="8" x2="2.5" y2="8" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="13.5" y1="8" x2="15.5" y2="8" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="2.7" y1="2.7" x2="4.1" y2="4.1" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="11.9" y1="11.9" x2="13.3" y2="13.3" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="2.7" y1="13.3" x2="4.1" y2="11.9" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
-            <line x1="11.9" y1="4.1" x2="13.3" y2="2.7" stroke="#262626" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="8" cy="8" r="3.5" stroke={ICON_STROKE} strokeWidth="1.5"/>
+            <line x1="8" y1="0.5" x2="8" y2="2.5" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="8" y1="13.5" x2="8" y2="15.5" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="0.5" y1="8" x2="2.5" y2="8" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="13.5" y1="8" x2="15.5" y2="8" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="2.7" y1="2.7" x2="4.1" y2="4.1" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="11.9" y1="11.9" x2="13.3" y2="13.3" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="2.7" y1="13.3" x2="4.1" y2="11.9" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="11.9" y1="4.1" x2="13.3" y2="2.7" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         ) : (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
-            <path d="M6.5 1.5C6.5 1.5 6 4.5 7 7C8 9.5 11 11 13.5 10.5C12.5 13.5 9.5 15 6.5 14C3.5 13 1.5 9.5 2.5 6.5C3.5 3.5 6.5 1.5 6.5 1.5Z" stroke="#262626" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6.5 1.5C6.5 1.5 6 4.5 7 7C8 9.5 11 11 13.5 10.5C12.5 13.5 9.5 15 6.5 14C3.5 13 1.5 9.5 2.5 6.5C3.5 3.5 6.5 1.5 6.5 1.5Z" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         ))}
         <span>
@@ -277,7 +287,7 @@ export function BottomBar() {
       }}>
         {isWide && (
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
-            <path d="M0.769144 5.95684L13.2691 0.191216C14.5973 -0.425972 15.6363 0.534966 15.0191 1.8709L9.26914 14.3084C8.68321 15.5897 6.97227 15.3318 6.96446 13.949L6.95664 8.33965C6.95664 8.26153 6.93321 8.23809 6.85508 8.23809L1.20664 8.21465C-0.137106 8.20684 -0.465231 6.52715 0.769144 5.95684ZM2.70664 6.7459L7.71446 6.71465C8.20664 6.70684 8.46446 6.97247 8.45664 7.44903L8.42539 12.4725C8.42539 12.5037 8.45664 12.5037 8.47227 12.4725L13.316 1.92559C13.3473 1.86309 13.316 1.84747 13.2613 1.86309L2.69883 6.69122C2.65977 6.70684 2.66758 6.7459 2.70664 6.7459Z" fill="#262626"/>
+            <path d="M0.769144 5.95684L13.2691 0.191216C14.5973 -0.425972 15.6363 0.534966 15.0191 1.8709L9.26914 14.3084C8.68321 15.5897 6.97227 15.3318 6.96446 13.949L6.95664 8.33965C6.95664 8.26153 6.93321 8.23809 6.85508 8.23809L1.20664 8.21465C-0.137106 8.20684 -0.465231 6.52715 0.769144 5.95684ZM2.70664 6.7459L7.71446 6.71465C8.20664 6.70684 8.46446 6.97247 8.45664 7.44903L8.42539 12.4725C8.42539 12.5037 8.45664 12.5037 8.47227 12.4725L13.316 1.92559C13.3473 1.86309 13.316 1.84747 13.2613 1.86309L2.69883 6.69122C2.65977 6.70684 2.66758 6.7459 2.70664 6.7459Z" fill={ICON_STROKE}/>
           </svg>
         )}
         {weather.loading ? (

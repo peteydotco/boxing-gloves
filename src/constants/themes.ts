@@ -40,6 +40,13 @@ export const colorTokens = {
   redUi: 'rgba(214,50,64,1)',          // #D63240
   redUiDark: 'rgba(181,40,51,1)',      // #B52833
 
+  // Canvas (page background)
+  canvas: '#FFFFFF',
+
+  // Neutral (warm-biased dark tones for text & icons)
+  neutralNearBlack: '#0E0E0E',
+  neutralDarkGray: '#262626',
+
   // Blade Surfaces (0 = front, 3 = back)
   blade0: '#0e0e0e',
   blade1: '#EB2D37',

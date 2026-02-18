@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { IoMdCheckmark } from 'react-icons/io'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 
 const quoteLines = [
   "Case studies coming soon.",
@@ -10,6 +11,7 @@ const quoteLines = [
 export function LogoMarqueeSection() {
   const [copied, setCopied] = useState(false)
   const [hoveredButton, setHoveredButton] = useState<'linkedin' | 'email' | null>(null)
+  const reduced = useReducedMotion()
 
   const handleCopyEmail = () => {
     navigator.clipboard.writeText('hello@petey.co')
@@ -30,7 +32,6 @@ export function LogoMarqueeSection() {
     width: 685,
     maxWidth: 'calc(100vw - 48px)',
     textAlign: 'center',
-    fontFamily: 'Inter',
   }
 
   return (
@@ -42,7 +43,7 @@ export function LogoMarqueeSection() {
         overflowY: 'visible',
         height: '85vh',
         marginTop: '-20vh',
-        backgroundColor: '#fff',
+        backgroundColor: 'var(--canvas)',
       }}
       data-scroll
       data-scroll-section
@@ -55,6 +56,7 @@ export function LogoMarqueeSection() {
            Headline text has pointer-events: none so spray painting passes through.
            Buttons have pointer-events: auto to preserve hover states and clicks. */}
       <motion.div
+        className="font-inter"
         variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.10 } } }}
         initial="hidden"
         whileInView="visible"
@@ -125,14 +127,14 @@ export function LogoMarqueeSection() {
               boxShadow: hoveredButton === 'email' ? '0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
               transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
             }}
-            whileHover={{ scale: 1.03 }}
-            transition={{ duration: 0.3 }}
+            whileHover={reduced ? undefined : { scale: 1.03 }}
+            transition={{ duration: reduced ? 0.01 : 0.3 }}
           >
             <AnimatePresence mode="wait">
               <motion.span
                 key={copied ? 'copied' : 'copy'}
+                className="font-inter"
                 style={{
-                  fontFamily: 'Inter',
                   fontSize: 17,
                   color: '#000000',
                   fontWeight: 500,
@@ -165,12 +167,12 @@ export function LogoMarqueeSection() {
               boxShadow: hoveredButton === 'linkedin' ? '0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
               transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
             }}
-            whileHover={{ scale: 1.03 }}
-            transition={{ duration: 0.3 }}
+            whileHover={reduced ? undefined : { scale: 1.03 }}
+            transition={{ duration: reduced ? 0.01 : 0.3 }}
           >
             <span
+              className="font-inter"
               style={{
-                fontFamily: 'Inter',
                 fontSize: 17,
                 color: '#000000',
                 fontWeight: 500,

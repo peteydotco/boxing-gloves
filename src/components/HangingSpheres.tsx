@@ -5,6 +5,7 @@ import { RigidBody, BallCollider, CuboidCollider, CylinderCollider } from '@reac
 import type { RapierRigidBody } from '@react-three/rapier'
 import * as THREE from 'three'
 import type { Settings } from '../types'
+import { prefersReducedMotion } from '../hooks/useReducedMotion'
 import leftGloveModelUrl from '../assets/gloveLEFT.glb?url'
 import rightGloveModelUrl from '../assets/gloveRIGHT.glb?url'
 
@@ -115,6 +116,10 @@ function DraggableGloveWithRope({
   const gloveRef = useRef<RapierRigidBody>(null)
   const tubeRef = useRef<THREE.Mesh>(null)
   const { camera, gl } = useThree()
+  const reducedMotion = useMemo(() => prefersReducedMotion(), [])
+
+  // When reduced motion is active, skip the staggered drop delay
+  const effectiveDropDelay = reducedMotion ? 0 : dropDelay
 
   // Load the GLB model (with Draco decoder for compressed meshes)
   const { scene: gloveModel } = useGLTF(modelUrl, true)
@@ -125,7 +130,7 @@ function DraggableGloveWithRope({
   const velocityHistory = useRef<THREE.Vector3[]>([])
   const lastPosition = useRef(new THREE.Vector3())
   const hasDropped = useRef(false)
-  const dropDelayElapsed = useRef(dropDelay === 0)
+  const dropDelayElapsed = useRef(effectiveDropDelay === 0)
   const dropStartTime = useRef<number | null>(null)
   const dragEndTime = useRef<number>(0) // Timestamp when drag ended, for post-drag settle
   const touchMoveBlocker = useRef<((e: TouchEvent) => void) | null>(null)
@@ -236,10 +241,10 @@ function DraggableGloveWithRope({
 
   // Handle drop delay - start timer on mount
   useEffect(() => {
-    if (dropDelay > 0) {
+    if (effectiveDropDelay > 0) {
       dropStartTime.current = performance.now()
     }
-  }, [dropDelay])
+  }, [effectiveDropDelay])
 
   // Soft string constraint + rope visual update
   useFrame(() => {
@@ -248,7 +253,7 @@ function DraggableGloveWithRope({
 
     // Check if drop delay has elapsed
     if (!dropDelayElapsed.current && dropStartTime.current !== null) {
-      if (performance.now() - dropStartTime.current >= dropDelay) {
+      if (performance.now() - dropStartTime.current >= effectiveDropDelay) {
         dropDelayElapsed.current = true
       }
     }
@@ -600,8 +605,8 @@ function DraggableGloveWithRope({
         mass={settings.mass}
         restitution={Math.max(settings.restitution, 0.6)}
         friction={Math.min(settings.friction, 0.1)}
-        linearDamping={settings.linearDamping}
-        angularDamping={1.5}
+        linearDamping={reducedMotion ? Math.max(settings.linearDamping, 8) : settings.linearDamping}
+        angularDamping={reducedMotion ? 8 : 1.5}
       >
         {/* Collider for main glove body (rectangular box) */}
         <CuboidCollider

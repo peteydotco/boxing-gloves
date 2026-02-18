@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from '../hooks/useReducedMotion'
+
 // Animation spring configurations for Framer Motion
 
 // Signature spring — the default curve for all UI motion
@@ -85,6 +87,11 @@ export const cursorMorphSpring = {
 export const POINTER_LIFT = {
   parallaxMax: 2.5,   // max px foreground children shift
   liftScale: 1.005,   // scale factor when morphed onto element
+}
+
+/** Returns an instant tween when reduced motion is active, normal spring otherwise. */
+export function motionSafe<T extends Record<string, unknown>>(spring: T): T | { type: 'tween'; duration: 0.01 } {
+  return prefersReducedMotion() ? { type: 'tween' as const, duration: 0.01 } : spring
 }
 
 // Carousel tuning configuration
