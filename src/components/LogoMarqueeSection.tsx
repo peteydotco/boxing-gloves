@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { IoMdCheckmark } from 'react-icons/io'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { DURATION } from '../constants/animation'
+import { TYPE_SCALE, WEIGHT, LETTER_SPACING } from '../constants/typography'
+import { colorTokens } from '../constants/themes'
 
 export function LogoMarqueeSection() {
   const [copied, setCopied] = useState(false)
@@ -104,11 +106,11 @@ export function LogoMarqueeSection() {
           ...centeredOverlay,
           zIndex: 11,
           pointerEvents: 'none',
-          fontSize: 'clamp(28px, 5vw, 48px)',
-          fontWeight: 600,
-          lineHeight: 1.25,
-          letterSpacing: '-0.028em',
-          color: '#000000',
+          fontSize: TYPE_SCALE['2xl'].size,
+          fontWeight: WEIGHT.medium,
+          lineHeight: TYPE_SCALE['2xl'].lineHeight,
+          letterSpacing: LETTER_SPACING.tighter,
+          color: colorTokens.neutralNearBlack,
         }}
       >
         <div style={{ overflow: 'hidden' }}>
