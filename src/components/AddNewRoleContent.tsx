@@ -385,18 +385,18 @@ export function AddNewRoleContent({
             whiteSpace: 'nowrap',
             position: 'relative',
           }}
-          initial={{ scale: 1, marginTop: '-4px', marginLeft: '0px', color: themeTitle, opacity: 0 }}
-          animate={{ scale: isMobile ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 28 / 18 : 32 / 18, marginTop: '1px', marginLeft: '-1px', color: themeTitle, opacity: 1 }}
+          initial={{ scale: 1, y: -4, x: 0, color: themeTitle, opacity: 0 }}
+          animate={{ scale: isMobile ? 26 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 28 / 18 : 32 / 18, y: 1, x: -1, color: themeTitle, opacity: 1 }}
           exit={{
             scale: 1,
-            marginTop: '-4px',
-            marginLeft: '0px',
+            y: -4,
+            x: 0,
             color: themeTitle,
             opacity: 1,
             transition: {
               scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-              marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
-              marginLeft: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+              y: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
+              x: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] },
             },
           }}
           transition={reduced ? { duration: 0.01 } : { ...contentSpring, opacity: { duration: 0.15, delay: 0.1, ease: 'easeOut' } }}

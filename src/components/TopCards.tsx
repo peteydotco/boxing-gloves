@@ -301,6 +301,8 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
   const MINI_MAG_RADIUS = 120     // distance (px) at which attraction drops to zero
   const morphContainerRef = React.useRef<HTMLDivElement>(null)
   const handleMiniTrayMouseMove = React.useCallback((e: React.MouseEvent) => {
+    // Skip magnetic parallax when user prefers reduced motion
+    if (reduced) return
     // Always compute offset from the actual morphing container's center,
     // even when the event fires on the larger hit zone.
     const el = morphContainerRef.current
@@ -611,7 +613,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
 
   // Animation frame for smooth velocity decay
   React.useEffect(() => {
-    if (expandedIndex === null) {
+    if (expandedIndex === null || reduced) {
       setParallaxOffset(0)
       return
     }

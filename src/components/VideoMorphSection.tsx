@@ -112,7 +112,7 @@ export function VideoMorphSection() {
     setMousePos({ x: xPercent, y: yPercent })
   }, [])
 
-  const hoverActive = morphComplete && isHovered
+  const hoverActive = morphComplete && isHovered && !prefersReducedMotion()
 
   const spotlightGradient = hoverActive
     ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,1) 0%, rgba(200,210,230,0.8) 15%, rgba(120,120,130,0.35) 35%, rgba(140,140,150,0.3) 55%, rgba(120,120,130,0.35) 100%)`

@@ -65,9 +65,10 @@ interface HighlightButtonProps {
   onHighlightClick?: (label: string) => void
   isMobile?: boolean
   contentScale?: number // Scale factor for tablet/shallow viewports
+  reduced?: boolean // prefers-reduced-motion
 }
 
-function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false, contentScale = 1 }: HighlightButtonProps) {
+function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false, contentScale = 1, reduced = false }: HighlightButtonProps) {
   const [isHovered, setIsHovered] = useState(false)
 
   // Mobile: fixed 48px, Desktop/Tablet: scale from canonical 68px
@@ -129,9 +130,9 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
           }}
           initial={false}
           animate={{
-            scale: isHovered ? hoverScale : 1,
+            scale: (isHovered && !reduced) ? hoverScale : 1,
           }}
-          transition={hoverTransition}
+          transition={reduced ? { duration: 0.01 } : hoverTransition}
         >
           {highlight.image ? (
             <img src={highlight.image} alt={highlight.label} loading="lazy" className="w-full h-full object-cover" />
@@ -601,9 +602,10 @@ interface HighlightsContainerProps {
   onHighlightClick?: (label: string) => void
   isMobile?: boolean
   contentScale?: number // Scale factor for tablet/shallow viewports
+  reduced?: boolean // prefers-reduced-motion
 }
 
-function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = false, contentScale = 1 }: HighlightsContainerProps) {
+function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = false, contentScale = 1, reduced = false }: HighlightsContainerProps) {
   // Calculate the stacked offset for each item - they start collapsed at x=0 with slight stagger
   const stackOffset = 8 // Each item offset by 8px when stacked
   // Spacing value used for stacked animation calculation (items slide in from stacked position)
@@ -688,6 +690,7 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
                 onHighlightClick={onHighlightClick}
                 isMobile={isMobile}
                 contentScale={contentScale}
+                reduced={reduced}
               />
             </motion.div>
           )
@@ -1241,17 +1244,17 @@ export function MorphingCard({
             <motion.div
               className="text-left w-full font-inter"
               style={{ color: styles.textColor, transformOrigin: 'top left', fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative' }}
-              initial={{ scale: 1, marginTop: '-4px', marginLeft: '0px', opacity: 1 }}
-              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 28 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 30 / 18 : 34 / 18, marginTop: '1px', marginLeft: '-1px', opacity: 1 }}
+              initial={{ scale: 1, y: -4, x: 0, opacity: 1 }}
+              animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 28 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 30 / 18 : 34 / 18, y: 1, x: -1, opacity: 1 }}
               exit={{
                 scale: 1,
-                marginTop: '-4px',
-                marginLeft: '0px',
+                y: -4,
+                x: 0,
                 opacity: compactCta ? 0 : 1,
                 transition: {
                   scale: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
-                  marginTop: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
-                  marginLeft: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+                  y: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
+                  x: { type: 'tween', duration: 0.25, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] },
                   ...(compactCta ? { opacity: { duration: 0.1, ease: 'easeOut' } } : {}),
                 },
               }}
@@ -1283,7 +1286,7 @@ export function MorphingCard({
                   {expandedContent.dateRange.includes('→') ? (
                     <>
                       {expandedContent.dateRange.split('→')[0]}
-                      <IoMdArrowForward style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', position: 'relative', top: '-1px' }} />
+                      <IoMdArrowForward aria-hidden="true" style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', transform: 'translateY(-1px)' }} />
                       {expandedContent.dateRange.split('→')[1]}
                     </>
                   ) : (
@@ -1361,6 +1364,7 @@ export function MorphingCard({
                           styles={styles}
                           onHighlightClick={onHighlightClick}
                           isMobile={true}
+                          reduced={reduced}
                         />
                       </motion.div>
                     )}
@@ -1549,6 +1553,7 @@ export function MorphingCard({
                     onHighlightClick={onHighlightClick}
                     isMobile={false}
                     contentScale={contentScale}
+                    reduced={reduced}
                   />
                 </motion.div>
               )}
@@ -1911,7 +1916,7 @@ export function MorphingCard({
                 {expandedContent.dateRange.includes('→') ? (
                   <>
                     {expandedContent.dateRange.split('→')[0]}
-                    <IoMdArrowForward style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', position: 'relative', top: '-1px' }} />
+                    <IoMdArrowForward aria-hidden="true" style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', transform: 'translateY(-1px)' }} />
                     {expandedContent.dateRange.split('→')[1]}
                   </>
                 ) : (
