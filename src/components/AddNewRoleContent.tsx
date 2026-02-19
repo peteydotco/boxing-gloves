@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import { IoMdArrowForward, IoMdCheckmark } from 'react-icons/io'
 import { contentSpring } from '../constants/animation'
+import { WEIGHT } from '../constants/typography'
 import { colorTokens } from '../constants/themes'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { BREAKPOINTS } from '../constants/breakpoints'
@@ -292,14 +293,14 @@ export function AddNewRoleContent({
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
             style={{ backgroundColor: themeBadgeBg, border: 'none' }}
-            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 1 }}
-            animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 0 }}
-            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: expandedFromCompact ? 0 : 1 }}
+            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '9.5px', paddingRight: '9px', opacity: 1 }}
+            animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '19.5px', paddingRight: '18px', opacity: 0 }}
+            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '9.5px', paddingRight: '9px', opacity: expandedFromCompact ? 0 : 1 }}
             transition={reduced ? { duration: 0.01 } : contentSpring}
           >
             <div
-              className="uppercase leading-[100%] text-[12px] font-dotgothic"
-              style={{ fontWeight: 400, letterSpacing: '0.08em', position: 'relative', top: '-0.5px', color: themeBadgeText, whiteSpace: 'nowrap' }}
+              className="uppercase leading-[100%] text-[12px] font-inter"
+              style={{ fontWeight: WEIGHT.medium, color: themeBadgeText, whiteSpace: 'nowrap' }}
             >
               {shortcut}
             </div>
@@ -316,14 +317,14 @@ export function AddNewRoleContent({
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
             style={{ backgroundColor: themeBadgeBg, border: 'none' }}
-            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 0 }}
-            animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 1 }}
-            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 0 }}
+            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '9.5px', paddingRight: '9px', opacity: 0 }}
+            animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '19.5px', paddingRight: '18px', opacity: 1 }}
+            exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '9.5px', paddingRight: '9px', opacity: 0 }}
             transition={reduced ? { duration: 0.01 } : contentSpring}
           >
             <div
-              className="uppercase leading-[100%] relative text-[12px] font-dotgothic"
-              style={{ fontWeight: 400, letterSpacing: '0.08em', top: '-0.5px' }}
+              className="uppercase leading-[100%] relative text-[12px] font-inter"
+              style={{ fontWeight: WEIGHT.medium }}
             >
               {/* ESC text absolutely positioned - same as MorphingCard */}
               <span className="absolute inset-0 flex items-center justify-center" style={{ color: themeBadgeText }}>
@@ -437,7 +438,7 @@ export function AddNewRoleContent({
                 onChange={(e) => setInputValue(e.target.value)}
                 disabled={!isFocused}
                 tabIndex={isFocused ? 0 : -1}
-                className="w-full bg-transparent outline-none relative font-inter"
+                className="w-full bg-transparent relative font-inter"
                 style={{
                   fontWeight: 500,
                   color: inputValue ? inputTypedColor : 'inherit',
@@ -447,6 +448,7 @@ export function AddNewRoleContent({
                   padding: 0,
                   margin: 0,
                   border: 'none',
+                  outline: 'none',
                   height: 'auto',
                   caretColor: isFocused ? caretColor : 'transparent',
                   pointerEvents: isFocused ? 'auto' : 'none',
@@ -723,7 +725,7 @@ export function AddNewRoleContent({
           }}
           onMouseEnter={() => setHoveredButton('linkedin')}
           onMouseLeave={() => setHoveredButton(null)}
-          className="flex items-center justify-center cursor-pointer"
+          className="flex items-center justify-center cursor-pointer focus-visible:outline-none"
           style={{
             width: `${s(225)}px`,
             height: `${s(48)}px`,
@@ -759,7 +761,7 @@ export function AddNewRoleContent({
           }}
           onMouseEnter={() => setHoveredButton('email')}
           onMouseLeave={() => setHoveredButton(null)}
-          className="flex items-center justify-center cursor-pointer"
+          className="flex items-center justify-center cursor-pointer focus-visible:outline-none"
           style={{
             width: `${s(225)}px`,
             height: `${s(48)}px`,

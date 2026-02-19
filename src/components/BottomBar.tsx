@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react'
 import { IoMdArrowForward } from 'react-icons/io'
+import { motion } from 'framer-motion'
 import { BREAKPOINTS, DURATION, WEIGHT } from '../constants'
+import { signatureSpring } from '../constants/animation'
 import { colorTokens } from '../constants/themes'
 import { elevations } from '../constants/elevations'
 import { useNycTime } from '../hooks/useNycTime'
@@ -58,34 +60,15 @@ export function BottomBar() {
     return () => document.removeEventListener('pointerdown', handleOutsideTap)
   }, [isTouch, hovered])
 
-  // Entrance — slide up from below after TopCards stagger in.
-  // Uses autoAlpha (visibility + opacity) so it doesn't conflict with the
-  // scroll-driven opacity tween that takes over after entrance completes.
+  const reduced = prefersReducedMotion()
+
+  // Scroll-driven fade out (GSAP) — dissolve to 0 as user scrolls past hero.
+  // Entrance is handled by Framer Motion on the motion.div below.
   useLayoutEffect(() => {
     const bar = barRef.current
-    if (!bar) return
-
-    // Reduced motion: show immediately, skip entrance + scroll animations
-    if (prefersReducedMotion()) {
-      gsap.set(bar, { autoAlpha: 1, y: 0 })
-      return
-    }
+    if (!bar || reduced) return
 
     const ctx = gsap.context(() => {
-      // Start hidden and offset
-      gsap.set(bar, { autoAlpha: 0, y: 40 })
-
-      // Entrance animation
-      gsap.to(bar, {
-        autoAlpha: 1,
-        y: 0,
-        duration: 0.5,
-        ease: 'power2.out',
-        delay: 0.3,
-      })
-
-      // Scroll-driven fade out — dissolve to 0 as user scrolls past hero.
-      // Uses autoAlpha so visibility:hidden is set at 0.
       gsap.fromTo(bar,
         { autoAlpha: 1 },
         {
@@ -108,7 +91,7 @@ export function BottomBar() {
     })
 
     return () => ctx.revert()
-  }, [])
+  }, [reduced])
 
   // On touch devices (<1024), tap toggles expand/collapse.
   const handleTap = useCallback(() => {
@@ -145,7 +128,7 @@ export function BottomBar() {
   const locationLabel = !isWide ? 'NYC' : (locationLabels[statusIndex] ?? 'New York')
 
   return (
-    <div
+    <motion.div
       ref={barRef}
       role="button"
       tabIndex={0}
@@ -157,6 +140,9 @@ export function BottomBar() {
       onClick={handleTap}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      initial={reduced ? false : { y: 80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={reduced ? { duration: 0 } : { ...signatureSpring }}
       style={{
         position: 'fixed',
         bottom: isMobile ? 'max(12px, env(safe-area-inset-bottom, 12px))' : 24,
@@ -307,6 +293,6 @@ export function BottomBar() {
           <>{locationLabel}{'\u00A0\u00A0'}{tempStr}</>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }

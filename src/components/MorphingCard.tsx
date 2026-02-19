@@ -835,10 +835,10 @@ export function MorphingCard({
             </span>
           </div>
           <span
-            className="uppercase font-dotgothic"
+            className="uppercase font-inter"
             style={{
               fontSize: '12px',
-              fontWeight: WEIGHT.regular,
+              fontWeight: WEIGHT.medium,
               lineHeight: '100%',
               color: styles.secondaryText,
               padding: '4.5px 8px 3.5px',
@@ -1174,12 +1174,12 @@ export function MorphingCard({
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
             style={{ backgroundColor: styles.badgeBg, border: 'none' }}
-            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: hideShortcut ? 0 : 1 }}
-            animate={{ right: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 14 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, top: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: hideShortcut ? 0 : 1 }}
+            initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '9.5px', paddingRight: '9px', opacity: hideShortcut ? 0 : 1 }}
+            animate={{ right: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 14 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, top: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '19.5px', paddingRight: '18px', opacity: hideShortcut ? 0 : 1 }}
             exit={{
               right: 10,
               top: 10,
-              paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px',
+              paddingTop: '4px', paddingBottom: '4px', paddingLeft: '9.5px', paddingRight: '9px',
               opacity: (hideShortcut || expandedFromCompact) ? 0 : 1,
               transition: expandedFromCompact
                 ? { opacity: { duration: 0.08, ease: 'easeOut' } }
@@ -1189,8 +1189,8 @@ export function MorphingCard({
           >
             {/* Badge text - same size as collapsed card */}
             <div
-              className="uppercase leading-[100%] relative text-[12px] font-dotgothic"
-              style={{ fontWeight: WEIGHT.regular, letterSpacing: LETTER_SPACING.widest, top: '-0.5px' }}
+              className="uppercase leading-[100%] relative text-[12px] font-inter"
+              style={{ fontWeight: WEIGHT.medium }}
             >
               {/* ESC text - absolutely positioned, fades in when expanded */}
               <motion.span
@@ -1836,17 +1836,15 @@ export function MorphingCard({
           <div
             className="flex items-center justify-center rounded-full shrink-0"
             style={{
-              padding: '4px 8px',
+              padding: '4px 9px 4px 9.5px',
               backgroundColor: card.variant === 'cta' ? colorTokens.borderOverlayDark : styles.badgeBg,
             }}
           >
             <div
-              className="text-[12px] uppercase leading-[100%] font-dotgothic"
+              className="text-[12px] uppercase leading-[100%] font-inter"
               style={{
-                fontWeight: WEIGHT.regular,
+                fontWeight: WEIGHT.medium,
                 letterSpacing: LETTER_SPACING.wider,
-                position: 'relative',
-                top: '-0.5px',
                 ...(card.variant === 'cta' && { color: 'rgba(0,0,0,0.48)' }),
               }}
             >

@@ -441,15 +441,17 @@ function App() {
            overflow: hidden contains the oversized SVG within the viewport.
            Hidden on mobile — hero cuts straight to entry gradient. */}
       {!isMobile && (
-        <div
+        <motion.div
           className="absolute pointer-events-none"
+          initial={prefersReducedMotion() ? false : { opacity: 0 }}
+          animate={{ opacity: 0.10 }}
+          transition={prefersReducedMotion() ? { duration: 0 } : { duration: 0.8, delay: 0.45, ease: [0.33, 1, 0.68, 1] }}
           style={{
             top: 0,
             left: 0,
             width: '100%',
             zIndex: Z.background,
             overflow: 'hidden',
-            opacity: 0.10,
           }}
         >
           <motion.div
@@ -476,7 +478,7 @@ function App() {
             />
 
           </motion.div>
-        </div>
+        </motion.div>
       )}
 
       {/* ===== Bio text — positioned along the graffiti tail =====
@@ -601,8 +603,11 @@ function App() {
         {/* Sticky 3D Canvas — pinned at viewport top through the travel zone.
              z-30 sits above the gradient dome (z-20) so gloves remain visible.
              On mobile: same sticky behavior so gloves pin through the gradient. */}
-        <div
+        <motion.div
           ref={stickyCanvasRef}
+          initial={prefersReducedMotion() ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={prefersReducedMotion() ? { duration: 0 } : { duration: 0.6, delay: 0.75, ease: [0.33, 1, 0.68, 1] }}
           style={{
             position: 'sticky',
             top: 0,
@@ -620,7 +625,7 @@ function App() {
             gloveDuskRef={gloveDuskRef}
             {...(!isMobile && { gloveScaleRef, gloveRotationRef, gloveLeftRotRef, gloveRightRotRef })}
           />
-        </div>
+        </motion.div>
 
         {/* ===== Hero Section =====
              Absolute-positioned so it doesn't add flow height to the travel zone

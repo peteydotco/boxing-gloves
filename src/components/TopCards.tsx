@@ -2,7 +2,7 @@ import * as React from 'react'
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { MorphingCard } from './MorphingCard'
 import { createPortal } from 'react-dom'
-import { BREAKPOINTS, CAROUSEL_CONFIG, DURATION, backdropColors, signatureSpring, ctaEntranceSpring, getVariantStyles, colorTokens, elevations, Z } from '../constants'
+import { BREAKPOINTS, CAROUSEL_CONFIG, DURATION, WEIGHT, backdropColors, signatureSpring, ctaEntranceSpring, getVariantStyles, colorTokens, elevations, Z } from '../constants'
 import { cards, stackedCardConfigs } from '../data/cards'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 
@@ -284,7 +284,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     if (hoverTimeoutRef.current) { clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = null }
     leaveTimeoutRef.current = setTimeout(() => {
       setCompactState(prev => prev === 'expanded' ? 'mini' : prev)
-    }, 300) // forgiving leave delay
+    }, 450) // forgiving leave delay
   }, [])
 
   // Touch/mobile: tap mini tray to expand immediately
@@ -298,7 +298,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
   // as the cursor approaches. Strength attenuates with distance from center.
   const MINI_MAG_STRENGTH = 0.18  // stronger than cards (0.08) since target is smaller
   const MINI_MAG_MAX = 5          // max 5px displacement (vs 3px for cards)
-  const MINI_MAG_RADIUS = 120     // distance (px) at which attraction drops to zero
+  const MINI_MAG_RADIUS = 160     // distance (px) at which attraction drops to zero
   const morphContainerRef = React.useRef<HTMLDivElement>(null)
   const handleMiniTrayMouseMove = React.useCallback((e: React.MouseEvent) => {
     // Skip magnetic parallax when user prefers reduced motion
@@ -607,6 +607,9 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     totalDragDistance: 0,
   })
 
+  // Tracks whether the last pointer interaction was a drag (suppresses click on links/buttons)
+  const wasDragged = React.useRef(false)
+
   // Ref for the expanded drag container (for native touch event listeners)
   // Using state to trigger re-render when ref is set, ensuring useEffect runs after mount
   const [dragContainer, setDragContainer] = React.useState<HTMLDivElement | null>(null)
@@ -746,6 +749,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
     state.lastTime = performance.now()
     state.dragVelocity = 0
     state.totalDragDistance = 0
+    wasDragged.current = false
     boundaryDragState.current.isDraggingAtBoundary = false
 
     // Capture pointer for reliable tracking outside element
@@ -815,6 +819,12 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
 
     const totalDrag = state.totalDragDistance
 
+    // Mark as dragged if movement exceeded a small threshold — this suppresses
+    // click events on links/buttons inside the card via the capture-phase handler
+    if (Math.abs(totalDrag) > 5) {
+      wasDragged.current = true
+    }
+
     // If we were dragging at a boundary, apply spring-back impulse
     if (CAROUSEL_CONFIG.enableBoundarySpringBack && boundaryDragState.current.isDraggingAtBoundary && Math.abs(totalDrag) > 5) {
       // Spring impulse in opposite direction, proportional to drag distance
@@ -866,6 +876,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
       state.lastTime = performance.now()
       state.dragVelocity = 0
       state.totalDragDistance = 0
+      wasDragged.current = false
       boundaryDragState.current.isDraggingAtBoundary = false
 
       // Track Y for swipe-to-dismiss
@@ -916,6 +927,11 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
 
       state.isDragging = false
       const totalDragX = state.totalDragDistance
+
+      // Mark as dragged to suppress tap→click on links/buttons (mirrors pointer handler)
+      if (Math.abs(totalDragX) > 5) {
+        wasDragged.current = true
+      }
 
       // Check for swipe-down-to-dismiss on mobile & tablet
       // Only dismiss if: downward movement, Y dominates X, and past threshold
@@ -1147,7 +1163,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                   animate={{ y: 0, opacity: 1 }}
                   transition={introStagger ? (reduced ? { duration: 0.01 } : {
                     ...signatureSpring,
-                    delay: vi * 0.08,
+                    delay: 0.45 + vi * 0.08,
                   }) : { duration: 0 }}
                   style={{
                     // Desktop: flex cards that share space equally
@@ -1241,6 +1257,16 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                 ref={setDragContainer}
                 className="fixed inset-0 cursor-grab active:cursor-grabbing"
                 style={{ zIndex: Z.expandedCard, touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+                onClickCapture={(e) => {
+                  // Suppress ALL click events (links, buttons) if the pointer interaction was a drag.
+                  // This fires in the capture phase — before any child onClick handlers.
+                  if (wasDragged.current) {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    wasDragged.current = false
+                    return
+                  }
+                }}
                 onClick={() => {
                   // Only close if it wasn't a drag (minimal movement)
                   if (Math.abs(dragState.current.totalDragDistance) < 10) {
@@ -1463,7 +1489,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                   the tray so the pull starts as the cursor approaches. Only rendered in
                   mini state; the morphing container handles its own events when expanded. */}
               {isMiniTray && (() => {
-                const hitPad = 60 // px beyond tray in each direction
+                const hitPad = 80 // px beyond tray in each direction
                 const trayW = numPills * 28 + (numPills - 1) * 4
                 const trayMarginTop = isMobile ? 32 : 40
                 return (
@@ -1864,12 +1890,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                               }}
                             >
                               <span
-                                className="text-[12px] uppercase leading-[100%] font-dotgothic"
+                                className="text-[12px] uppercase leading-[100%] font-inter"
                                 style={{
-                                  fontWeight: 400,
+                                  fontWeight: WEIGHT.medium,
                                   letterSpacing: '0.08em',
-                                  position: 'relative',
-                                  top: '-0.5px',
                                   color: ctaTextColor,
                                   transition: `color ${DURATION.slow}s ease`,
                                 }}
@@ -1889,12 +1913,10 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                               }}
                             >
                               <span
-                                className="text-[12px] uppercase leading-[100%] font-dotgothic"
+                                className="text-[12px] uppercase leading-[100%] font-inter"
                                 style={{
-                                  fontWeight: 400,
+                                  fontWeight: WEIGHT.medium,
                                   letterSpacing: '0.08em',
-                                  position: 'relative',
-                                  top: '-0.5px',
                                   color: styles.textColor,
                                 }}
                               >
