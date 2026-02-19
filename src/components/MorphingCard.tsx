@@ -148,8 +148,8 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
         </motion.div>
       </div>
       <span
-        className="uppercase font-dotgothic"
-        style={{ fontWeight: WEIGHT.regular, fontSize: labelSize, lineHeight: '100%', letterSpacing: LETTER_SPACING.widest, color: styles.textColor }}
+        className="uppercase leading-[100%] font-inter"
+        style={{ fontWeight: WEIGHT.medium, fontSize: '12px', color: styles.secondaryText }}
       >
         {highlight.label}
       </span>
@@ -902,10 +902,10 @@ export function MorphingCard({
               : {}),
         }}
         initial={{
-          top: Math.round(collapsedPosition.top),
-          left: Math.round(collapsedPosition.left),
-          width: Math.round(collapsedPosition.width),
-          height: Math.round(collapsedPosition.height),
+          top: collapsedPosition.top,
+          left: collapsedPosition.left,
+          width: collapsedPosition.width,
+          height: collapsedPosition.height,
           borderRadius: initialBorderRadius,
           rotate: 0,
           scale: 1,
@@ -920,20 +920,14 @@ export function MorphingCard({
           scale: stackedScale,
         }}
         exit={{
-          // When returning to compact pill, use exact fractional values (no rounding) so the portal's
-          // final frame pixel-perfectly matches the real compact bar that replaces it on unmount
-          top: expandedFromCompact
-            ? (exitPosition ?? collapsedPosition).top
-            : Math.round((exitPosition ?? collapsedPosition).top),
-          left: expandedFromCompact
-            ? (exitPosition ?? collapsedPosition).left
-            : Math.round((exitPosition ?? collapsedPosition).left),
-          width: expandedFromCompact
-            ? (exitPosition ?? collapsedPosition).width
-            : Math.round((exitPosition ?? collapsedPosition).width),
-          height: expandedFromCompact
-            ? (exitPosition ?? collapsedPosition).height
-            : Math.round((exitPosition ?? collapsedPosition).height),
+          // Use exact fractional values (no rounding) so the portal's final frame
+          // pixel-perfectly matches the real element that replaces it on unmount.
+          // Flex-distributed cards sit at fractional pixels (e.g., 243.75px);
+          // rounding shifts them ~0.25px causing a visible jump on handoff.
+          top: (exitPosition ?? collapsedPosition).top,
+          left: (exitPosition ?? collapsedPosition).left,
+          width: (exitPosition ?? collapsedPosition).width,
+          height: (exitPosition ?? collapsedPosition).height,
           borderRadius: initialBorderRadius,
           rotate: 0,
           scale: 1,
@@ -1190,7 +1184,7 @@ export function MorphingCard({
             {/* Badge text - same size as collapsed card */}
             <div
               className="uppercase leading-[100%] relative text-[12px] font-inter"
-              style={{ fontWeight: WEIGHT.medium }}
+              style={{ fontWeight: WEIGHT.medium, letterSpacing: LETTER_SPACING.wider }}
             >
               {/* ESC text - absolutely positioned, fades in when expanded */}
               <motion.span

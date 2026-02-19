@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import { IoMdArrowForward, IoMdCheckmark } from 'react-icons/io'
 import { contentSpring } from '../constants/animation'
-import { WEIGHT } from '../constants/typography'
+import { WEIGHT, LETTER_SPACING } from '../constants/typography'
 import { colorTokens } from '../constants/themes'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { BREAKPOINTS } from '../constants/breakpoints'
@@ -300,7 +300,7 @@ export function AddNewRoleContent({
           >
             <div
               className="uppercase leading-[100%] text-[12px] font-inter"
-              style={{ fontWeight: WEIGHT.medium, color: themeBadgeText, whiteSpace: 'nowrap' }}
+              style={{ fontWeight: WEIGHT.medium, letterSpacing: LETTER_SPACING.wider, color: themeBadgeText, whiteSpace: 'nowrap' }}
             >
               {shortcut}
             </div>
@@ -324,7 +324,7 @@ export function AddNewRoleContent({
           >
             <div
               className="uppercase leading-[100%] relative text-[12px] font-inter"
-              style={{ fontWeight: WEIGHT.medium }}
+              style={{ fontWeight: WEIGHT.medium, letterSpacing: LETTER_SPACING.wider }}
             >
               {/* ESC text absolutely positioned - same as MorphingCard */}
               <span className="absolute inset-0 flex items-center justify-center" style={{ color: themeBadgeText }}>
@@ -518,8 +518,8 @@ export function AddNewRoleContent({
                     </span>
                     <span style={{ width: `${s(12)}px` }} />
                     <span
-                      className="uppercase font-dotgothic"
-                      style={{ fontWeight: 400, fontSize: `${s(11)}px`, letterSpacing: '0.12em', color: themeText }}
+                      className="uppercase leading-[100%] font-inter"
+                      style={{ fontWeight: WEIGHT.medium, fontSize: `${s(12)}px`, color: isDark ? 'rgba(255,255,255,0.48)' : colorTokens.ctaGray }}
                     >
                       {exp.location}
                     </span>
