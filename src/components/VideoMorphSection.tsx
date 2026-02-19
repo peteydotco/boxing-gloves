@@ -341,7 +341,7 @@ export function VideoMorphSection() {
       data-section="video-morph"
       data-cursor-invert=""
       className="relative w-full"
-      style={{ height: '250vh', backgroundColor: '#010000' }}
+      style={{ height: '350vh', backgroundColor: '#010000' }}
     >
       {/* ── Sticky wrapper — pins content to viewport center ────── */}
       <div
@@ -584,8 +584,9 @@ export function VideoMorphSection() {
       </div>
 
       {/* Scroll sentinel — in normal document flow (NOT inside sticky).
-          Section is 250vh → sticky travel is 150vh.
-          Sentinel at 90vh → crosses viewport center at 40vh into travel. */}
+          Section is 350vh → sticky travel is 250vh.
+          Sentinel at 120vh → crosses viewport center at ~70vh into travel.
+          After morph, ~180vh of pinned scroll remains for viewing. */}
       <div
         ref={sentinelRef}
         style={{ position: 'absolute', top: '120vh', bottom: 0, width: '100%', pointerEvents: 'none' }}

@@ -78,8 +78,6 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
   const circleSize = isMobile ? 48 : Math.round(68 * contentScale)
   const borderWidth = isMobile ? 3 : Math.max(2, Math.round(3 * contentScale))
   const shadowSize = isMobile ? 3 : Math.round(4 * contentScale)
-  const labelSize = isMobile ? '11px' : `${Math.round(11 * contentScale)}px`
-
   // On hover, thumbnail+white stroke scales to cover the dark outer stroke
   // Scale factor: (circleSize + shadowSize*2) / circleSize
   const hoverScale = (circleSize + shadowSize * 2) / circleSize
