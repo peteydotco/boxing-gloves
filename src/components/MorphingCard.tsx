@@ -261,6 +261,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
 
   return (
     <button
+      aria-label={`View ${card.title} (opens in new tab)`}
       data-cursor="play"
       onClick={(e) => {
         e.stopPropagation()
@@ -452,6 +453,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
 
   return (
     <motion.button
+      aria-label={`Play ${card.songTitle} on Apple Music (opens in new tab)`}
       onClick={(e) => {
         e.stopPropagation()
         window.open(card.href, '_blank', 'noopener,noreferrer')
@@ -1152,7 +1154,8 @@ export function MorphingCard({
           <>
           {/* Shortcut badge - absolutely positioned at top right, animates position with padding */}
           {/* Separate from the text cluster to match collapsed card structure */}
-          <motion.div
+          <motion.button
+            aria-label="Close card"
             data-cursor="morph"
             data-cursor-radius="20"
             onClick={(e) => {
@@ -1160,7 +1163,7 @@ export function MorphingCard({
               onClose()
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
-            style={{ backgroundColor: styles.badgeBg }}
+            style={{ backgroundColor: styles.badgeBg, border: 'none' }}
             initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: hideShortcut ? 0 : 1 }}
             animate={{ right: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 14 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, top: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 16 : 22, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: hideShortcut ? 0 : 1 }}
             exit={{
@@ -1201,7 +1204,7 @@ export function MorphingCard({
                 {card.shortcut}
               </motion.span>
             </div>
-          </motion.div>
+          </motion.button>
 
           {/* TOP CLUSTER: Header + Title + Date Range */}
           {/* This cluster stays at the top of the card */}

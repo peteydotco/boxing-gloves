@@ -84,17 +84,23 @@ export function BottomBar() {
       })
 
       // Scroll-driven fade out — dissolve to 0 as user scrolls past hero.
-      // Uses fromTo so GSAP doesn't snapshot the pre-entrance opacity.
+      // Uses autoAlpha so visibility:hidden is set at 0.
       gsap.fromTo(bar,
-        { opacity: 1 },
+        { autoAlpha: 1 },
         {
-          opacity: 0,
+          autoAlpha: 0,
           ease: 'power2.out',
           scrollTrigger: {
             trigger: document.body,
             start: 'top top',
             end: '100vh top',
             scrub: 0.6,
+            // Toggle pointerEvents at actual scroll position (no scrub lag).
+            // The bar is position:fixed so it's always in the viewport —
+            // without this, elementFromPoint picks it up and triggers cursor morph.
+            onUpdate: (self) => {
+              bar.style.pointerEvents = self.progress > 0.05 ? 'none' : 'auto'
+            },
           },
         }
       )
@@ -140,6 +146,10 @@ export function BottomBar() {
   return (
     <div
       ref={barRef}
+      role="button"
+      tabIndex={0}
+      aria-label="Status bar"
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleTap() } }}
       className="font-inter"
       data-bottom-bar
       data-cursor="morph"
@@ -191,7 +201,7 @@ export function BottomBar() {
         transition: SLIDE_TRANSITION,
       }}>
         {isWide && (weather.isDaytime ? (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
             <circle cx="8" cy="8" r="3.5" stroke={ICON_STROKE} strokeWidth="1.5"/>
             <line x1="8" y1="0.5" x2="8" y2="2.5" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
             <line x1="8" y1="13.5" x2="8" y2="15.5" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
@@ -203,7 +213,7 @@ export function BottomBar() {
             <line x1="11.9" y1="4.1" x2="13.3" y2="2.7" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round"/>
           </svg>
         ) : (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
             <path d="M6.5 1.5C6.5 1.5 6 4.5 7 7C8 9.5 11 11 13.5 10.5C12.5 13.5 9.5 15 6.5 14C3.5 13 1.5 9.5 2.5 6.5C3.5 3.5 6.5 1.5 6.5 1.5Z" stroke={ICON_STROKE} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         ))}
@@ -286,12 +296,12 @@ export function BottomBar() {
         transition: SLIDE_TRANSITION,
       }}>
         {isWide && (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginRight: 6 }}>
             <path d="M0.769144 5.95684L13.2691 0.191216C14.5973 -0.425972 15.6363 0.534966 15.0191 1.8709L9.26914 14.3084C8.68321 15.5897 6.97227 15.3318 6.96446 13.949L6.95664 8.33965C6.95664 8.26153 6.93321 8.23809 6.85508 8.23809L1.20664 8.21465C-0.137106 8.20684 -0.465231 6.52715 0.769144 5.95684ZM2.70664 6.7459L7.71446 6.71465C8.20664 6.70684 8.46446 6.97247 8.45664 7.44903L8.42539 12.4725C8.42539 12.5037 8.45664 12.5037 8.47227 12.4725L13.316 1.92559C13.3473 1.86309 13.316 1.84747 13.2613 1.86309L2.69883 6.69122C2.65977 6.70684 2.66758 6.7459 2.70664 6.7459Z" fill={ICON_STROKE}/>
           </svg>
         )}
         {weather.loading ? (
-          <span style={{ opacity: 0.4 }}>{locationLabel}</span>
+          <span style={{ opacity: 0.6 }}>{locationLabel}</span>
         ) : (
           <>{locationLabel}{'\u00A0\u00A0'}{tempStr}</>
         )}

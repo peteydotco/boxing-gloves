@@ -429,11 +429,12 @@ function App() {
   }, [])
 
   return (
-    <div
+    <main
       ref={containerRef}
       className="relative w-full min-h-screen flex flex-col"
       style={{ overflowX: 'clip' }}
     >
+      <h1 className="sr-only">Peter Rodriguez — Designer</h1>
 
       {/* ===== PETEY Graffiti SVG — page-level background layer =====
            Positioned absolutely from the App root, scrolls with the page.
@@ -626,6 +627,7 @@ function App() {
              (flow height = sticky canvas + spacer only, giving maximum sticky travel). */}
         <section
           ref={heroRef}
+          aria-label="Hero"
           className="relative h-screen w-full flex-shrink-0"
           style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 40, pointerEvents: 'none' }}
         >
@@ -732,7 +734,7 @@ function App() {
           ))}
         </div>
       )}
-    </div>
+    </main>
   )
 }
 

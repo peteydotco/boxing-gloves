@@ -279,13 +279,14 @@ export function AddNewRoleContent({
       {!hideShortcut && (
         <>
           {/* Shortcut badge (4) - visible in collapsed, fades out when expanded */}
-          <motion.div
+          <motion.button
+            aria-label="Close card"
             onClick={(e) => {
               e.stopPropagation()
               onClose()
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
-            style={{ backgroundColor: themeBadgeBg }}
+            style={{ backgroundColor: themeBadgeBg, border: 'none' }}
             initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 1 }}
             animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 0 }}
             exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: expandedFromCompact ? 0 : 1 }}
@@ -297,17 +298,18 @@ export function AddNewRoleContent({
             >
               {shortcut}
             </div>
-          </motion.div>
+          </motion.button>
 
           {/* ESC badge - hidden in collapsed, fades in when expanded */}
           {/* Matches MorphingCard pattern exactly: shortcut provides layout, ESC overlays */}
-          <motion.div
+          <motion.button
+            aria-label="Close card"
             onClick={(e) => {
               e.stopPropagation()
               onClose()
             }}
             className="flex items-center justify-center rounded-full shrink-0 cursor-pointer absolute"
-            style={{ backgroundColor: themeBadgeBg }}
+            style={{ backgroundColor: themeBadgeBg, border: 'none' }}
             initial={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 0 }}
             animate={{ right: badgeRight, top: badgeTop, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '18px', paddingRight: '17px', opacity: 1 }}
             exit={{ right: 10, top: 10, paddingTop: '4px', paddingBottom: '4px', paddingLeft: '8px', paddingRight: '8px', opacity: 0 }}
@@ -324,7 +326,7 @@ export function AddNewRoleContent({
               {/* Single digit provides layout width - matches other cards' shortcuts (1, 2, 3, 4) */}
               <span style={{ color: themeBadgeText, opacity: 0 }}>4</span>
             </div>
-          </motion.div>
+          </motion.button>
         </>
       )}
 
@@ -424,6 +426,7 @@ export function AddNewRoleContent({
               <input
                 ref={inputRef}
                 type="text"
+                aria-label="Add a role"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 disabled={!isFocused}

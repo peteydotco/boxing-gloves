@@ -36,6 +36,7 @@ export function LogoMarqueeSection() {
 
   return (
     <section
+      aria-label="Clients and collaborators"
       className=""
       style={{
         position: 'relative',

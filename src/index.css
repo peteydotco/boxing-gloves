@@ -463,6 +463,26 @@ canvas {
   padding: 0.5px;
 }
 
+/* ===== Accessibility =====
+   Screen-reader-only utility — visually hidden, accessible to assistive technology */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Global focus indicator — visible on keyboard navigation only */
+*:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 /* ===== Reduced Motion =====
    Respects user's prefers-reduced-motion preference.
    Disables non-essential animations while preserving layout and interactivity. */

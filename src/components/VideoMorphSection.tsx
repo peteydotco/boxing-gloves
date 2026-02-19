@@ -335,6 +335,7 @@ export function VideoMorphSection() {
   return (
     <section
       ref={sectionRef}
+      aria-label="Video showcase"
       data-section="video-morph"
       data-cursor-invert=""
       className="relative w-full"
@@ -419,6 +420,7 @@ export function VideoMorphSection() {
                   >
                     {isPlaying ? (
                       <iframe
+                        title="YouTube video player"
                         src={`https://www.youtube.com/embed/${YOUTUBE_VIDEO_ID}?autoplay=1&rel=0`}
                         className="absolute inset-0 w-full h-full"
                         style={{ border: 'none' }}
@@ -427,6 +429,7 @@ export function VideoMorphSection() {
                       />
                     ) : (
                       <button
+                        aria-label="Play video"
                         onClick={() => setIsPlaying(true)}
                         className="relative w-full h-full"
                         data-cursor="play"

@@ -108,6 +108,7 @@ export function CustomCursor() {
     >
       {/* Play triangle — rounded corners, parallaxes with cursor movement */}
       <motion.svg
+        aria-hidden="true"
         viewBox="0 0 24 24"
         style={{
           position: 'absolute',
@@ -128,6 +129,7 @@ export function CustomCursor() {
       {/* Joystick nub — stroke ring on grab, filled dot on drag.
           Offsets in drag direction like a thumbstick. */}
       <motion.svg
+        aria-hidden="true"
         viewBox="0 0 20 20"
         width={20}
         height={20}
@@ -150,6 +152,7 @@ export function CustomCursor() {
 
       {/* Spray nozzle dot — small filled circle indicating paint target */}
       <motion.svg
+        aria-hidden="true"
         viewBox="0 0 20 20"
         width={20}
         height={20}

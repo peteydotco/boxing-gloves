@@ -1555,7 +1555,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                     pointerEvents: 'none',
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
-                    backgroundColor: isOverDark ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.8)',
+                    backgroundColor: isOverDark ? 'rgba(50,50,60,0.55)' : 'rgba(255,255,255,0.8)',
                     boxShadow: '0px 216px 60px 0px rgba(0,0,0,0), 0px 138px 55px 0px rgba(0,0,0,0.01), 0px 78px 47px 0px rgba(0,0,0,0.05), 0px 35px 35px 0px rgba(0,0,0,0.09), 0px 9px 19px 0px rgba(0,0,0,0.1)',
                     transition: 'background-color 0.4s ease',
                     // Magnetic: glass lags behind container (counter-displacement)
@@ -1685,7 +1685,13 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                           y: pillMagY,
                           backdropFilter: (!isMiniTray && isCta) ? 'blur(8px)' : undefined,
                           WebkitBackdropFilter: (!isMiniTray && isCta) ? 'blur(8px)' : undefined,
-                          transition: 'background-color 0.4s ease',
+                          // Mini pill outer stroke — subtle ring to separate pills from glass container bg.
+                          // Uses outline (not border) to avoid layout shift. Not Framer-animated, so safe for transitions.
+                          outline: (isMiniTray && !isCta)
+                            ? `1px solid ${isOverDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.10)'}`
+                            : '1px solid transparent',
+                          outlineOffset: -1,
+                          transition: 'background-color 0.4s ease, outline-color 0.15s ease',
                         }}
                         initial={{
                           width: 28,
