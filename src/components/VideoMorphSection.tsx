@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react
 import { motion, useSpring, useTransform, useMotionValueEvent } from 'framer-motion'
 import { gsap, ScrollTrigger, SplitText } from '../lib/gsap'
 import { BREAKPOINTS } from '../constants/breakpoints'
+import { DURATION } from '../constants/animation'
+import { WEIGHT, LETTER_SPACING } from '../constants/typography'
 import { colorTokens } from '../constants/themes'
 import { prefersReducedMotion } from '../hooks/useReducedMotion'
 
@@ -115,7 +117,7 @@ export function VideoMorphSection() {
   const hoverActive = morphComplete && isHovered && !prefersReducedMotion()
 
   const spotlightGradient = hoverActive
-    ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,1) 0%, rgba(200,210,230,0.8) 15%, rgba(120,120,130,0.35) 35%, rgba(140,140,150,0.3) 55%, rgba(120,120,130,0.35) 100%)`
+    ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,1) 0%, rgba(120,120,130,0.35) 35%, rgba(120,120,130,0.35) 100%)`
     : 'none'
 
   // Shadow — 5-layer Figma-matched, cursor-repelling
@@ -324,8 +326,8 @@ export function VideoMorphSection() {
 
   const labelStyle = {
     fontSize: isMobile ? 22 : 24,
-    fontWeight: 500,
-    letterSpacing: '-0.02em',
+    fontWeight: WEIGHT.medium,
+    letterSpacing: LETTER_SPACING.tight,
     whiteSpace: 'nowrap' as const,
     flex: 1,
     minWidth: 0,
@@ -429,6 +431,7 @@ export function VideoMorphSection() {
                       />
                     ) : (
                       <button
+                        type="button"
                         aria-label="Play video"
                         onClick={() => setIsPlaying(true)}
                         className="relative w-full h-full"
@@ -463,7 +466,7 @@ export function VideoMorphSection() {
                         ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 45%, transparent 80%)`
                         : 'none',
                       opacity: hoverActive ? 1 : 0,
-                      transition: 'opacity 0.4s ease-out',
+                      transition: `opacity ${DURATION.slow}s ease-out`,
                     }}
                   />
 
@@ -478,7 +481,7 @@ export function VideoMorphSection() {
                       WebkitMaskComposite: 'xor',
                       padding: '1px',
                       opacity: hoverActive ? 0.6 : 0,
-                      transition: 'opacity 0.4s ease-out',
+                      transition: `opacity ${DURATION.slow}s ease-out`,
                     }}
                   />
                 </motion.div>
@@ -547,10 +550,10 @@ export function VideoMorphSection() {
               left: '50%',
               transform: 'translateX(-50%)',
               fontSize: 'clamp(13px, 3.2vw, 16px)',
-              fontWeight: 500,
+              fontWeight: WEIGHT.medium,
               textAlign: 'center',
               lineHeight: 1.5,
-              letterSpacing: '-0.02em',
+              letterSpacing: LETTER_SPACING.tight,
               marginTop: 44,
               width: 'max-content',
               maxWidth: 'calc(100vw - 48px)',

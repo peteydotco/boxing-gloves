@@ -14,7 +14,10 @@ export function LogoMarqueeSection() {
   const reduced = useReducedMotion()
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText('hello@petey.co')
+    navigator.clipboard.writeText('hello@petey.co').catch(() => {
+      // Clipboard API may fail in insecure contexts or when denied permission
+      console.warn('Clipboard write failed')
+    })
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -113,6 +116,7 @@ export function LogoMarqueeSection() {
           }}
         >
           <motion.button
+            type="button"
             data-cursor="morph"
             data-cursor-radius="5"
             onClick={handleCopyEmail}
@@ -153,6 +157,7 @@ export function LogoMarqueeSection() {
           </motion.button>
 
           <motion.button
+            type="button"
             data-cursor="morph"
             data-cursor-radius="5"
             onClick={handleLinkedIn}

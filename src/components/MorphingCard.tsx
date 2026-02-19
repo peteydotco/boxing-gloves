@@ -11,6 +11,7 @@ import type { CardData, VariantStyle, ThemeMode } from '../types'
 import { variantStylesLight, getVariantStyles } from '../constants/themes'
 import { colorTokens } from '../constants/themes'
 import { BREAKPOINTS } from '../constants/breakpoints'
+import { WEIGHT, LETTER_SPACING } from '../constants/typography'
 import { AddNewRoleContent } from './AddNewRoleContent'
 import {
   signatureSpring,
@@ -20,6 +21,7 @@ import {
   mobileCollapseSpring,
   contentSpring,
   hoverTransition,
+  DURATION,
 } from '../constants/animation'
 
 interface MorphingCardProps {
@@ -84,6 +86,7 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
 
   return (
     <button
+      type="button"
       data-cursor="morph"
       data-cursor-radius={isMobile ? '24' : `${Math.round(34 * contentScale)}`}
       onClick={(e) => {
@@ -138,7 +141,7 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
           {highlight.image ? (
             <img src={highlight.image} alt={highlight.label} loading="lazy" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-[11px] uppercase font-inter" style={{ fontWeight: 500, color: styles.textColor }}>
+            <span className="text-[11px] uppercase font-inter" style={{ fontWeight: WEIGHT.medium, color: styles.textColor }}>
               {highlight.label.slice(0, 4)}
             </span>
           )}
@@ -146,7 +149,7 @@ function HighlightButton({ highlight, styles, onHighlightClick, isMobile = false
       </div>
       <span
         className="uppercase font-dotgothic"
-        style={{ fontWeight: 400, fontSize: labelSize, lineHeight: '100%', letterSpacing: '0.12em', color: styles.textColor }}
+        style={{ fontWeight: WEIGHT.regular, fontSize: labelSize, lineHeight: '100%', letterSpacing: LETTER_SPACING.widest, color: styles.textColor }}
       >
         {highlight.label}
       </span>
@@ -263,6 +266,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
 
   return (
     <button
+      type="button"
       aria-label={`View ${card.title} (opens in new tab)`}
       data-cursor="play"
       onClick={(e) => {
@@ -394,7 +398,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
             <span
               className="uppercase leading-[100%] font-inter"
               style={{
-                fontWeight: 500,
+                fontWeight: WEIGHT.medium,
                 color: '#000000',
                 fontSize: isMobile ? '11px' : `${Math.round(12 * contentScale)}px`,
               }}
@@ -455,6 +459,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
 
   return (
     <motion.button
+      type="button"
       aria-label={`Play ${card.songTitle} on Apple Music (opens in new tab)`}
       onClick={(e) => {
         e.stopPropagation()
@@ -551,7 +556,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
           <span
             className="uppercase font-inter"
             style={{
-              fontWeight: 500,
+              fontWeight: WEIGHT.medium,
               fontSize: isMobile ? '10px' : `${Math.round(11 * contentScale)}px`,
               letterSpacing: '0.33px',
               color: isInvertedWhite ? 'rgba(26,26,46,0.6)' : 'rgba(255,255,255,0.6)',
@@ -564,7 +569,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
           <span
             className="truncate w-full text-left font-inter"
             style={{
-              fontWeight: 500,
+              fontWeight: WEIGHT.medium,
               fontSize: isMobile ? '14px' : `${Math.round(19 * contentScale)}px`,
               color: isInvertedWhite ? 'rgba(26,26,46,1)' : '#FFFFFF',
               lineHeight: '1.3',
@@ -577,7 +582,7 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
           <span
             className="truncate w-full text-left font-inter"
             style={{
-              fontWeight: 400,
+              fontWeight: WEIGHT.regular,
               fontSize: isMobile ? '12px' : `${Math.round(15 * contentScale)}px`,
               color: isInvertedWhite ? 'rgba(26,26,46,0.7)' : 'rgba(255,255,255,0.75)',
               lineHeight: '1.3',
@@ -794,8 +799,8 @@ export function MorphingCard({
   const defaultBorderColor = styles.border
   const spotlightGradient = (isHovered && hasPointer)
     ? card.variant === 'cta'
-      ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(230, 230, 232, 0.35) 15%, ${defaultBorderColor} 35%, rgba(200, 200, 205, 0.15) 55%, rgba(195, 195, 200, 0.17) 100%)`
-      : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.6) 0%, rgba(200, 210, 230, 0.45) 15%, ${defaultBorderColor} 35%, rgba(140, 140, 150, 0.3) 55%, rgba(120, 120, 130, 0.35) 100%)`
+      ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.6) 0%, ${defaultBorderColor} 35%, rgba(195, 195, 200, 0.17) 100%)`
+      : `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.6) 0%, ${defaultBorderColor} 35%, rgba(120, 120, 130, 0.35) 100%)`
     : 'none'
 
   const label = mobileLabel || card.label
@@ -818,13 +823,13 @@ export function MorphingCard({
           <div className="flex flex-col gap-1">
             <span
               className="font-inter"
-              style={{ fontSize: '12px', fontWeight: 500, lineHeight: '15px', letterSpacing: '0.01em', color: styles.secondaryText }}
+              style={{ fontSize: '12px', fontWeight: WEIGHT.medium, lineHeight: '15px', letterSpacing: LETTER_SPACING.wide, color: styles.secondaryText }}
             >
               {card.label}
             </span>
             <span
               className="font-inter"
-              style={{ fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', color: styles.textColor }}
+              style={{ fontSize: '18px', fontWeight: WEIGHT.medium, lineHeight: '24px', letterSpacing: LETTER_SPACING.snug, color: styles.textColor }}
             >
               {card.title}
             </span>
@@ -833,7 +838,7 @@ export function MorphingCard({
             className="uppercase font-dotgothic"
             style={{
               fontSize: '12px',
-              fontWeight: 400,
+              fontWeight: WEIGHT.regular,
               lineHeight: '100%',
               color: styles.secondaryText,
               padding: '4.5px 8px 3.5px',
@@ -1040,7 +1045,7 @@ export function MorphingCard({
           style={{
             background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 45%, transparent 80%)`,
             opacity: isHovered ? 1 : 0,
-            transition: 'opacity 0.4s ease-out',
+            transition: `opacity ${DURATION.slow}s ease-out`,
           }}
         />
         {/* Border spotlight layer */}
@@ -1053,7 +1058,7 @@ export function MorphingCard({
             WebkitMaskComposite: 'xor',
             padding: '1px',
             opacity: isHovered ? 0.6 : 0,
-            transition: 'opacity 0.4s ease-out',
+            transition: `opacity ${DURATION.slow}s ease-out`,
           }}
         />
 
@@ -1159,6 +1164,7 @@ export function MorphingCard({
           {/* Shortcut badge - absolutely positioned at top right, animates position with padding */}
           {/* Separate from the text cluster to match collapsed card structure */}
           <motion.button
+            type="button"
             aria-label="Close card"
             data-cursor="morph"
             data-cursor-radius="20"
@@ -1184,7 +1190,7 @@ export function MorphingCard({
             {/* Badge text - same size as collapsed card */}
             <div
               className="uppercase leading-[100%] relative text-[12px] font-dotgothic"
-              style={{ fontWeight: 400, letterSpacing: '0.12em', top: '-0.5px' }}
+              style={{ fontWeight: WEIGHT.regular, letterSpacing: LETTER_SPACING.widest, top: '-0.5px' }}
             >
               {/* ESC text - absolutely positioned, fades in when expanded */}
               <motion.span
@@ -1221,7 +1227,7 @@ export function MorphingCard({
             {/* Label - morphs from collapsed to expanded */}
             <motion.div
               className="text-left font-inter"
-              style={{ color: styles.textColor, fontSize: '12px', fontWeight: 500, lineHeight: '15px', letterSpacing: '0.01em', transformOrigin: 'top left', whiteSpace: 'nowrap', overflow: 'hidden' }}
+              style={{ color: styles.textColor, fontSize: '12px', fontWeight: WEIGHT.medium, lineHeight: '15px', letterSpacing: LETTER_SPACING.wide, transformOrigin: 'top left', whiteSpace: 'nowrap', overflow: 'hidden' }}
               initial={{ scale: 1, opacity: 1 }}
               animate={{ scale: 14 / 12, opacity: 1 }}
               exit={{
@@ -1244,7 +1250,7 @@ export function MorphingCard({
             {/* For compactCta (mobile CTA), fade out quickly on exit since collapsed state has different layout */}
             <motion.div
               className="text-left w-full font-inter"
-              style={{ color: styles.textColor, transformOrigin: 'top left', fontSize: '18px', fontWeight: 500, lineHeight: '24px', letterSpacing: '-0.01em', whiteSpace: 'nowrap', position: 'relative' }}
+              style={{ color: styles.textColor, transformOrigin: 'top left', fontSize: '18px', fontWeight: WEIGHT.medium, lineHeight: '24px', letterSpacing: LETTER_SPACING.snug, whiteSpace: 'nowrap', position: 'relative' }}
               initial={{ scale: 1, y: -4, x: 0, opacity: 1 }}
               animate={{ scale: (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.mobile) ? 28 / 18 : (typeof window !== 'undefined' && window.innerWidth < BREAKPOINTS.desktop) ? 30 / 18 : 34 / 18, y: 1, x: -1, opacity: 1 }}
               exit={{
@@ -1272,10 +1278,10 @@ export function MorphingCard({
                 <motion.p
                   className="font-inter"
                   style={{
-                    fontWeight: 400,
+                    fontWeight: WEIGHT.regular,
                     fontSize: isMobileViewport ? '14px' : isTabletViewport ? '16px' : '18px',
                     lineHeight: isMobileViewport ? '20px' : isTabletViewport ? '22px' : '26px',
-                    letterSpacing: '-0.01em',
+                    letterSpacing: LETTER_SPACING.snug,
                     color: styles.textColor,
                     marginTop: isMobileViewport ? '20px' : isTabletViewport ? '16px' : '28px',
                   }}
@@ -1337,10 +1343,10 @@ export function MorphingCard({
                       <motion.p
                         className="flex items-center gap-2 font-inter"
                         style={{
-                          fontWeight: 400,
+                          fontWeight: WEIGHT.regular,
                           fontSize: '14px',
                           lineHeight: '20px',
-                          letterSpacing: '-0.01em',
+                          letterSpacing: LETTER_SPACING.snug,
                           color: styles.textColor,
                           opacity: 0.9,
                         }}
@@ -1429,6 +1435,7 @@ export function MorphingCard({
 
                             return (
                               <button
+                                type="button"
                                 key={i}
                                 data-cursor="morph"
                                 data-cursor-radius="5"
@@ -1443,7 +1450,7 @@ export function MorphingCard({
                                 }}
                               >
                                 {Icon && <Icon className="w-5 h-5" />}
-                                <span data-cursor-parallax="" className="text-[18px] uppercase font-inter" style={{ fontWeight: 500, letterSpacing: '-0.01em' }}>
+                                <span data-cursor-parallax="" className="text-[18px] uppercase font-inter" style={{ fontWeight: WEIGHT.medium, letterSpacing: LETTER_SPACING.snug }}>
                                   {action.label}
                                 </span>
                               </button>
@@ -1510,10 +1517,10 @@ export function MorphingCard({
                 <motion.p
                   className="flex items-center font-inter"
                   style={{
-                    fontWeight: 400,
+                    fontWeight: WEIGHT.regular,
                     fontSize: `${Math.round(18 * contentScale)}px`,
                     lineHeight: `${Math.round(26 * contentScale)}px`,
-                    letterSpacing: '-0.01em',
+                    letterSpacing: LETTER_SPACING.snug,
                     color: styles.textColor,
                     opacity: 0.9,
                     gap: `${Math.round(8 * contentScale)}px`,
@@ -1644,6 +1651,7 @@ export function MorphingCard({
 
                       return (
                         <button
+                          type="button"
                           key={i}
                           data-cursor="morph"
                           data-cursor-radius="5"
@@ -1659,7 +1667,7 @@ export function MorphingCard({
                           }}
                         >
                           {Icon && <Icon style={{ width: `${iconSize}px`, height: `${iconSize}px` }} />}
-                          <span data-cursor-parallax="" className="uppercase font-inter" style={{ fontWeight: 500, letterSpacing: '-0.01em', fontSize: `${fontSize}px` }}>
+                          <span data-cursor-parallax="" className="uppercase font-inter" style={{ fontWeight: WEIGHT.medium, letterSpacing: LETTER_SPACING.snug, fontSize: `${fontSize}px` }}>
                             {action.label}
                           </span>
                         </button>
@@ -1789,7 +1797,7 @@ export function MorphingCard({
         style={{
           background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 30%, transparent 60%)`,
           opacity: isHovered ? 1 : 0,
-          transition: 'opacity 0.4s ease-out',
+          transition: `opacity ${DURATION.slow}s ease-out`,
         }}
       />
       {/* Border spotlight — skip for CTA (clashes with dotted SVG border) */}
@@ -1807,7 +1815,7 @@ export function MorphingCard({
             WebkitMaskComposite: 'xor',
             padding: '1px',
             opacity: isHovered ? 1 : 0,
-            transition: 'opacity 0.4s ease-out',
+            transition: `opacity ${DURATION.slow}s ease-out`,
           }}
         />
       )}
@@ -1821,7 +1829,7 @@ export function MorphingCard({
             right: '10px',
             transform: (isHovered && !isExpanded) ? 'translateY(-20px)' : 'translateY(0)',
             opacity: (isHovered && !isExpanded) ? 0 : 1,
-            transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
+            transition: `transform ${DURATION.normal}s cubic-bezier(0.33, 1, 0.68, 1), opacity ${DURATION.normal}s cubic-bezier(0.33, 1, 0.68, 1)`,
             zIndex: 10,
           }}
         >
@@ -1835,8 +1843,8 @@ export function MorphingCard({
             <div
               className="text-[12px] uppercase leading-[100%] font-dotgothic"
               style={{
-                fontWeight: 400,
-                letterSpacing: '0.08em',
+                fontWeight: WEIGHT.regular,
+                letterSpacing: LETTER_SPACING.wider,
                 position: 'relative',
                 top: '-0.5px',
                 ...(card.variant === 'cta' && { color: 'rgba(0,0,0,0.48)' }),
@@ -1857,7 +1865,7 @@ export function MorphingCard({
           <div data-cursor-parallax="" className="flex flex-col items-center justify-center w-full h-full">
             <div
               className="text-[12px] text-center font-inter"
-              style={{ fontWeight: 500, lineHeight: '15px', letterSpacing: '-0.01em' }}
+              style={{ fontWeight: WEIGHT.medium, lineHeight: '15px', letterSpacing: LETTER_SPACING.snug }}
             >
               Add a role...
             </div>
@@ -1870,12 +1878,12 @@ export function MorphingCard({
               <div
                 className="text-[12px] text-left font-inter"
                 style={{
-                  fontWeight: 500,
+                  fontWeight: WEIGHT.medium,
                   lineHeight: '15px',
-                  letterSpacing: '0.01em',
+                  letterSpacing: LETTER_SPACING.wide,
                   transform: (isHovered && !isExpanded) ? 'translateY(-20px)' : 'translateY(0)',
                   opacity: (isHovered && !isExpanded) ? 0 : 1,
-                  transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
+                  transition: `transform ${DURATION.normal}s cubic-bezier(0.33, 1, 0.68, 1), opacity ${DURATION.normal}s cubic-bezier(0.33, 1, 0.68, 1)`,
                 }}
               >
                 {label}
@@ -1886,12 +1894,12 @@ export function MorphingCard({
                 className="text-left w-full font-inter"
                 style={{
                   fontSize: '18px',
-                  fontWeight: 500,
+                  fontWeight: WEIGHT.medium,
                   lineHeight: '24px',
-                  letterSpacing: '-0.01em',
+                  letterSpacing: LETTER_SPACING.snug,
                   marginTop: '-4px',
                   transform: (isHovered && !isExpanded) ? 'translateY(-21px)' : 'translateY(0)',
-                  transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
+                  transition: `transform ${DURATION.normal}s cubic-bezier(0.33, 1, 0.68, 1)`,
                   color: card.variant === 'cta' ? (styles as typeof variantStylesLight.cta).ctaTitleColor : undefined,
                 }}
               >
@@ -1904,13 +1912,13 @@ export function MorphingCard({
                 style={{
                   bottom: -19.5,
                   left: 0,
-                  fontWeight: 400,
+                  fontWeight: WEIGHT.regular,
                   fontSize: '14px',
                   lineHeight: '18px',
-                  letterSpacing: '-0.01em',
+                  letterSpacing: LETTER_SPACING.snug,
                   transform: (isHovered && !isExpanded) ? 'translateY(-19px)' : 'translateY(0)',
                   opacity: (isHovered && !isExpanded) ? 1 : 0,
-                  transition: 'transform 0.25s cubic-bezier(0.33, 1, 0.68, 1), opacity 0.25s cubic-bezier(0.33, 1, 0.68, 1)',
+                  transition: `transform ${DURATION.normal}s cubic-bezier(0.33, 1, 0.68, 1), opacity ${DURATION.normal}s cubic-bezier(0.33, 1, 0.68, 1)`,
                   color: card.variant === 'cta' ? styles.textColor : undefined,
                 }}
               >

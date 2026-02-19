@@ -13,7 +13,7 @@ import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
 import { BottomBar } from './components/BottomBar'
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
-import { BREAKPOINTS, Z } from './constants'
+import { BREAKPOINTS, Z, TYPE_SCALE, WEIGHT, LETTER_SPACING } from './constants'
 import { colorTokens } from './constants/themes'
 import { prefersReducedMotion } from './hooks/useReducedMotion'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
@@ -823,10 +823,10 @@ function BioTextReveal({
         ...(right ? { right } : {}),
         width,
         zIndex: 1,
-        fontSize: 24,
-        fontWeight: 500,
-        lineHeight: 1.4,
-        letterSpacing: '-0.04em',
+        fontSize: TYPE_SCALE['2xl'].size,
+        fontWeight: WEIGHT.medium,
+        lineHeight: TYPE_SCALE['2xl'].lineHeight,
+        letterSpacing: LETTER_SPACING.tighter,
         color: colorTokens.neutralNearBlack,
         textAlign,
       }}
@@ -971,10 +971,10 @@ function AndOccasionallyText({ triggerRef }: { triggerRef: React.RefObject<HTMLD
           zIndex: 25,
           pointerEvents: 'auto',
           whiteSpace: 'nowrap',
-          fontSize: 24,
-          fontWeight: 500,
-          lineHeight: 1.4,
-          letterSpacing: '-0.02em',
+          fontSize: TYPE_SCALE['2xl'].size,
+          fontWeight: WEIGHT.medium,
+          lineHeight: TYPE_SCALE['2xl'].lineHeight,
+          letterSpacing: LETTER_SPACING.tight,
           color: colorTokens.neutralNearBlack,
           textAlign: 'center',
         }}

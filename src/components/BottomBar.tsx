@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react'
 import { IoMdArrowForward } from 'react-icons/io'
-import { BREAKPOINTS } from '../constants'
+import { BREAKPOINTS, DURATION, WEIGHT } from '../constants'
 import { colorTokens } from '../constants/themes'
 import { elevations } from '../constants/elevations'
 import { useNycTime } from '../hooks/useNycTime'
@@ -130,7 +130,7 @@ export function BottomBar() {
   const previewText = (
     <>
       {status.shortText}
-      {' '}<IoMdArrowForward style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', position: 'relative', top: '-1px' }} />{' '}
+      {' '}<IoMdArrowForward aria-hidden="true" style={{ display: 'inline', verticalAlign: 'middle', fontSize: '0.9em', margin: '0 1px', position: 'relative', top: '-1px' }} />{' '}
       {nextInfo.status.shortText} in {nextInfo.hoursUntil}h
     </>
   )
@@ -178,7 +178,7 @@ export function BottomBar() {
         border: hovered ? `1px solid ${colorTokens.surfaceWhite}` : `1px solid ${colorTokens.surfaceWhiteHover}`,
         boxShadow: elevations.figma5Step,
         padding: '0 20px 1px',
-        fontWeight: 500,
+        fontWeight: WEIGHT.medium,
         fontSize,
         color: ICON_STROKE,
         pointerEvents: 'auto',
@@ -220,7 +220,7 @@ export function BottomBar() {
         ))}
         <span>
           {hours}
-          <span style={{ opacity: colonVisible ? 1 : 0, transition: 'opacity 0.15s ease' }}>:</span>
+          <span style={{ opacity: colonVisible ? 1 : 0, transition: `opacity ${DURATION.fast}s ease` }}>:</span>
           {minutes} {period}{isWide && ` ${timezone}`}
         </span>
       </div>

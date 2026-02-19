@@ -260,7 +260,10 @@ export function AddNewRoleContent({
   }, [isFocused])
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText('hello@petey.co')
+    navigator.clipboard.writeText('hello@petey.co').catch(() => {
+      // Clipboard API may fail in insecure contexts or when denied permission
+      console.warn('Clipboard write failed')
+    })
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -281,6 +284,7 @@ export function AddNewRoleContent({
         <>
           {/* Shortcut badge (4) - visible in collapsed, fades out when expanded */}
           <motion.button
+            type="button"
             aria-label="Close card"
             onClick={(e) => {
               e.stopPropagation()
@@ -304,6 +308,7 @@ export function AddNewRoleContent({
           {/* ESC badge - hidden in collapsed, fades in when expanded */}
           {/* Matches MorphingCard pattern exactly: shortcut provides layout, ESC overlays */}
           <motion.button
+            type="button"
             aria-label="Close card"
             onClick={(e) => {
               e.stopPropagation()
@@ -709,6 +714,7 @@ export function AddNewRoleContent({
         transition={{ duration: 0.25, delay: 0.3 }}
       >
         <motion.button
+          type="button"
           data-cursor="morph"
           data-cursor-radius="5"
           onClick={(e) => {
@@ -744,6 +750,7 @@ export function AddNewRoleContent({
           </span>
         </motion.button>
         <motion.button
+          type="button"
           data-cursor="morph"
           data-cursor-radius="5"
           onClick={(e) => {

@@ -2,7 +2,7 @@ import * as React from 'react'
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { MorphingCard } from './MorphingCard'
 import { createPortal } from 'react-dom'
-import { BREAKPOINTS, CAROUSEL_CONFIG, backdropColors, signatureSpring, ctaEntranceSpring, getVariantStyles, colorTokens, elevations, Z } from '../constants'
+import { BREAKPOINTS, CAROUSEL_CONFIG, DURATION, backdropColors, signatureSpring, ctaEntranceSpring, getVariantStyles, colorTokens, elevations, Z } from '../constants'
 import { cards, stackedCardConfigs } from '../data/cards'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 
@@ -1559,7 +1559,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                     WebkitBackdropFilter: 'blur(8px)',
                     backgroundColor: isOverDark ? 'rgba(50,50,60,0.55)' : 'rgba(255,255,255,0.8)',
                     boxShadow: elevations.figma5Step,
-                    transition: 'background-color 0.4s ease',
+                    transition: `background-color ${DURATION.slow}s ease`,
                     // Magnetic: glass lags behind container (counter-displacement)
                     x: glassMagX,
                     y: glassMagY,
@@ -1693,7 +1693,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                             ? `1px solid ${isOverDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.10)'}`
                             : '1px solid transparent',
                           outlineOffset: -1,
-                          transition: 'background-color 0.4s ease, outline-color 0.15s ease',
+                          transition: `background-color ${DURATION.slow}s ease, outline-color ${DURATION.fast}s ease`,
                         }}
                         initial={{
                           width: 28,
@@ -1768,7 +1768,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                               strokeWidth="2.5"
                               strokeDasharray="12 8"
                               strokeLinecap="round"
-                              style={{ transition: 'stroke 0.4s ease' }}
+                              style={{ transition: `stroke ${DURATION.slow}s ease` }}
                             />
                           </motion.svg>
                         )}
@@ -1787,7 +1787,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                               strokeWidth="1.5"
                               strokeDasharray="3 2.5"
                               strokeLinecap="round"
-                              style={{ transition: 'stroke 0.4s ease' }}
+                              style={{ transition: `stroke ${DURATION.slow}s ease` }}
                             />
                           </svg>
                         )}
@@ -1808,7 +1808,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                             letterSpacing: '-0.01em',
                             lineHeight: '22px',
                             color: isCta ? ctaTextColor : '#FFFFFF',
-                            transition: isCta ? 'color 0.4s ease' : undefined,
+                            transition: isCta ? `color ${DURATION.slow}s ease` : undefined,
                             whiteSpace: 'nowrap',
                             pointerEvents: isMiniTray ? 'none' : 'auto',
                           }}
@@ -1857,7 +1857,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                               className="flex items-center justify-center shrink-0 rounded-full"
                               style={{
                                 backgroundColor: isOverDark ? 'rgba(255,255,255,0.15)' : '#DDDDDD',
-                                transition: 'background-color 0.4s ease',
+                                transition: `background-color ${DURATION.slow}s ease`,
                                 padding: '4px 8px',
                                 minWidth: 18.66,
                                 height: 18.66,
@@ -1871,7 +1871,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                                   position: 'relative',
                                   top: '-0.5px',
                                   color: ctaTextColor,
-                                  transition: 'color 0.4s ease',
+                                  transition: `color ${DURATION.slow}s ease`,
                                 }}
                               >
                                 {card.shortcut}
