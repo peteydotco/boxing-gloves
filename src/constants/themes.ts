@@ -60,6 +60,22 @@ export const colorTokens = {
   ink750: 'rgba(27,32,42,1)',          // #1B202A
   ink700: 'rgba(30,30,40,1)',          // #1E1E28
   ink600: '#252530',
+
+  // Surface & overlay tokens
+  surfaceWhite: '#FFFFFF',
+  surfaceWhiteHover: 'rgba(250,250,250,0.8)',
+
+  // CTA-specific grays
+  ctaGray: '#8E8E8E',
+  ctaBorderLight: '#CACACA',
+
+  // Border overlays (semi-transparent, used for inset strokes)
+  borderOverlayLight: 'rgba(255,255,255,0.08)',
+  borderOverlayDark: 'rgba(0,0,0,0.08)',
+  borderSubtle: 'rgba(0,0,0,0.09)',
+
+  // Credit text (WCAG AA compliant on white)
+  creditText: '#757575',
 } as const
 
 // Light/inverted theme styles

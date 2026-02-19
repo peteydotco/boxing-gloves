@@ -9,6 +9,7 @@ import { IoMdArrowForward } from 'react-icons/io'
 import React from 'react'
 import type { CardData, VariantStyle, ThemeMode } from '../types'
 import { variantStylesLight, getVariantStyles } from '../constants/themes'
+import { colorTokens } from '../constants/themes'
 import { BREAKPOINTS } from '../constants/breakpoints'
 import { AddNewRoleContent } from './AddNewRoleContent'
 import {
@@ -283,8 +284,8 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
           boxShadow: isInvertedWhite
             ? 'inset 0 0 0 1px rgba(0,0,0,0.06)'
             : (variant === 'white')
-              ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
-              : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+              ? `inset 0 0 0 1px ${colorTokens.borderOverlayLight}`
+              : `inset 0 0 0 1px ${colorTokens.borderOverlayDark}`,
         }}
       />
 
@@ -406,7 +407,7 @@ function ReflectionsCard({ card, themeMode = 'light', variant, isMobile = false,
         <div
           className="absolute inset-0 rounded-[6px] pointer-events-none"
           style={{
-            boxShadow: '0 0 0 1px rgba(255,255,255,0.08)',
+            boxShadow: `0 0 0 1px ${colorTokens.borderOverlayLight}`,
           }}
         />
       </motion.div>
@@ -475,8 +476,8 @@ function NowPlayingCard({ card, themeMode = 'light', variant, isMobile = false, 
           boxShadow: (variant === 'white' && (themeMode === 'dark' || themeMode === 'darkInverted'))
             ? 'inset 0 0 0 1px rgba(0,0,0,0.06)'
             : (variant === 'white' || variant === 'cta')
-              ? 'inset 0 0 0 1px rgba(255,255,255,0.08)'
-              : 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+              ? `inset 0 0 0 1px ${colorTokens.borderOverlayLight}`
+              : `inset 0 0 0 1px ${colorTokens.borderOverlayDark}`,
         }}
       />
 
@@ -623,7 +624,7 @@ function HighlightsContainer({ highlights, styles, onHighlightClick, isMobile = 
       <div
         className="absolute inset-0 rounded-[10px] pointer-events-none z-10"
         style={{
-          boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+          boxShadow: `inset 0 0 0 1px ${colorTokens.borderOverlayDark}`,
         }}
       />
 
@@ -857,11 +858,11 @@ export function MorphingCard({
   // but expanded needs solid white bg + dark text (original values)
   const expandedStyles = card.variant === 'cta' ? {
     ...styles,
-    bg: '#FFFFFF',
-    textColor: '#8E8E8E',
-    ctaTitleColor: '#8E8E8E',
+    bg: colorTokens.surfaceWhite,
+    textColor: colorTokens.ctaGray,
+    ctaTitleColor: colorTokens.ctaGray,
     border: 'rgba(0,0,0,0.05)',
-    badgeBg: 'rgba(0,0,0,0.08)',
+    badgeBg: colorTokens.borderOverlayDark,
   } : styles
 
   // If expanded with collapsedPosition, this is a portal card that animates from collapsed to expanded
@@ -1686,7 +1687,7 @@ export function MorphingCard({
             Uses mini-tray-sized border params (rx=4, thin stroke, small dashes) since the
             exit target is the 28×8px mini pill, not the expanded compact pill. */}
         {expandedFromCompact && card.variant === 'cta' && (() => {
-          const ghostBorderColor = isOverDark ? 'rgba(255,255,255,0.4)' : '#cacaca'
+          const ghostBorderColor = isOverDark ? 'rgba(255,255,255,0.4)' : colorTokens.ctaBorderLight
           const ghostBg = isOverDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.36)'
           return (
           <motion.div
@@ -1828,7 +1829,7 @@ export function MorphingCard({
             className="flex items-center justify-center rounded-full shrink-0"
             style={{
               padding: '4px 8px',
-              backgroundColor: card.variant === 'cta' ? 'rgba(0,0,0,0.08)' : styles.badgeBg,
+              backgroundColor: card.variant === 'cta' ? colorTokens.borderOverlayDark : styles.badgeBg,
             }}
           >
             <div

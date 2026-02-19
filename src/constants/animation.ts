@@ -94,6 +94,18 @@ export function motionSafe<T extends Record<string, unknown>>(spring: T): T | { 
   return prefersReducedMotion() ? { type: 'tween' as const, duration: 0.01 } : spring
 }
 
+// =============================================================================
+// TRANSITION DURATION SCALE — For CSS transition-duration and Framer Motion
+// =============================================================================
+export const DURATION = {
+  /** 0.15s — fast: micro-interactions, opacity fades, icon swaps */
+  fast: 0.15,
+  /** 0.25s — normal: hover states, color transitions, button feedback */
+  normal: 0.25,
+  /** 0.4s — slow: background-color crossfades, border-color changes */
+  slow: 0.4,
+} as const
+
 // Carousel tuning configuration
 export const CAROUSEL_CONFIG = {
   dragThreshold: 50,

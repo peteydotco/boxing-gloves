@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import { IoMdArrowForward, IoMdCheckmark } from 'react-icons/io'
 import { contentSpring } from '../constants/animation'
+import { colorTokens } from '../constants/themes'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 import { BREAKPOINTS } from '../constants/breakpoints'
 import type { VariantStyle } from '../types'
@@ -200,11 +201,11 @@ const defaultCtaColors = {
   ctaTitleColor: 'rgba(0,0,0,0.75)',
   secondaryText: 'rgba(0,0,0,0.7)',
   badgeTextColor: 'rgba(0,0,0,0.48)', // lighter gray for badge text
-  badgeBg: 'rgba(0,0,0,0.08)',
+  badgeBg: colorTokens.borderOverlayDark,
   primaryButtonBg: 'rgba(0,0,0,0.87)',
-  primaryButtonText: '#FFFFFF',
+  primaryButtonText: colorTokens.surfaceWhite,
   primaryButtonBorder: 'rgba(0,0,0,0.2)',
-  border: 'rgba(0,0,0,0.08)',
+  border: colorTokens.borderOverlayDark,
   dividerColor: 'rgba(0,0,0,0.12)',
 }
 
@@ -721,8 +722,8 @@ export function AddNewRoleContent({
             width: `${s(225)}px`,
             height: `${s(48)}px`,
             borderRadius: '5px',
-            backgroundColor: hoveredButton === 'linkedin' ? '#FFFFFF' : 'transparent',
-            border: hoveredButton === 'linkedin' ? '1px solid rgba(0,0,0,0.075)' : '1px solid rgba(0,0,0,0.09)',
+            backgroundColor: hoveredButton === 'linkedin' ? colorTokens.surfaceWhite : 'transparent',
+            border: hoveredButton === 'linkedin' ? '1px solid rgba(0,0,0,0.075)' : `1px solid ${colorTokens.borderSubtle}`,
             boxShadow: hoveredButton === 'linkedin' ? '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
             transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
           }}
@@ -756,8 +757,8 @@ export function AddNewRoleContent({
             width: `${s(225)}px`,
             height: `${s(48)}px`,
             borderRadius: '5px',
-            backgroundColor: hoveredButton === 'email' ? '#FFFFFF' : 'transparent',
-            border: hoveredButton === 'email' ? '1px solid rgba(0,0,0,0.075)' : '1px solid rgba(0,0,0,0.09)',
+            backgroundColor: hoveredButton === 'email' ? colorTokens.surfaceWhite : 'transparent',
+            border: hoveredButton === 'email' ? '1px solid rgba(0,0,0,0.075)' : `1px solid ${colorTokens.borderSubtle}`,
             boxShadow: hoveredButton === 'email' ? '0 1070px 250px 0 rgba(0,0,0,0.00), 0 685px 250px 0 rgba(0,0,0,0.02), 0 385px 231px 0 rgba(0,0,0,0.08), 0 171px 171px 0 rgba(0,0,0,0.14), 0 43px 94px 0 rgba(0,0,0,0.16)' : 'none',
             transition: 'background-color 0.3s ease-out, box-shadow 0.3s ease-out, border-color 0.3s ease-out',
           }}

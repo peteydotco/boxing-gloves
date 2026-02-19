@@ -2,7 +2,7 @@ import * as React from 'react'
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { MorphingCard } from './MorphingCard'
 import { createPortal } from 'react-dom'
-import { BREAKPOINTS, CAROUSEL_CONFIG, backdropColors, signatureSpring, ctaEntranceSpring, getVariantStyles } from '../constants'
+import { BREAKPOINTS, CAROUSEL_CONFIG, backdropColors, signatureSpring, ctaEntranceSpring, getVariantStyles, colorTokens, elevations, Z } from '../constants'
 import { cards, stackedCardConfigs } from '../data/cards'
 import { useReducedMotion } from '../hooks/useReducedMotion'
 
@@ -1223,7 +1223,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
               {/* Backdrop - samples bg color from focused card, smoothly transitions */}
               <motion.div
                 className="fixed inset-0"
-                style={{ zIndex: 9998, mixBlendMode: 'multiply' }}
+                style={{ zIndex: Z.expandedCard - 1, mixBlendMode: 'multiply' }}
                 initial={{ opacity: 0, backgroundColor: backdropColors[themeMode === 'dark' || themeMode === 'darkInverted' ? 'dark' : 'light'][cardsToShow[expandedIndex!]?.variant || 'cta'] }}
                 animate={{
                   opacity: 1,
@@ -1240,7 +1240,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
               <div
                 ref={setDragContainer}
                 className="fixed inset-0 cursor-grab active:cursor-grabbing"
-                style={{ zIndex: 9999, touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
+                style={{ zIndex: Z.expandedCard, touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none' }}
                 onClick={() => {
                   // Only close if it wasn't a drag (minimal movement)
                   if (Math.abs(dragState.current.totalDragDistance) < 10) {
@@ -1357,7 +1357,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
               data-compact-bar
               className="fixed top-0 left-0 right-0 horizontal-padding-responsive"
               style={{
-                zIndex: 50,
+                zIndex: Z.compactBar,
                 paddingTop: isMobile ? 12 : 20,
                 paddingBottom: isMobile ? 12 : 20,
                 overflow: 'visible',
@@ -1439,7 +1439,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
               data-compact-bar
               className="fixed top-0 left-0 right-0"
               style={{
-                zIndex: 50,
+                zIndex: Z.compactBar,
                 display: 'flex',
                 justifyContent: 'center',
                 pointerEvents: 'none', // Let children handle pointer events
@@ -1558,7 +1558,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
                     backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
                     backgroundColor: isOverDark ? 'rgba(50,50,60,0.55)' : 'rgba(255,255,255,0.8)',
-                    boxShadow: '0px 216px 60px 0px rgba(0,0,0,0), 0px 138px 55px 0px rgba(0,0,0,0.01), 0px 78px 47px 0px rgba(0,0,0,0.05), 0px 35px 35px 0px rgba(0,0,0,0.09), 0px 9px 19px 0px rgba(0,0,0,0.1)',
+                    boxShadow: elevations.figma5Step,
                     transition: 'background-color 0.4s ease',
                     // Magnetic: glass lags behind container (counter-displacement)
                     x: glassMagX,
@@ -1656,9 +1656,9 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
 
                     // Mini tray pill colors (from Figma)
                     const miniColors: Record<string, string> = {
-                      blue: '#0165ff',
-                      white: '#1a1a2e',
-                      red: '#eb2d37',
+                      blue: colorTokens.brandSquarespace,
+                      white: colorTokens.ink800,
+                      red: colorTokens.redBrand,
                       cta: isOverDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.36)',
                     }
 

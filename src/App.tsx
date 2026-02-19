@@ -13,7 +13,7 @@ import { LogoMarqueeSection } from './components/LogoMarqueeSection'
 import { SiteFooter } from './components/SiteFooter'
 import { BottomBar } from './components/BottomBar'
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
-import { BREAKPOINTS } from './constants'
+import { BREAKPOINTS, Z } from './constants'
 import { colorTokens } from './constants/themes'
 import { prefersReducedMotion } from './hooks/useReducedMotion'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
@@ -447,7 +447,7 @@ function App() {
             top: 0,
             left: 0,
             width: '100%',
-            zIndex: 0,
+            zIndex: Z.background,
             overflow: 'hidden',
             opacity: 0.10,
           }}
@@ -608,7 +608,7 @@ function App() {
             top: 0,
             height: '100vh',
             width: '100%',
-            zIndex: 30,
+            zIndex: Z.stickyCanvas,
             pointerEvents: 'auto',
           }}
         >
@@ -629,11 +629,11 @@ function App() {
           ref={heroRef}
           aria-label="Hero"
           className="relative h-screen w-full flex-shrink-0"
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 40, pointerEvents: 'none' }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: Z.hero, pointerEvents: 'none' }}
         >
           <div
             className="absolute top-0 left-0 right-0"
-            style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: 40 }}
+            style={{ pointerEvents: 'auto', overflow: 'visible', zIndex: Z.hero }}
           >
             <TopCards themeMode={themeMode} introStagger />
           </div>
@@ -669,7 +669,7 @@ function App() {
           direction="enter"
           src="/images/transition-entry.png"
           className="relative"
-          style={{ zIndex: 20, ...(isMobile ? { marginTop: '-100vh' } : {}) }}
+          style={{ zIndex: Z.gradientDome, ...(isMobile ? { marginTop: '-100vh' } : {}) }}
           fadeIn={isMobile}
         />
 
@@ -683,7 +683,7 @@ function App() {
       </div>
 
       {/* ===== Spray Paint Zone — canvas overlay spans gradient + quote + footer ===== */}
-      <div style={{ position: 'relative', zIndex: 21 }}>
+      <div style={{ position: 'relative', zIndex: Z.sprayZone }}>
         {/* ===== Exit Gradient Transition ===== */}
         <GradientTransition
           direction="exit"
@@ -715,7 +715,7 @@ function App() {
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 99999,
+            zIndex: Z.debugGrid,
             pointerEvents: 'none',
             display: 'grid',
             gridTemplateColumns: 'repeat(12, 1fr)',

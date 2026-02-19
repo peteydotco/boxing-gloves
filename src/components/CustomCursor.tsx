@@ -1,5 +1,6 @@
 import { motion, useTransform } from 'framer-motion'
 import { useCursorMorph } from '../hooks/useCursorMorph'
+import { Z } from '../constants'
 
 const DARK_COLOR = 'rgba(0, 0, 0, 0.18)'
 const LIGHT_COLOR = 'rgba(255, 255, 255, 0.5)'
@@ -100,7 +101,7 @@ export function CustomCursor() {
         translateY: '-50%',
         background,
         pointerEvents: 'none',
-        zIndex: 99998,
+        zIndex: Z.cursor,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } fr
 import { IoMdArrowForward } from 'react-icons/io'
 import { BREAKPOINTS } from '../constants'
 import { colorTokens } from '../constants/themes'
+import { elevations } from '../constants/elevations'
 import { useNycTime } from '../hooks/useNycTime'
 import { useStatusSchedule, ALL_STATUSES, getNextStatus, getNycDate } from '../hooks/useStatusSchedule'
 import { useNycWeather } from '../hooks/useNycWeather'
@@ -173,9 +174,9 @@ export function BottomBar() {
         borderRadius: 16,
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
-        background: hovered ? '#FFFFFF' : 'rgba(250, 250, 250, 0.8)',
-        border: hovered ? '1px solid #FFFFFF' : '1px solid rgba(250, 250, 250, 0.8)',
-        boxShadow: '0px 216px 60px 0px rgba(0,0,0,0), 0px 138px 55px 0px rgba(0,0,0,0.01), 0px 78px 47px 0px rgba(0,0,0,0.05), 0px 35px 35px 0px rgba(0,0,0,0.09), 0px 9px 19px 0px rgba(0,0,0,0.1)',
+        background: hovered ? colorTokens.surfaceWhite : colorTokens.surfaceWhiteHover,
+        border: hovered ? `1px solid ${colorTokens.surfaceWhite}` : `1px solid ${colorTokens.surfaceWhiteHover}`,
+        boxShadow: elevations.figma5Step,
         padding: '0 20px 1px',
         fontWeight: 500,
         fontSize,

@@ -562,7 +562,7 @@ export function VideoMorphSection() {
                 hidden: { opacity: 0, y: 20 },
                 visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.33, 1, 0.68, 1] as [number, number, number, number] } },
               }}
-              style={{ color: '#8B8B8B' }}
+              style={{ color: colorTokens.creditText }}
             >
               A special thank you to my partners{' '}
               <a href="https://www.linkedin.com/in/vanasa-liu/" style={{ color: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>

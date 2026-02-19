@@ -7,6 +7,54 @@ import { prefersReducedMotion } from '../hooks/useReducedMotion'
 import * as THREE from 'three'
 import type { Settings, ShadowSettings, ThemeMode } from '../types'
 
+// =============================================================================
+// LIGHTING TOKENS — 3D-specific color palette (not shared with UI themes)
+// Kept local to Scene because these are Three.js lighting values, not UI tokens.
+// =============================================================================
+const lightingTokens = {
+  // Shared / neutral
+  white: '#ffffff',
+
+  // Day / light theme
+  light: {
+    fill: '#a0c4ff',       // Soft sky blue fill
+    back: '#ffe4b5',       // Warm sunlight rim
+    accent: '#ffd700',     // Gold accent (env ring lightformer)
+  },
+
+  // Night / dark theme
+  dark: {
+    main: '#aabbdd',       // Cool blue-white key light
+    fill: '#7799dd',       // Cool blue fill
+    back: '#5577bb',       // Cool moonlight rim
+    top: '#99aacc',        // Soft blue-gray overhead
+    ambient: '#778899',    // Slate gray ambient fill
+    spot: '#aabbcc',       // Cool blue spotlight
+    envTop: '#99aacc',     // Environment top lightformer
+    envLeft: '#7788bb',    // Environment left lightformer
+    envRing: '#5577aa',    // Environment ring lightformer
+  },
+
+  // Darkest theme (pure black bg) — inherits dark + overrides
+  darkest: {
+    spot: '#ffffff',       // Bright white spotlight for contrast
+  },
+
+  // Dusk interpolation targets (scroll-driven sunset transition)
+  dusk: {
+    mainDark: '#1A0A1A',        // Near-black — "dark side" facing viewer
+    fillDark: '#CC6633',        // Warm terra cotta side-spill
+    backDark: '#FF9955',        // Bright coral-orange rim light
+    topDark: '#D8A8D8',         // Soft lavender upper atmosphere
+    ambDark: '#1A0A1A',         // Near-black ambient
+    spotDark: '#FF7744',        // Warm orange backlight
+    // Lightformer dusk targets
+    lfTopDark: '#CC6633',       // Burnt terra cotta top reflections
+    lfLeftDark: '#D8A8D8',      // Soft mauve purple tint
+    lfRingDark: '#FF9955',      // Coral-orange accent
+  },
+} as const
+
 // Global ref for mouse position - updated by App.tsx, read by Scene internals
 // This avoids React re-renders when mouse moves
 export const mousePositionRef = { current: { x: 0.5, y: 0.5 } }
@@ -124,18 +172,18 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
 
   // Pre-computed color pairs for dusk interpolation (allocated once, reused every frame)
   const duskColors = useRef({
-    mainLight: new THREE.Color('#ffffff'),
-    mainDark: new THREE.Color('#1A0A1A'),      // near-black — "dark side" facing viewer
-    fillLight: new THREE.Color('#a0c4ff'),
-    fillDark: new THREE.Color('#CC6633'),       // warm terra cotta side-spill from sunset behind
-    backLight: new THREE.Color('#ffe4b5'),
-    backDark: new THREE.Color('#FF9955'),       // bright coral-orange — hero rim light
-    topLight: new THREE.Color('#ffffff'),
-    topDark: new THREE.Color('#D8A8D8'),        // soft lavender — upper sunset atmosphere
-    ambLight: new THREE.Color('#ffffff'),
-    ambDark: new THREE.Color('#1A0A1A'),        // near-black — deep shadows, minimal fill
-    spotLight: new THREE.Color('#aabbcc'),
-    spotDark: new THREE.Color('#FF7744'),       // warm orange backlight
+    mainLight: new THREE.Color(lightingTokens.white),
+    mainDark: new THREE.Color(lightingTokens.dusk.mainDark),      // near-black — "dark side" facing viewer
+    fillLight: new THREE.Color(lightingTokens.light.fill),
+    fillDark: new THREE.Color(lightingTokens.dusk.fillDark),       // warm terra cotta side-spill from sunset behind
+    backLight: new THREE.Color(lightingTokens.light.back),
+    backDark: new THREE.Color(lightingTokens.dusk.backDark),       // bright coral-orange — hero rim light
+    topLight: new THREE.Color(lightingTokens.white),
+    topDark: new THREE.Color(lightingTokens.dusk.topDark),        // soft lavender — upper sunset atmosphere
+    ambLight: new THREE.Color(lightingTokens.white),
+    ambDark: new THREE.Color(lightingTokens.dusk.ambDark),        // near-black — deep shadows, minimal fill
+    spotLight: new THREE.Color(lightingTokens.dark.spot),
+    spotDark: new THREE.Color(lightingTokens.dusk.spotDark),       // warm orange backlight
     tmp: new THREE.Color(),
   })
 
@@ -238,11 +286,11 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
   // Light theme: warm, bright daylight lighting
   const mainIntensity = isDarkTheme ? 2.4 : 3
   const fillIntensity = isDarkTheme ? 1.0 : 1.5
-  const fillColor = isDarkTheme ? '#7799dd' : '#a0c4ff' // Cooler blue for night
+  const fillColor = isDarkTheme ? lightingTokens.dark.fill : lightingTokens.light.fill // Cooler blue for night
   const backIntensity = isDarkTheme ? 1.2 : 2
-  const backColor = isDarkTheme ? '#5577bb' : '#ffe4b5' // Cool moonlight vs warm sunlight
+  const backColor = isDarkTheme ? lightingTokens.dark.back : lightingTokens.light.back // Cool moonlight vs warm sunlight
   const topIntensity = isDarkTheme ? 20 : 30
-  const topColor = isDarkTheme ? '#99aacc' : '#ffffff' // Soft blue-gray vs white
+  const topColor = isDarkTheme ? lightingTokens.dark.top : lightingTokens.white // Soft blue-gray vs white
   const ambientIntensity = isDarkTheme ? 0.4 : 0.6
 
   return (
@@ -252,7 +300,7 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
         ref={mainLightRef}
         position={lightPos}
         intensity={mainIntensity}
-        color={isDarkTheme ? '#aabbdd' : '#ffffff'}
+        color={isDarkTheme ? lightingTokens.dark.main : lightingTokens.white}
         castShadow
         shadow-mapSize={shadowMapSize}
         shadow-camera-left={-cameraBounds}
@@ -290,7 +338,7 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
       />
 
       {/* Ambient fill */}
-      <ambientLight ref={ambientRef} intensity={ambientIntensity} color={isDarkTheme ? '#778899' : '#ffffff'} />
+      <ambientLight ref={ambientRef} intensity={ambientIntensity} color={isDarkTheme ? lightingTokens.dark.ambient : lightingTokens.white} />
 
       {/* Spotlight — always present, fades in via dusk interpolation (intensity 0 at t=0) */}
       <spotLight
@@ -299,7 +347,7 @@ function Lighting({ lightPos, shadowMapSize, cameraBounds, cameraFar, shadowRadi
         angle={0.6}
         penumbra={0.8}
         intensity={isDarkTheme ? (isDarkestTheme ? 80 : 40) : 0}
-        color={isDarkTheme ? (isDarkestTheme ? '#ffffff' : '#aabbcc') : '#aabbcc'}
+        color={isDarkTheme ? (isDarkestTheme ? lightingTokens.darkest.spot : lightingTokens.dark.spot) : lightingTokens.dark.spot}
         target-position={[0, 0, 0]}
       />
     </>
@@ -379,12 +427,12 @@ function DuskLightformers({ isDarkTheme, gloveDuskRef }: { isDarkTheme: boolean;
   const lf3Ref = useRef<THREE.Mesh>(null)
 
   const lfColors = useRef({
-    lf1Light: new THREE.Color('#ffffff'),
-    lf1Dark: new THREE.Color('#CC6633'),       // burnt terra cotta — warm top reflections
-    lf2Light: new THREE.Color('#ffffff'),
-    lf2Dark: new THREE.Color('#D8A8D8'),       // soft mauve — purple tint on left
-    lf3Light: new THREE.Color('#ffd700'),
-    lf3Dark: new THREE.Color('#FF9955'),       // coral-orange (gold → warm sunset)
+    lf1Light: new THREE.Color(lightingTokens.white),
+    lf1Dark: new THREE.Color(lightingTokens.dusk.lfTopDark),       // burnt terra cotta — warm top reflections
+    lf2Light: new THREE.Color(lightingTokens.white),
+    lf2Dark: new THREE.Color(lightingTokens.dusk.lfLeftDark),       // soft mauve — purple tint on left
+    lf3Light: new THREE.Color(lightingTokens.light.accent),
+    lf3Dark: new THREE.Color(lightingTokens.dusk.lfRingDark),       // coral-orange (gold → warm sunset)
     tmp: new THREE.Color(),
   })
 
@@ -419,7 +467,7 @@ function DuskLightformers({ isDarkTheme, gloveDuskRef }: { isDarkTheme: boolean;
         ref={lf1Ref}
         form="circle"
         intensity={isDarkTheme ? 2.5 : 4}
-        color={isDarkTheme ? '#99aacc' : '#ffffff'}
+        color={isDarkTheme ? lightingTokens.dark.envTop : lightingTokens.white}
         rotation-x={Math.PI / 2}
         position={[0, 5, -9]}
         scale={2}
@@ -428,7 +476,7 @@ function DuskLightformers({ isDarkTheme, gloveDuskRef }: { isDarkTheme: boolean;
         ref={lf2Ref}
         form="circle"
         intensity={isDarkTheme ? 1.2 : 2}
-        color={isDarkTheme ? '#7788bb' : '#ffffff'}
+        color={isDarkTheme ? lightingTokens.dark.envLeft : lightingTokens.white}
         rotation-y={Math.PI / 2}
         position={[-5, 1, -1]}
         scale={2}
@@ -436,7 +484,7 @@ function DuskLightformers({ isDarkTheme, gloveDuskRef }: { isDarkTheme: boolean;
       <Lightformer
         ref={lf3Ref}
         form="ring"
-        color={isDarkTheme ? '#5577aa' : '#ffd700'}
+        color={isDarkTheme ? lightingTokens.dark.envRing : lightingTokens.light.accent}
         intensity={isDarkTheme ? 0.6 : 1}
         rotation-y={Math.PI / 2}
         position={[5, 2, 0]}
