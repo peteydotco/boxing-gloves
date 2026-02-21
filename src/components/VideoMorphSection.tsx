@@ -65,9 +65,10 @@ export function VideoMorphSection() {
   const morphWidth = useTransform(morphProgress, [0, 1], [22, targetWidth])
   const morphHeight = useTransform(morphProgress, [0, 1], [22, targetWidth * (9 / 16)])
   const borderRadius = useTransform(morphProgress, [0, 1], [2, 16])
+  const clipPath = useTransform(borderRadius, (r: number) => `inset(0 round ${r}px)`)
   const videoOpacity = useTransform(morphProgress, [0, 0.4, 0.6], [0, 0, 1])
   const loaderOpacity = useTransform(morphProgress, [0, 0.05], [1, 0])
-  const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(255,255,255,0)', 'rgba(255,255,255,1)'])
+  const morphBg = useTransform(morphProgress, [0, 0.05], ['rgba(0,0,0,0)', 'rgba(0,0,0,1)'])
 
   // Compact label slide: start tight next to loader, slide out to twoColOffset.
   // On mobile, labels stay put (no offset) so the expanding video covers them.
@@ -85,9 +86,6 @@ export function VideoMorphSection() {
   const morphSkew = useSpring(0, morphSpring)
   const loaderInnerRef = useRef<HTMLDivElement>(null)
   const hasPlayedSkew = useRef(false)
-
-  // Shadow base from morph progress
-  const morphShadowBase = useTransform(morphProgress, [0, 0.3, 0.8], [0, 0, 1])
 
   const [showCredits, setShowCredits] = useState(false)
   const creditsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -120,39 +118,6 @@ export function VideoMorphSection() {
   const spotlightGradient = hoverActive
     ? `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, rgba(255,255,255,1) 0%, rgba(120,120,130,0.35) 35%, rgba(120,120,130,0.35) 100%)`
     : 'none'
-
-  // Shadow — 5-layer Figma-matched, cursor-repelling
-  const [shadowIntensity, setShadowIntensity] = useState(0)
-  useMotionValueEvent(morphShadowBase, 'change', (v) => {
-    setShadowIntensity(v)
-  })
-
-  const computeShadow = useCallback(() => {
-    if (shadowIntensity <= 0) return '0 0 0 0 rgba(0,0,0,0)'
-    const s = shadowIntensity
-
-    const repelX = hoverActive ? (50 - mousePos.x) * 0.8 : 0
-    const repelY = hoverActive ? (50 - mousePos.y) * 0.5 : 0
-
-    const layers = [
-      { y: 549, blur: 154, spread: 0, a: 0.00 },
-      { y: 351, blur: 141, spread: 0, a: 0.01 },
-      { y: 197, blur: 118, spread: 0, a: 0.05 },
-      { y: 87,  blur: 87,  spread: 0, a: 0.09 },
-      { y: 21,  blur: 48,  spread: 0, a: 0.10 },
-    ]
-
-    return layers.map(l => {
-      const x = Math.round(repelX * (l.y / 549) * s)
-      const y = Math.round((l.y + repelY * (l.y / 549)) * s)
-      const blur = Math.round(l.blur * s)
-      const spread = Math.round(l.spread * s)
-      const a = (l.a * s).toFixed(2)
-      return `${x}px ${y}px ${blur}px ${spread}px rgba(0,0,0,${a})`
-    }).join(', ')
-  }, [shadowIntensity, hoverActive, mousePos.x, mousePos.y])
-
-  const dynamicShadow = computeShadow()
 
   // ── Morph trigger/reverse (original IntersectionObserver pattern) ──────
   const handleMorph = useCallback((enter: boolean) => {
@@ -194,16 +159,11 @@ export function VideoMorphSection() {
     }
   }, [morphProgress, morphSkew])
 
-  // IntersectionObserver sentinels — forward and reverse use different trigger points.
-  // Forward sentinel at 120vh triggers morph on scroll-down (viewport center).
-  // Reverse sentinel at 90vh triggers un-morph sooner on scroll-up so the user
-  // doesn't have to scroll as far back before the video collapses.
+  // Single IntersectionObserver sentinel — handles both forward and reverse.
+  // Scrolling down past the sentinel triggers morph; scrolling back up past it reverses.
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const reverseSentinelRef = useRef<HTMLDivElement>(null)
   const lastScrollY = useRef(0)
-  const hasMorphed = useRef(false)
 
-  // Forward observer — morph on scroll-down
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
@@ -214,34 +174,9 @@ export function VideoMorphSection() {
         const scrollingDown = currentScrollY > lastScrollY.current
         lastScrollY.current = currentScrollY
 
-        if (entry.isIntersecting && scrollingDown) {
-          hasMorphed.current = true
+        if (entry.isIntersecting) {
           handleMorph(true)
-        }
-      },
-      { rootMargin: '-50% 0px -50% 0px', threshold: 0 }
-    )
-
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [handleMorph])
-
-  // Reverse observer — un-morph when the higher sentinel's top drops below
-  // viewport center on scroll-up. We check boundingClientRect.top > rootBounds
-  // center to confirm the sentinel left from below (scroll-up), not above (scroll-down).
-  useEffect(() => {
-    const el = reverseSentinelRef.current
-    if (!el) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (
-          !entry.isIntersecting &&
-          hasMorphed.current &&
-          entry.rootBounds &&
-          entry.boundingClientRect.top > (entry.rootBounds.top + entry.rootBounds.height / 2)
-        ) {
-          hasMorphed.current = false
+        } else if (!scrollingDown) {
           handleMorph(false)
         }
       },
@@ -446,9 +381,8 @@ export function VideoMorphSection() {
                     width: morphWidth,
                     height: morphHeight,
                     borderRadius,
+                    clipPath,
                     backgroundColor: morphBg,
-                    overflow: 'hidden',
-                    boxShadow: dynamicShadow,
                     skewX: morphSkew,
                   }}
                 >
@@ -620,15 +554,10 @@ export function VideoMorphSection() {
         </div>
       </div>
 
-      {/* Forward sentinel — triggers morph on scroll-down at 150vh into section */}
+      {/* Scroll sentinel — triggers morph at 150vh on scroll-down, reverses on scroll-up */}
       <div
         ref={sentinelRef}
         style={{ position: 'absolute', top: '150vh', bottom: 0, width: '100%', pointerEvents: 'none' }}
-      />
-      {/* Reverse sentinel — positioned at 250vh so un-morph triggers quickly on scroll-up */}
-      <div
-        ref={reverseSentinelRef}
-        style={{ position: 'absolute', top: '250vh', bottom: 0, width: '100%', pointerEvents: 'none' }}
       />
 
     </section>
