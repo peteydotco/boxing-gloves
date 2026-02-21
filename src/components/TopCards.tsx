@@ -215,7 +215,7 @@ export function TopCards({ cardIndices, themeMode = 'light', introStagger = fals
         const sectionH = videoSection.offsetHeight
         const viewH = window.innerHeight
         const progress = (-vRect.top + viewH) / (sectionH + viewH)
-        const nowDark = progress > 0.175 && progress < 0.83
+        const nowDark = progress > 0.175 && progress < 1.00
         if (nowDark !== currentDark) {
           currentDark = nowDark
           setIsOverDark(nowDark)

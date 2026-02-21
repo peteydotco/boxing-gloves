@@ -792,8 +792,8 @@ function BioTextReveal({
         stagger: fromRight ? { each: 0.08, from: 'end' } : 0.08,
         scrollTrigger: {
           trigger: el,
-          start: 'top 90%',
-          end: 'bottom 40%',
+          start: 'top 85%',
+          end: 'top 50%',
           scrub: 0.6,
         },
       })

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react'
-import { motion, useSpring, useTransform, useMotionValueEvent } from 'framer-motion'
+import { motion, useSpring, useTransform, useMotionValueEvent, animate } from 'framer-motion'
+
 import { gsap, ScrollTrigger, SplitText } from '../lib/gsap'
 import { BREAKPOINTS } from '../constants/breakpoints'
 import { DURATION } from '../constants/animation'
@@ -177,8 +178,13 @@ export function VideoMorphSection() {
       creditsTimerRef.current = setTimeout(() => setShowCredits(true), 250)
     } else {
       setIsPlaying(false)
-      morphProgress.set(0)
-      morphSkew.set(0)
+      // Fast tween reverse (50ms, near-linear ease)
+      animate(morphProgress, 0, {
+        type: 'tween',
+        duration: 0.05,
+        ease: [0.01, 0.01, 0.01, 0.01] as [number, number, number, number],
+      })
+      morphSkew.jump(0)
       hasPlayedSkew.current = false
       setShowCredits(false)
       if (creditsTimerRef.current) {
@@ -188,10 +194,16 @@ export function VideoMorphSection() {
     }
   }, [morphProgress, morphSkew])
 
-  // IntersectionObserver sentinel — triggers morph at viewport center
+  // IntersectionObserver sentinels — forward and reverse use different trigger points.
+  // Forward sentinel at 120vh triggers morph on scroll-down (viewport center).
+  // Reverse sentinel at 90vh triggers un-morph sooner on scroll-up so the user
+  // doesn't have to scroll as far back before the video collapses.
   const sentinelRef = useRef<HTMLDivElement>(null)
+  const reverseSentinelRef = useRef<HTMLDivElement>(null)
   const lastScrollY = useRef(0)
+  const hasMorphed = useRef(false)
 
+  // Forward observer — morph on scroll-down
   useEffect(() => {
     const el = sentinelRef.current
     if (!el) return
@@ -202,9 +214,34 @@ export function VideoMorphSection() {
         const scrollingDown = currentScrollY > lastScrollY.current
         lastScrollY.current = currentScrollY
 
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting && scrollingDown) {
+          hasMorphed.current = true
           handleMorph(true)
-        } else if (!scrollingDown) {
+        }
+      },
+      { rootMargin: '-50% 0px -50% 0px', threshold: 0 }
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [handleMorph])
+
+  // Reverse observer — un-morph when the higher sentinel's top drops below
+  // viewport center on scroll-up. We check boundingClientRect.top > rootBounds
+  // center to confirm the sentinel left from below (scroll-up), not above (scroll-down).
+  useEffect(() => {
+    const el = reverseSentinelRef.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          !entry.isIntersecting &&
+          hasMorphed.current &&
+          entry.rootBounds &&
+          entry.boundingClientRect.top > (entry.rootBounds.top + entry.rootBounds.height / 2)
+        ) {
+          hasMorphed.current = false
           handleMorph(false)
         }
       },
@@ -583,13 +620,15 @@ export function VideoMorphSection() {
         </div>
       </div>
 
-      {/* Scroll sentinel — in normal document flow (NOT inside sticky).
-          Section is 350vh → sticky travel is 250vh.
-          Sentinel at 120vh → crosses viewport center at ~70vh into travel.
-          After morph, ~180vh of pinned scroll remains for viewing. */}
+      {/* Forward sentinel — triggers morph on scroll-down at 150vh into section */}
       <div
         ref={sentinelRef}
-        style={{ position: 'absolute', top: '120vh', bottom: 0, width: '100%', pointerEvents: 'none' }}
+        style={{ position: 'absolute', top: '150vh', bottom: 0, width: '100%', pointerEvents: 'none' }}
+      />
+      {/* Reverse sentinel — positioned at 250vh so un-morph triggers quickly on scroll-up */}
+      <div
+        ref={reverseSentinelRef}
+        style={{ position: 'absolute', top: '250vh', bottom: 0, width: '100%', pointerEvents: 'none' }}
       />
 
     </section>

@@ -24,6 +24,8 @@ export function SiteFooter() {
           alignItems: 'center',
           gap: 0,
           flexWrap: 'nowrap',
+          transform: 'scale(0.95)',
+          transformOrigin: 'center center',
         }}
       >
         {/* ===== Pills group: © 2026 PETEY.CO ===== */}
