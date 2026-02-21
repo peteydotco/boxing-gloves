@@ -77,6 +77,42 @@ Always commit changes after completing tasks. Use conventional commit messages:
 - `docs:` for documentation
 - `chore:` for maintenance tasks
 
+## Pre-Launch Search & Metadata Checklist
+
+Before any site goes live, always verify and add the following to `index.html`:
+
+### Required metadata
+- `<title>` — descriptive, under 60 characters
+- `<meta name="description">` — compelling summary, under 160 characters
+- `<link rel="canonical" href="...">` — canonical URL to prevent duplicate content
+- `<meta name="robots" content="index, follow">` — confirm the site should be indexed
+
+### Open Graph (Facebook, LinkedIn, iMessage, etc.)
+- `og:title`, `og:description`, `og:type`, `og:url`
+- `og:image` — absolute URL to a 1200×630 social share image
+
+### Twitter Card
+- `twitter:card` (use `summary_large_image` when an image is available)
+- `twitter:title`, `twitter:description`, `twitter:image`
+
+### Search engine verification
+- Google Search Console: `<meta name="google-site-verification" content="...">` or HTML file in `public/`
+- Bing Webmaster Tools: `<meta name="msvalidate.01" content="...">` (if applicable)
+
+### Structured data
+- Add JSON-LD `<script type="application/ld+json">` for Person/Organization/WebSite schema as appropriate
+
+### Technical SEO files (in `public/`)
+- `robots.txt` — allow crawling, point to sitemap
+- `sitemap.xml` — list all public URLs
+- Social share image (e.g. `og-image.png`)
+
+### Accessibility & performance
+- `<html lang="en">` — confirm correct language attribute
+- Favicon set: `favicon.ico`, `apple-touch-icon.png`, `manifest.json` / `site.webmanifest`
+
+**Always ask the user for any verification codes or tokens they need added — never guess these values.**
+
 ## Development Notes
 
 - The physics simulation runs at 60fps in `useFrame`
